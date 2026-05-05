@@ -1,4 +1,5 @@
 import type { DataTableColumn } from '../../components/DataTable'
+import { parseMoneyNumber } from '../../utils/money'
 
 export type EntityRow = Record<string, unknown>
 
@@ -7,6 +8,7 @@ export type EntityField = {
   label: string
   type:
     | 'checkbox'
+    | 'computed'
     | 'date'
     | 'imagePreview'
     | 'number'
@@ -21,6 +23,7 @@ export type EntityField = {
   prefix?: string
   suffix?: string
   options?: { label: string; value: string }[]
+  computeValue?: (values: EntityRow) => unknown
   optionSource?: {
     labelField: string
     labelFormatter?: (row: EntityRow) => string | null | undefined
@@ -107,6 +110,15 @@ function imagePreview(
   return { name, label, previewSourceField, type: 'imagePreview', ...options }
 }
 
+function computed(
+  name: string,
+  label: string,
+  computeValue: (values: EntityRow) => unknown,
+  options: Omit<EntityField, 'computeValue' | 'label' | 'name' | 'type'> = {},
+): EntityField {
+  return { name, label, computeValue, type: 'computed', ...options }
+}
+
 function column(
   key: string,
   header: string,
@@ -128,6 +140,17 @@ function formatProjectOption(row: EntityRow) {
   return productName
     ? `Project #${String(row.idProject)} - ${productName}`
     : `Project #${String(row.idProject)}`
+}
+
+function sumMoneyValues(...values: unknown[]): number {
+  return values.reduce<number>(
+    (total, value) => total + (parseMoneyNumber(value) ?? 0),
+    0,
+  )
+}
+
+function getProjectTotalCost(row: EntityRow) {
+  return sumMoneyValues(row.productionCost, row.adminCost)
 }
 
 export const entityConfigs = {
@@ -244,6 +267,10 @@ export const entityConfigs = {
       column('unitCost', 'Unit Cost', { valueFormat: 'money' }),
       column('productionCost', 'Production Cost', { valueFormat: 'money' }),
       column('adminCost', 'Admin Cost', { valueFormat: 'money' }),
+      column('totalCost', 'Total Cost', {
+        valueFormat: 'money',
+        valueGetter: getProjectTotalCost,
+      }),
     ],
     fields: [
       select('idProduct', 'Product', undefined, {
@@ -284,6 +311,11 @@ export const entityConfigs = {
         min: 0,
         prefix: '$',
         step: 0.01,
+        valueFormat: 'money',
+      }),
+      computed('totalCost', 'Total Cost', getProjectTotalCost, {
+        helperText: 'Production cost plus administrative cost.',
+        prefix: '$',
         valueFormat: 'money',
       }),
     ],

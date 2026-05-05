@@ -42,7 +42,7 @@ A product is the item being purchased and sold. Products have multiple external 
 
 A model is a pricing model assigned to products.
 
-A project is a batch purchase of one product. It stores the purchased units and costs, including unit, production, and administrative costs. Several stakeholders can participate in a project. A project can be active or inactive; at most one project can be active for the same product at any time.
+A project is a batch purchase of one product. It stores the purchased units and costs, including unit, production, and administrative costs. The total project cost is derived as `production_cost + admin_cost`; it is displayed in project screens but is not stored as a separate database field. Several stakeholders can participate in a project. A project can be active or inactive; at most one project can be active for the same product at any time.
 
 A stakeholder is a person or organization participating in one or more projects.
 
@@ -84,6 +84,10 @@ A sale is a committed sales record for a product and the project that generated 
 - `admin_cost`: numeric administrative cost.
 - `is_active`: boolean flag indicating whether this is the current active project for the product.
 - `active_product_id`: internal nullable unique key maintained by the backend to enforce that only one active project can exist for a product.
+
+Derived values:
+
+- `total_project_cost`: displayed-only value calculated as `production_cost + admin_cost`.
 
 ### stakeholder
 
@@ -269,7 +273,8 @@ Entity pages:
 - Product create/edit forms load pricing models and show model names in the model selector while submitting the selected model ID to the API.
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
 - Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
-- Project create/edit forms include an active flag plus unit cost, production cost, and administrative cost fields.
+- Project create/edit forms include an active flag plus unit cost, production cost, and administrative cost fields. They also display a read-only total cost field derived from production cost plus administrative cost.
+- Project table views display the same derived total cost with money formatting.
 - Project create/edit forms include a Stakeholder Split detail section. The section loads stakeholders by name, allows adding/removing stakeholder percentage lines, requires complete rows totaling exactly `100` when lines are present, and saves the project header before saving the split lines.
 - Project stakeholder splits are not exposed as a standalone primary navigation item in the MVP UI.
 - Stakeholder edit forms show the projects where the stakeholder participates, including the project label and stake percentage.

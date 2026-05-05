@@ -7,8 +7,11 @@ import { DataTable, type DataTableColumn } from './DataTable'
 type ProductRow = {
   id: number
   amount?: string | number
+  adminCost?: number
   name: string
+  productionCost?: number
   tag: string
+  totalCost?: number
 }
 
 const rows: ProductRow[] = [
@@ -101,5 +104,70 @@ describe('DataTable', () => {
 
     expect(screen.getByText('1,000,000.00')).toBeVisible()
     expect(screen.getByText('1,250.50')).toBeVisible()
+  })
+
+  it('renders, filters, and sorts derived column values', async () => {
+    const user = userEvent.setup()
+
+    const derivedColumns = [
+      { key: 'name', header: 'Name' },
+      {
+        key: 'totalCost',
+        header: 'Total Cost',
+        valueFormat: 'money',
+        valueGetter: (row: ProductRow) =>
+          (row.productionCost ?? 0) + (row.adminCost ?? 0),
+      },
+    ] as DataTableColumn<ProductRow>[]
+
+    function DerivedColumnHarness() {
+      const [searchValue, setSearchValue] = useState('')
+
+      return (
+        <DataTable
+          columns={derivedColumns}
+          getRowId={(row) => row.id}
+          onRowDoubleClick={vi.fn()}
+          onSearchChange={setSearchValue}
+          rows={[
+            {
+              id: 1,
+              adminCost: 1250.5,
+              name: 'Large project',
+              productionCost: 8750,
+              tag: 'office',
+            },
+            {
+              id: 2,
+              adminCost: 100,
+              name: 'Small project',
+              productionCost: 400,
+              tag: 'studio',
+            },
+          ]}
+          searchValue={searchValue}
+        />
+      )
+    }
+
+    render(<DerivedColumnHarness />)
+
+    expect(screen.getByText('10,000.50')).toBeVisible()
+    expect(screen.getByText('500.00')).toBeVisible()
+
+    await user.type(
+      screen.getByRole('searchbox', { name: /search/i }),
+      '10,000.50',
+    )
+
+    expect(screen.getByText('Large project')).toBeVisible()
+    expect(screen.queryByText('Small project')).not.toBeInTheDocument()
+
+    await user.clear(screen.getByRole('searchbox', { name: /search/i }))
+    await user.click(screen.getByRole('button', { name: /total cost/i }))
+
+    const bodyRows = screen.getAllByRole('row').slice(1)
+    expect(bodyRows[0]).toHaveTextContent('Small project')
+    expect(bodyRows[1]).toHaveTextContent('Large project')
   })
 })

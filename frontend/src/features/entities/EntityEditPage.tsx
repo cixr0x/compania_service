@@ -92,7 +92,7 @@ function buildEntityPayload(
 ): EntityRow {
   return Object.fromEntries(
     config.fields.flatMap((field) => {
-      if (field.type === 'imagePreview') {
+      if (field.type === 'computed' || field.type === 'imagePreview') {
         return []
       }
 

@@ -15,7 +15,7 @@ function LocationProbe() {
   return <div data-testid="location">{location.pathname}</div>
 }
 
-function renderProductsList() {
+function renderEntityList(initialEntry = '/products') {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -24,7 +24,7 @@ function renderProductsList() {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/products']}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <Routes>
           <Route path="/:entityName" element={<EntityListPage />} />
           <Route path="*" element={<LocationProbe />} />
@@ -32,6 +32,10 @@ function renderProductsList() {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+}
+
+function renderProductsList() {
+  return renderEntityList('/products')
 }
 
 describe('EntityListPage', () => {
@@ -103,5 +107,25 @@ describe('EntityListPage', () => {
     await waitFor(() => {
       expect(screen.getByTestId('location')).toHaveTextContent('/products/101')
     })
+  })
+
+  it('shows derived total project cost in the projects table', async () => {
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        adminCost: 2250.5,
+        idProduct: 42,
+        idProject: 501,
+        isActive: true,
+        productionCost: 7500.25,
+        unitCost: 1000000,
+        units: 10,
+      },
+    ])
+
+    renderEntityList('/projects')
+
+    expect(await screen.findByRole('heading', { name: 'Projects' })).toBeVisible()
+    expect(screen.getByText('Total Cost')).toBeVisible()
+    expect(await screen.findByText('9,750.75')).toBeVisible()
   })
 })

@@ -4,6 +4,7 @@ import { formatMoney } from '../utils/money'
 export type DataTableColumn<Row extends Record<string, unknown>> = {
   key: keyof Row & string
   header: string
+  valueGetter?: (row: Row) => unknown
   valueFormat?: 'money'
 }
 
@@ -49,6 +50,13 @@ function compareValues(left: unknown, right: unknown): number {
   })
 }
 
+function getColumnValue<Row extends Record<string, unknown>>(
+  row: Row,
+  column: DataTableColumn<Row>,
+): unknown {
+  return column.valueGetter ? column.valueGetter(row) : row[column.key]
+}
+
 export function DataTable<Row extends Record<string, unknown>>({
   rows,
   columns,
@@ -69,7 +77,7 @@ export function DataTable<Row extends Record<string, unknown>>({
     const filteredRows = normalizedSearch
       ? rows.filter((row) =>
           columns.some((column) =>
-            formatCellValue(row[column.key], column)
+            formatCellValue(getColumnValue(row, column), column)
               .toLowerCase()
               .includes(normalizedSearch),
           ),
@@ -80,8 +88,16 @@ export function DataTable<Row extends Record<string, unknown>>({
       return filteredRows
     }
 
+    const sortColumn = columns.find((column) => column.key === sort.key)
+    if (!sortColumn) {
+      return filteredRows
+    }
+
     return [...filteredRows].sort((left, right) => {
-      const result = compareValues(left[sort.key], right[sort.key])
+      const result = compareValues(
+        getColumnValue(left, sortColumn),
+        getColumnValue(right, sortColumn),
+      )
       return sort.direction === 'asc' ? result : -result
     })
   }, [columns, rows, searchValue, sort])
@@ -167,7 +183,7 @@ export function DataTable<Row extends Record<string, unknown>>({
                 >
                   {columns.map((column) => (
                     <td key={column.key}>
-                      {formatCellValue(row[column.key], column)}
+                      {formatCellValue(getColumnValue(row, column), column)}
                     </td>
                   ))}
                 </tr>

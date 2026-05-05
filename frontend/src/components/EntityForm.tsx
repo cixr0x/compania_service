@@ -123,7 +123,10 @@ export function EntityForm({
   }
 
   function renderField(field: EntityField) {
-    const value = values[field.name]
+    const value =
+      field.type === 'computed' && field.computeValue
+        ? field.computeValue(values)
+        : values[field.name]
     const inputValue = getInputValue(
       field,
       value,
@@ -177,7 +180,16 @@ export function EntityForm({
               {field.prefix}
             </span>
           ) : null}
-          {field.type === 'textarea' ? (
+          {field.type === 'computed' ? (
+            <input
+              aria-describedby={helperId}
+              id={fieldId}
+              inputMode={isMoneyField ? 'decimal' : undefined}
+              readOnly
+              type="text"
+              value={inputValue}
+            />
+          ) : field.type === 'textarea' ? (
             <textarea
               aria-describedby={helperId}
               id={fieldId}

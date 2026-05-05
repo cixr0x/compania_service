@@ -394,11 +394,53 @@ describe('EntityEditPage', () => {
     })
   })
 
+  it('shows a read-only project total cost and excludes it from create payloads', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockResolvedValue([
+      { id: 42, name: 'Maple Shelf', idModel: 7 },
+    ])
+    vi.mocked(postJson).mockResolvedValue({ idProject: 501 })
+
+    renderEntityEditPage('/projects/new', '/:entityName/:id')
+
+    const productSelect = await screen.findByLabelText('Product')
+    expect(
+      await screen.findByRole('option', { name: 'Maple Shelf' }),
+    ).toHaveValue('42')
+    const totalCostInput = screen.getByLabelText('Total Cost')
+    expect(totalCostInput).toHaveValue('0.00')
+    expect(totalCostInput).toHaveAttribute('readonly')
+
+    await user.selectOptions(productSelect, '42')
+    await user.type(screen.getByLabelText('Production Cost'), '7,500.25')
+    await user.type(screen.getByLabelText('Admin Cost'), '2,250.50')
+
+    expect(totalCostInput).toHaveValue('9,750.75')
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith(
+        '/projects',
+        expect.objectContaining({
+          adminCost: 2250.5,
+          idProduct: 42,
+          isActive: false,
+          productionCost: 7500.25,
+        }),
+      )
+    })
+    expect(vi.mocked(postJson).mock.calls[0]?.[1]).not.toHaveProperty(
+      'totalCost',
+    )
+  })
+
   it('configures every money field and money table column for currency formatting', () => {
     const moneyFields: Array<[EntityName, string]> = [
       ['projects', 'unitCost'],
       ['projects', 'productionCost'],
       ['projects', 'adminCost'],
+      ['projects', 'totalCost'],
       ['sales', 'amount'],
       ['sales', 'fee'],
     ]
