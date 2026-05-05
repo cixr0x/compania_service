@@ -13,8 +13,8 @@ export class CreateProjectStakeholderDto {
   idStakeholder!: number;
 
   @Type(() => Number)
-  @IsNumber()
-  @Min(0)
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
   @Max(100)
   stakePercentage!: number;
 }

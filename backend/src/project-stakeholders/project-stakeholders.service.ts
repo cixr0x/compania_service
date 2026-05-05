@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectStakeholderDto } from './dto/create-project-stakeholder.dto';
@@ -9,13 +10,24 @@ const projectStakeholderInclude = {
   stakeholder: true,
 };
 
+type ProjectStakeholderWriteClient = {
+  $queryRaw: PrismaService['$queryRaw'];
+  projectStakeholder: Pick<
+    PrismaService['projectStakeholder'],
+    'create' | 'update' | 'findUnique' | 'findMany'
+  >;
+};
+
 @Injectable()
 export class ProjectStakeholdersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateProjectStakeholderDto) {
-    await this.assertProjectTotalDoesNotExceed100(dto.idProject, dto.stakePercentage);
-    return this.prisma.projectStakeholder.create({ data: dto });
+    return this.prisma.$transaction(async (tx) => {
+      await this.lockProjects(tx, [dto.idProject]);
+      await this.assertProjectTotalDoesNotExceed100(tx, dto.idProject, dto.stakePercentage);
+      return tx.projectStakeholder.create({ data: dto });
+    });
   }
 
   findAll(query: PaginationQueryDto) {
@@ -39,22 +51,32 @@ export class ProjectStakeholdersService {
   }
 
   async update(id: number, dto: UpdateProjectStakeholderDto) {
-    const current = await this.findOne(id);
-    const destinationProjectId = dto.idProject ?? current.idProject;
-    const nextStakePercentage =
-      dto.stakePercentage === undefined
-        ? Number(current.stakePercentage)
-        : dto.stakePercentage;
+    return this.prisma.$transaction(async (tx) => {
+      let current = await this.findOneWithClient(tx, id);
+      const destinationProjectId = dto.idProject ?? current.idProject;
 
-    await this.assertProjectTotalDoesNotExceed100(
-      destinationProjectId,
-      nextStakePercentage,
-      id,
-    );
+      await this.lockProjects(tx, [current.idProject, destinationProjectId]);
+      current = await this.findOneWithClient(tx, id);
 
-    return this.prisma.projectStakeholder.update({
-      where: { idProjectStakeholder: id },
-      data: dto,
+      const lockedDestinationProjectId = dto.idProject ?? current.idProject;
+      const nextStakePercentage =
+        dto.stakePercentage === undefined
+          ? Number(current.stakePercentage)
+          : dto.stakePercentage;
+      const idProjectStakeholderToExclude =
+        current.idProject === lockedDestinationProjectId ? id : undefined;
+
+      await this.assertProjectTotalDoesNotExceed100(
+        tx,
+        lockedDestinationProjectId,
+        nextStakePercentage,
+        idProjectStakeholderToExclude,
+      );
+
+      return tx.projectStakeholder.update({
+        where: { idProjectStakeholder: id },
+        data: dto,
+      });
     });
   }
 
@@ -64,11 +86,12 @@ export class ProjectStakeholdersService {
   }
 
   private async assertProjectTotalDoesNotExceed100(
+    client: Pick<ProjectStakeholderWriteClient, 'projectStakeholder'>,
     idProject: number,
     stakePercentage: number,
     idProjectStakeholderToExclude?: number,
   ) {
-    const rows = await this.prisma.projectStakeholder.findMany({
+    const rows = await client.projectStakeholder.findMany({
       where: { idProject },
       select: { idProjectStakeholder: true, stakePercentage: true },
     });
@@ -80,6 +103,31 @@ export class ProjectStakeholdersService {
 
     if (Math.round(nextTotal * 100) > 10000) {
       throw new BadRequestException('Project stakeholder total cannot exceed 100');
+    }
+  }
+
+  private async findOneWithClient(
+    client: Pick<ProjectStakeholderWriteClient, 'projectStakeholder'>,
+    id: number,
+  ) {
+    const record = await client.projectStakeholder.findUnique({
+      where: { idProjectStakeholder: id },
+      include: projectStakeholderInclude,
+    });
+    if (!record) throw new NotFoundException(`Project stakeholder ${id} was not found`);
+    return record;
+  }
+
+  private async lockProjects(
+    client: Pick<ProjectStakeholderWriteClient, '$queryRaw'>,
+    projectIds: number[],
+  ) {
+    const uniqueProjectIds = [...new Set(projectIds)].sort((a, b) => a - b);
+
+    for (const idProject of uniqueProjectIds) {
+      await client.$queryRaw(
+        Prisma.sql`SELECT id_project FROM project WHERE id_project = ${idProject} FOR UPDATE`,
+      );
     }
   }
 }
