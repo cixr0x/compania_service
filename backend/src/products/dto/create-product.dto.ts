@@ -41,11 +41,12 @@ export class CreateProductDto {
   @Min(1)
   idModel?: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   @Max(100)
-  ownership = 0;
+  ownership?: number;
 
   @IsOptional()
   @IsString()
