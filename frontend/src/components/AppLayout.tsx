@@ -27,7 +27,7 @@ const navigationItems: NavigationItem[] = [
     icon: Handshake,
   },
   { label: 'Sales', path: '/sales', icon: CircleDollarSign },
-  { label: 'Sales Imports', path: '/sales-imports', icon: DatabaseZap },
+  { label: 'Sales Imports', path: '/imports', icon: DatabaseZap },
 ]
 
 export function AppLayout() {

@@ -107,7 +107,7 @@ function App() {
           element={<PlaceholderPage {...pageSummaries.sales} />}
         />
         <Route
-          path="sales-imports"
+          path="imports"
           element={<PlaceholderPage {...pageSummaries.salesImports} />}
         />
         <Route path="*" element={<Navigate replace to="/products" />} />
