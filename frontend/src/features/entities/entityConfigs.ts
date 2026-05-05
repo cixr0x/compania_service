@@ -5,7 +5,14 @@ export type EntityRow = Record<string, unknown>
 export type EntityField = {
   name: string
   label: string
-  type: 'date' | 'number' | 'text' | 'textarea'
+  type: 'date' | 'number' | 'select' | 'text' | 'textarea'
+  helperText?: string
+  required?: boolean
+  section?: string
+  span?: 'full'
+  prefix?: string
+  suffix?: string
+  options?: { label: string; value: string }[]
   min?: number
   max?: number
   step?: number
@@ -13,8 +20,10 @@ export type EntityField = {
 
 export type EntityConfig = {
   title: string
+  singularTitle: string
   path: EntityName
   idField: string
+  formLayout?: 'compact' | 'default'
   columns: DataTableColumn<EntityRow>[]
   fields: EntityField[]
 }
@@ -27,20 +36,37 @@ export type EntityName =
   | 'project-stakeholders'
   | 'sales'
 
-function text(name: string, label: string): EntityField {
-  return { name, label, type: 'text' }
+function text(
+  name: string,
+  label: string,
+  options: Omit<EntityField, 'label' | 'name' | 'type'> = {},
+): EntityField {
+  return { name, label, type: 'text', ...options }
 }
 
 function number(
   name: string,
   label: string,
-  options: Pick<EntityField, 'max' | 'min' | 'step'> = {},
+  options: Omit<EntityField, 'label' | 'name' | 'type'> = {},
 ): EntityField {
   return { name, label, type: 'number', ...options }
 }
 
-function textarea(name: string, label: string): EntityField {
-  return { name, label, type: 'textarea' }
+function select(
+  name: string,
+  label: string,
+  options: EntityField['options'],
+  fieldOptions: Omit<EntityField, 'label' | 'name' | 'options' | 'type'> = {},
+): EntityField {
+  return { name, label, options, type: 'select', ...fieldOptions }
+}
+
+function textarea(
+  name: string,
+  label: string,
+  options: Omit<EntityField, 'label' | 'name' | 'type'> = {},
+): EntityField {
+  return { name, label, type: 'textarea', ...options }
 }
 
 function column(key: string, header: string): DataTableColumn<EntityRow> {
@@ -50,6 +76,7 @@ function column(key: string, header: string): DataTableColumn<EntityRow> {
 export const entityConfigs = {
   products: {
     title: 'Products',
+    singularTitle: 'Product',
     path: 'products',
     idField: 'id',
     columns: [
@@ -64,31 +91,82 @@ export const entityConfigs = {
       column('idModel', 'Model ID'),
     ],
     fields: [
-      text('name', 'Name'),
-      textarea('description', 'Description'),
-      text('image', 'Image'),
-      text('idEcommerce', 'Ecommerce ID'),
-      text('idStore', 'Store ID'),
-      text('idEvent', 'Event ID'),
-      text('idSurface', 'Surface ID'),
-      number('idModel', 'Model ID'),
-      number('ownership', 'Ownership', { max: 100, min: 0, step: 0.01 }),
-      text('tag', 'Tag'),
+      text('name', 'Name', {
+        helperText: 'Public product name shown in lists and sale matching.',
+        required: true,
+        section: 'Product details',
+      }),
+      textarea('description', 'Description', {
+        helperText: 'Short internal description for identifying this product.',
+        section: 'Product details',
+        span: 'full',
+      }),
+      text('image', 'Image URL', {
+        helperText: 'Direct image URL used in catalog previews.',
+        section: 'Product details',
+        span: 'full',
+      }),
+      text('idEcommerce', 'Ecommerce external ID', {
+        helperText: 'External product ID used by ecommerce imports.',
+        section: 'Channel mapping',
+      }),
+      text('idStore', 'Store external ID', {
+        helperText: 'External product ID used by store imports.',
+        section: 'Channel mapping',
+      }),
+      text('idEvent', 'Event external ID', {
+        helperText: 'External product ID used by event imports.',
+        section: 'Channel mapping',
+      }),
+      text('idSurface', 'Surface external ID', {
+        helperText: 'External product ID used by surface imports.',
+        section: 'Channel mapping',
+      }),
+      number('idModel', 'Model ID', {
+        helperText: 'Numeric model ID that classifies this product.',
+        min: 1,
+        section: 'Commercial attributes',
+        step: 1,
+      }),
+      number('ownership', 'Owner-retained profit', {
+        helperText: 'Percentage of profit retained by the owner for this product.',
+        max: 100,
+        min: 0,
+        section: 'Commercial attributes',
+        step: 0.01,
+        suffix: '%',
+      }),
+      text('tag', 'Tag', {
+        helperText: 'Optional short label for filtering or reporting.',
+        section: 'Commercial attributes',
+      }),
     ],
   },
   models: {
     title: 'Models',
+    singularTitle: 'Model',
     path: 'models',
     idField: 'idModel',
+    formLayout: 'compact',
     columns: [
       column('idModel', 'ID'),
       column('name', 'Name'),
       column('description', 'Description'),
     ],
-    fields: [text('name', 'Name'), textarea('description', 'Description')],
+    fields: [
+      text('name', 'Name', {
+        helperText: 'Compact model name used to group products.',
+        required: true,
+      }),
+      textarea('description', 'Description', {
+        helperText: 'Optional notes about this model.',
+        span: 'full',
+      }),
+    ],
   },
   projects: {
     title: 'Projects',
+    singularTitle: 'Project',
     path: 'projects',
     idField: 'idProject',
     columns: [
@@ -99,21 +177,47 @@ export const entityConfigs = {
       column('adminCost', 'Admin Cost'),
     ],
     fields: [
-      number('idProduct', 'Product ID'),
-      number('units', 'Units'),
-      number('unitCost', 'Unit Cost'),
-      number('adminCost', 'Admin Cost'),
+      number('idProduct', 'Product ID', {
+        helperText: 'Numeric product ID this project will produce or sell.',
+        min: 1,
+        step: 1,
+      }),
+      number('units', 'Units', {
+        helperText: 'Whole number of units planned for the project.',
+        min: 0,
+        step: 1,
+      }),
+      number('unitCost', 'Unit Cost', {
+        helperText: 'Currency cost per unit.',
+        min: 0,
+        prefix: '$',
+        step: 0.01,
+      }),
+      number('adminCost', 'Admin Cost', {
+        helperText: 'Currency cost for project administration.',
+        min: 0,
+        prefix: '$',
+        step: 0.01,
+      }),
     ],
   },
   stakeholders: {
     title: 'Stakeholders',
+    singularTitle: 'Stakeholder',
     path: 'stakeholders',
     idField: 'idStakeholder',
+    formLayout: 'compact',
     columns: [column('idStakeholder', 'ID'), column('name', 'Name')],
-    fields: [text('name', 'Name')],
+    fields: [
+      text('name', 'Name', {
+        helperText: 'Stakeholder display name.',
+        required: true,
+      }),
+    ],
   },
   'project-stakeholders': {
     title: 'Project Stakeholders',
+    singularTitle: 'Project Stakeholders/Split',
     path: 'project-stakeholders',
     idField: 'idProjectStakeholder',
     columns: [
@@ -123,13 +227,28 @@ export const entityConfigs = {
       column('stakePercentage', 'Stake Percentage'),
     ],
     fields: [
-      number('idProject', 'Project ID'),
-      number('idStakeholder', 'Stakeholder ID'),
-      number('stakePercentage', 'Stake Percentage'),
+      number('idProject', 'Project ID', {
+        helperText: 'Project whose stakeholder split must total 100%.',
+        min: 1,
+        step: 1,
+      }),
+      number('idStakeholder', 'Stakeholder ID', {
+        helperText: 'Stakeholder receiving this share.',
+        min: 1,
+        step: 1,
+      }),
+      number('stakePercentage', 'Stake Percentage', {
+        helperText: 'Percentage share for this stakeholder.',
+        max: 100,
+        min: 0,
+        step: 0.01,
+        suffix: '%',
+      }),
     ],
   },
   sales: {
     title: 'Sales',
+    singularTitle: 'Sale',
     path: 'sales',
     idField: 'idSale',
     columns: [
@@ -142,12 +261,46 @@ export const entityConfigs = {
       column('fee', 'Fee'),
     ],
     fields: [
-      { name: 'date', label: 'Date', type: 'date' },
-      number('idProduct', 'Product ID'),
-      number('quantity', 'Quantity'),
-      number('amount', 'Amount'),
-      text('source', 'Source'),
-      number('fee', 'Fee'),
+      {
+        name: 'date',
+        label: 'Date',
+        type: 'date',
+        helperText: 'Sale date.',
+        required: true,
+      },
+      number('idProduct', 'Product ID', {
+        helperText: 'Numeric product ID sold.',
+        min: 1,
+        step: 1,
+      }),
+      number('quantity', 'Quantity', {
+        helperText: 'Whole number of units sold.',
+        min: 1,
+        step: 1,
+      }),
+      number('amount', 'Amount', {
+        helperText: 'Sale amount in currency.',
+        min: 0,
+        prefix: '$',
+        step: 0.01,
+      }),
+      select(
+        'source',
+        'Source',
+        [
+          { label: 'Ecommerce', value: 'ecommerce' },
+          { label: 'Store', value: 'store' },
+          { label: 'Event', value: 'event' },
+          { label: 'Surface', value: 'surface' },
+        ],
+        { helperText: 'Sales channel matching import sources.' },
+      ),
+      number('fee', 'Fee', {
+        helperText: 'Fee amount in currency.',
+        min: 0,
+        prefix: '$',
+        step: 0.01,
+      }),
     ],
   },
 } satisfies Record<EntityName, EntityConfig>

@@ -271,7 +271,9 @@ export function ProjectStakeholderSplitEditor({
         <div>
           <p className="eyebrow">Workspace</p>
           <h2 id={`${config.path}-form-heading`}>
-            {isCreate ? `Create ${config.title}` : `Edit ${config.title}`}
+            {isCreate
+              ? `Create ${config.singularTitle}`
+              : `Edit ${config.title}`}
           </h2>
         </div>
         <Link className="secondary-action" to={`/${config.path}`}>
@@ -290,27 +292,56 @@ export function ProjectStakeholderSplitEditor({
           ) : null}
 
           <div className="split-summary">
-            <label className="form-field">
-              <span>Project ID</span>
+            <div className="form-field">
+              <span className="field-label-row">
+                <label htmlFor="split-project-id">Project ID</label>
+                <span aria-hidden="true" className="field-required">
+                  Required
+                </span>
+              </span>
               <input
+                aria-describedby="split-project-helper"
+                id="split-project-id"
                 onChange={(event) => handleProjectIdChange(event.target.value)}
                 readOnly={!isCreate}
-                step="any"
+                min={1}
+                step={1}
                 type="number"
                 value={activeDraft.projectId}
               />
-            </label>
-            <div className="split-total" aria-live="polite">
-              Total: {formatTotal(totalPercentage)}%
+              <span className="field-helper" id="split-project-helper">
+                Project that all stakeholder rows belong to.
+              </span>
+            </div>
+            <div
+              className={
+                Math.abs(totalPercentage - 100) <= 0.000001
+                  ? 'split-total split-total-complete'
+                  : 'split-total split-total-incomplete'
+              }
+              aria-live="polite"
+            >
+              <span>Total allocation: {formatTotal(totalPercentage)}%</span>
+              <span>Total must equal 100% before saving.</span>
             </div>
           </div>
 
           <div className="split-rows">
             {activeDraft.rows.map((row, index) => (
               <div className="split-row" key={row.rowKey}>
-                <label className="form-field">
-                  <span>Stakeholder ID</span>
+                <div className="form-field">
+                  <span className="field-label-row">
+                    <label htmlFor={`split-stakeholder-${row.rowKey}`}>
+                      Stakeholder ID
+                    </label>
+                    <span aria-hidden="true" className="field-required">
+                      Required
+                    </span>
+                  </span>
                   <input
+                    aria-describedby={`split-stakeholder-${row.rowKey}-helper`}
+                    id={`split-stakeholder-${row.rowKey}`}
+                    min={1}
                     onChange={(event) =>
                       handleRowChange(
                         row.rowKey,
@@ -318,37 +349,57 @@ export function ProjectStakeholderSplitEditor({
                         event.target.value,
                       )
                     }
-                    step="any"
+                    step={1}
                     type="number"
                     value={row.idStakeholder}
                   />
-                </label>
-                <label className="form-field">
-                  <span>Stake Percentage</span>
-                  <input
-                    max={100}
-                    min={0}
-                    onChange={(event) =>
-                      handleRowChange(
-                        row.rowKey,
-                        'stakePercentage',
-                        event.target.value,
-                      )
-                    }
-                    step={0.01}
-                    type="number"
-                    value={row.stakePercentage}
-                  />
-                </label>
-                <button
-                  aria-label={`Remove row ${index + 1}`}
-                  className="secondary-action split-remove-action"
-                  disabled={activeDraft.rows.length === 1}
-                  onClick={() => handleRemoveRow(row.rowKey)}
-                  type="button"
-                >
-                  Remove
-                </button>
+                  <span
+                    className="field-helper"
+                    id={`split-stakeholder-${row.rowKey}-helper`}
+                  >
+                    Stakeholder receiving this share.
+                  </span>
+                </div>
+                <div className="form-field">
+                  <span className="field-label-row">
+                    <label htmlFor={`split-percentage-${row.rowKey}`}>
+                      Stake Percentage
+                    </label>
+                    <span aria-hidden="true" className="field-required">
+                      Required
+                    </span>
+                  </span>
+                  <span className="field-control field-control-adorned">
+                    <input
+                      id={`split-percentage-${row.rowKey}`}
+                      max={100}
+                      min={0}
+                      onChange={(event) =>
+                        handleRowChange(
+                          row.rowKey,
+                          'stakePercentage',
+                          event.target.value,
+                        )
+                      }
+                      step={0.01}
+                      type="number"
+                      value={row.stakePercentage}
+                    />
+                    <span aria-hidden="true" className="field-adornment">
+                      %
+                    </span>
+                  </span>
+                </div>
+                {activeDraft.rows.length > 1 ? (
+                  <button
+                    aria-label={`Remove row ${index + 1}`}
+                    className="secondary-action split-remove-action"
+                    onClick={() => handleRemoveRow(row.rowKey)}
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                ) : null}
               </div>
             ))}
           </div>

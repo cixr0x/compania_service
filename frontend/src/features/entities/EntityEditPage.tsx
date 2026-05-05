@@ -159,7 +159,9 @@ export function EntityEditPage() {
         <div>
           <p className="eyebrow">Workspace</p>
           <h2 id={`${config.path}-form-heading`}>
-            {isCreate ? `Create ${config.title}` : `Edit ${config.title}`}
+            {isCreate
+              ? `Create ${config.singularTitle}`
+              : `Edit ${config.title}`}
           </h2>
         </div>
         <Link className="secondary-action" to={`/${config.path}`}>

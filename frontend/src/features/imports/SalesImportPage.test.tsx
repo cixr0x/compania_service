@@ -125,6 +125,41 @@ describe('SalesImportPage', () => {
     expect(screen.getByText('Starter Kit')).toBeVisible()
   })
 
+  it('presents upload, validation, and commit as sequential steps with empty-state hints', () => {
+    renderWithQueryClient(
+      <MemoryRouter>
+        <SalesImportPage />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('1')).toBeVisible()
+    expect(screen.getByText('Upload')).toBeVisible()
+    expect(screen.getByText('2')).toBeVisible()
+    expect(screen.getByText('Validate/Revalidate')).toBeVisible()
+    expect(screen.getByText('3')).toBeVisible()
+    expect(screen.getByText('Commit')).toBeVisible()
+    expect(screen.getByText(/choose a csv or xlsx file/i)).toBeVisible()
+    expect(screen.getByText(/upload a file to stage rows/i)).toBeVisible()
+    expect(screen.getByText(/validate the uploaded batch/i)).toBeVisible()
+  })
+
+  it('labels the file picker area with the selected file name', async () => {
+    const user = userEvent.setup()
+    const file = new File(['external_id,amount'], 'sales.csv', {
+      type: 'text/csv',
+    })
+
+    renderWithQueryClient(
+      <MemoryRouter>
+        <SalesImportPage />
+      </MemoryRouter>,
+    )
+
+    await user.upload(screen.getByLabelText('Sales file'), file)
+
+    expect(screen.getByText('sales.csv')).toBeVisible()
+  })
+
   it('hydrates existing batch source and import date from initial batch detail', async () => {
     mockImportQueries(stagedRows, [])
 

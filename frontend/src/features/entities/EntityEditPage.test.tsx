@@ -53,9 +53,7 @@ describe('EntityEditPage', () => {
 
     renderEntityEditPage('/products/new', '/:entityName/:id')
 
-    expect(
-      screen.getByRole('heading', { name: 'Create Products' }),
-    ).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Create Product' })).toBeVisible()
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument()
 
     await user.type(screen.getByLabelText('Name'), 'Maple Shelf')
@@ -70,6 +68,25 @@ describe('EntityEditPage', () => {
     expect(patchJson).not.toHaveBeenCalled()
     expect(deleteJson).not.toHaveBeenCalled()
     expect(getJson).not.toHaveBeenCalled()
+  })
+
+  it('renders create product form metadata in grouped sections', () => {
+    renderEntityEditPage('/products/new', '/:entityName/:id')
+
+    expect(screen.getByRole('heading', { name: 'Create Product' })).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Product details' })).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Channel mapping' })).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Commercial attributes' })).toBeVisible()
+
+    const nameInput = screen.getByLabelText(/name/i)
+    const imageInput = screen.getByLabelText(/image url/i)
+    const ownershipInput = screen.getByLabelText(/owner-retained profit/i)
+
+    expect(nameInput).toBeRequired()
+    expect(nameInput).toHaveAccessibleDescription(/public product name/i)
+    expect(imageInput).toHaveAccessibleDescription(/catalog previews/i)
+    expect(ownershipInput).toHaveAccessibleDescription(/percentage of profit/i)
+    expect(screen.getByText('%')).toBeVisible()
   })
 
   it('patches an existing product with only configured fields', async () => {
@@ -140,6 +157,29 @@ describe('EntityEditPage', () => {
     })
   })
 
+  it('renders sales source as the import-source select with numeric guidance', () => {
+    renderEntityEditPage('/sales/new', '/:entityName/:id')
+
+    expect(screen.getByRole('heading', { name: 'Create Sale' })).toBeVisible()
+
+    const sourceSelect = screen.getByLabelText('Source')
+    expect(sourceSelect.tagName).toBe('SELECT')
+    expect(screen.getByRole('option', { name: 'Ecommerce' })).toHaveValue(
+      'ecommerce',
+    )
+    expect(screen.getByRole('option', { name: 'Store' })).toHaveValue('store')
+    expect(screen.getByRole('option', { name: 'Event' })).toHaveValue('event')
+    expect(screen.getByRole('option', { name: 'Surface' })).toHaveValue(
+      'surface',
+    )
+    expect(screen.getByLabelText('Quantity')).toHaveAttribute('step', '1')
+    expect(screen.getByLabelText('Quantity')).toHaveAttribute('min', '1')
+    expect(screen.getByLabelText('Amount')).toHaveAccessibleDescription(
+      /currency/i,
+    )
+    expect(screen.getAllByText('$')).toHaveLength(2)
+  })
+
   it('saves a new project stakeholder split with PUT for the full project total', async () => {
     const user = userEvent.setup()
     vi.mocked(putJson).mockResolvedValue([
@@ -150,8 +190,17 @@ describe('EntityEditPage', () => {
     renderEntityEditPage('/project-stakeholders/new', '/:entityName/:id')
 
     expect(
-      screen.getByRole('heading', { name: 'Create Project Stakeholders' }),
+      screen.getByRole('heading', { name: 'Create Project Stakeholders/Split' }),
     ).toBeVisible()
+
+    expect(screen.getByLabelText('Project ID')).toHaveAccessibleDescription(
+      /all stakeholder rows/i,
+    )
+    expect(screen.getByLabelText('Stakeholder ID')).toHaveAccessibleDescription(
+      /stakeholder receiving/i,
+    )
+    expect(screen.queryByRole('button', { name: /remove row/i })).not.toBeInTheDocument()
+    expect(screen.getByText(/total must equal 100%/i)).toBeVisible()
 
     await user.type(screen.getByLabelText('Project ID'), '77')
     await user.type(screen.getAllByLabelText('Stakeholder ID')[0], '10')
@@ -160,7 +209,7 @@ describe('EntityEditPage', () => {
     await user.type(screen.getAllByLabelText('Stakeholder ID')[1], '11')
     await user.type(screen.getAllByLabelText('Stake Percentage')[1], '40')
 
-    expect(screen.getByText('Total: 100%')).toBeVisible()
+    expect(screen.getByText('Total allocation: 100%')).toBeVisible()
 
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -214,7 +263,7 @@ describe('EntityEditPage', () => {
     expect(await screen.findByDisplayValue('77')).toBeVisible()
     expect(screen.getByDisplayValue('10')).toBeVisible()
     expect(screen.getByDisplayValue('11')).toBeVisible()
-    expect(screen.getByText('Total: 100%')).toBeVisible()
+    expect(screen.getByText('Total allocation: 100%')).toBeVisible()
     expect(getJson).toHaveBeenCalledWith('/project-stakeholders/projects/77')
 
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))

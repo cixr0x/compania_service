@@ -302,6 +302,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     rows.length > 0 &&
     areRowsComplete
   const isUploadDisabled = hasActiveBatch || uploadMutation.isPending
+  const fileHint = file?.name ?? 'Choose a CSV or XLSX file.'
 
   return (
     <section className="page-panel import-workflow" aria-labelledby="imports-heading">
@@ -316,44 +317,55 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
       </div>
 
       <form className="import-controls" onSubmit={handleUpload}>
-        <label className="form-field">
-          Source
-          <select
-            disabled={hasActiveBatch}
-            value={selectedSource}
-            onChange={(event) => setSource(event.target.value as ImportSource)}
-          >
-            {importSources.map((sourceOption) => (
-              <option key={sourceOption} value={sourceOption}>
-                {sourceLabels[sourceOption]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="import-step import-step-upload">
+          <div className="import-step-heading">
+            <span>1</span>
+            <strong>Upload file</strong>
+          </div>
 
-        <label className="form-field">
-          Import date
-          <input
-            type="date"
-            value={selectedImportDate}
-            onChange={(event) => {
-              setIsImportDateDirty(true)
-              setImportDate(event.target.value)
-            }}
-          />
-        </label>
+          <div className="import-upload-fields">
+            <label className="form-field">
+              Source
+              <select
+                disabled={hasActiveBatch}
+                value={selectedSource}
+                onChange={(event) => setSource(event.target.value as ImportSource)}
+              >
+                {importSources.map((sourceOption) => (
+                  <option key={sourceOption} value={sourceOption}>
+                    {sourceLabels[sourceOption]}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <label className="form-field import-file-field">
-          Sales file
-          <input
-            accept=".csv,.xlsx"
-            disabled={hasActiveBatch}
-            type="file"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-          />
-        </label>
+            <label className="form-field">
+              Import date
+              <input
+                type="date"
+                value={selectedImportDate}
+                onChange={(event) => {
+                  setIsImportDateDirty(true)
+                  setImportDate(event.target.value)
+                }}
+              />
+            </label>
 
-        <div className="import-actions">
+            <div className="form-field import-file-field">
+              <label htmlFor="sales-import-file">Sales file</label>
+              <span className="import-file-control">
+                <input
+                  accept=".csv,.xlsx"
+                  disabled={hasActiveBatch}
+                  id="sales-import-file"
+                  type="file"
+                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                />
+              </span>
+              <span className="field-helper">{fileHint}</span>
+            </div>
+          </div>
+
           <button
             className="primary-action"
             disabled={isUploadDisabled}
@@ -361,6 +373,17 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
           >
             {uploadMutation.isPending ? 'Uploading' : 'Upload'}
           </button>
+        </div>
+
+        <div className="import-actions">
+          <div className="import-step import-action-step">
+            <div className="import-step-heading">
+              <span>2</span>
+              <strong>Validate batch</strong>
+            </div>
+            <p className="muted-copy">
+              Upload a batch before validation.
+            </p>
           <button
             className="secondary-action"
             disabled={!hasActiveBatch || validateMutation.isPending}
@@ -369,6 +392,16 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
           >
             {validateMutation.isPending ? 'Validating' : 'Validate/Revalidate'}
           </button>
+          </div>
+
+          <div className="import-step import-action-step">
+            <div className="import-step-heading">
+              <span>3</span>
+              <strong>Commit sales</strong>
+            </div>
+            <p className="muted-copy">
+              Validate the uploaded batch and clear errors before commit.
+            </p>
           <button
             className="primary-action"
             disabled={!canCommit || commitMutation.isPending}
@@ -377,6 +410,8 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
           >
             {commitMutation.isPending ? 'Committing' : 'Commit'}
           </button>
+          </div>
+
           {hasActiveBatch ? (
             <button
               className="secondary-action"
@@ -421,7 +456,11 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
             ))}
           </div>
         ) : (
-          <p className="muted-copy">No import errors for this batch.</p>
+          <p className="muted-copy">
+            {hasActiveBatch
+              ? 'No import errors for this batch.'
+              : 'Upload and validate a batch to see import errors.'}
+          </p>
         )}
       </section>
 
@@ -482,7 +521,11 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
               ) : (
                 <tr>
                   <td className="table-state" colSpan={7}>
-                    {stageQuery.isLoading ? 'Loading staged rows' : 'No staged rows'}
+                    {stageQuery.isLoading
+                      ? 'Loading staged rows'
+                      : hasActiveBatch
+                        ? 'No staged rows'
+                        : 'Upload a file to stage rows before validation.'}
                   </td>
                 </tr>
               )}
