@@ -31,11 +31,14 @@ export class ImportParserService {
     const records = parseCsv(buffer, {
       bom: true,
       columns: true,
+      info: true,
       skip_empty_lines: true,
       trim: false,
-    }) as Record<string, unknown>[];
+    }) as { record: Record<string, unknown>; info: { lines: number } }[];
 
-    return records.map((record, index) => this.toParsedRow(index + 2, record));
+    return records.map(({ record, info }) =>
+      this.toParsedRow(info.lines, record),
+    );
   }
 
   private async parseXlsx(buffer: Buffer): Promise<ParsedImportRow[]> {

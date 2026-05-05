@@ -21,6 +21,7 @@ const batchDetailInclude = {
 };
 
 const mutableTerminalStatuses: ImportStatus[] = ['committed', 'cancelled'];
+type TransactionClient = Prisma.TransactionClient;
 type StageForParse = {
   rowNumber: number;
   externalProductId: string | null;
@@ -96,21 +97,29 @@ export class ImportBatchesService {
   }
 
   async update(id: number, dto: UpdateImportBatchDto) {
-    const batch = await this.findOne(id);
-    this.ensureBatchCanMutate(batch.status);
     const data = this.normalizeUpdateData(dto);
-    const sourceChanged =
-      dto.source !== undefined && dto.source !== batch.source;
-
-    if (!sourceChanged) {
-      return this.prisma.importBatch.update({
-        where: { idImportBatch: id },
-        data,
-        include: batchDetailInclude,
-      });
-    }
 
     return this.prisma.$transaction(async (tx) => {
+      await this.lockImportBatch(tx, id);
+      const batch = await tx.importBatch.findUnique({
+        where: { idImportBatch: id },
+        include: batchDetailInclude,
+      });
+      if (!batch) {
+        throw new NotFoundException(`Import batch ${id} was not found`);
+      }
+      this.ensureBatchCanMutate(batch.status);
+
+      const sourceChanged =
+        dto.source !== undefined && dto.source !== batch.source;
+      if (!sourceChanged) {
+        return tx.importBatch.update({
+          where: { idImportBatch: id },
+          data,
+          include: batchDetailInclude,
+        });
+      }
+
       await tx.importError.deleteMany({
         where: { idImportBatch: id, field: 'source' },
       });
@@ -171,19 +180,21 @@ export class ImportBatchesService {
   }
 
   async validate(id: number) {
-    const batch = await this.prisma.importBatch.findUnique({
-      where: { idImportBatch: id },
-      include: { stageRows: { orderBy: { rowNumber: 'asc' } } },
-    });
-    if (!batch) throw new NotFoundException(`Import batch ${id} was not found`);
-    this.ensureBatchCanMutate(batch.status);
-
-    const validation = await this.validator.validateRows(
-      batch.source as CreateImportBatchDto['source'],
-      batch.stageRows.map((row) => this.toParsedRow(row)),
-    );
-
     return this.prisma.$transaction(async (tx) => {
+      await this.lockImportBatch(tx, id);
+      const batch = await tx.importBatch.findUnique({
+        where: { idImportBatch: id },
+        include: { stageRows: { orderBy: { rowNumber: 'asc' } } },
+      });
+      if (!batch) {
+        throw new NotFoundException(`Import batch ${id} was not found`);
+      }
+      this.ensureBatchCanMutate(batch.status);
+
+      const validation = await this.validator.validateRows(
+        batch.source as CreateImportBatchDto['source'],
+        batch.stageRows.map((row) => this.toParsedRow(row)),
+      );
       const stageByRowNumber = new Map(
         batch.stageRows.map((row) => [row.rowNumber, row]),
       );
@@ -227,13 +238,18 @@ export class ImportBatchesService {
 
   async commit(id: number) {
     return this.prisma.$transaction(async (tx) => {
+      await this.lockImportBatch(tx, id);
       const batch = await tx.importBatch.findUnique({
         where: { idImportBatch: id },
       });
       if (!batch) {
         throw new NotFoundException(`Import batch ${id} was not found`);
       }
-      this.ensureBatchCanMutate(batch.status);
+      if (batch.status !== 'validated') {
+        throw new BadRequestException(
+          'Import batch must be validated before commit',
+        );
+      }
 
       if (!batch.importDate) {
         throw new BadRequestException('Import date is required before commit');
@@ -318,6 +334,15 @@ export class ImportBatchesService {
         `Import batch cannot be changed when status is ${status}`,
       );
     }
+  }
+
+  private async lockImportBatch(tx: TransactionClient, id: number) {
+    await tx.$queryRaw`
+      SELECT id_import_batch
+      FROM import_batch
+      WHERE id_import_batch = ${id}
+      FOR UPDATE
+    `;
   }
 
   private toStageCreateData(

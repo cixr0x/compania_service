@@ -71,6 +71,23 @@ describe('ImportParserService', () => {
     ]);
   });
 
+  it('preserves physical CSV row numbers when blank lines are present', async () => {
+    const service = new ImportParserService();
+    const file = {
+      originalname: 'sales.csv',
+      buffer: Buffer.from('ID,Description,Qty,Total\n\nS-1,Shirt,2,25.50\n'),
+    } as Express.Multer.File;
+
+    const rows = await service.parse(file);
+
+    expect(rows).toMatchObject([
+      {
+        rowNumber: 3,
+        externalProductId: 'S-1',
+      },
+    ]);
+  });
+
   it('rejects unsupported file extensions', async () => {
     const service = new ImportParserService();
     const file = {
