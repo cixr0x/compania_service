@@ -16,6 +16,21 @@ describe('Sale DTO validation', () => {
     },
   );
 
+  it('rejects explicit null for create fee', async () => {
+    const dto = plainToInstance(CreateSaleDto, {
+      date: '2026-05-05',
+      idProduct: 7,
+      quantity: 2,
+      amount: 120,
+      source: 'ecommerce',
+      fee: null,
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.map((error) => error.property)).toContain('fee');
+  });
+
   it('rejects rollover calendar dates', async () => {
     const dto = plainToInstance(CreateSaleDto, {
       date: '2026-02-31',

@@ -3,10 +3,10 @@ import {
   IsInt,
   IsNotEmpty,
   IsNumber,
-  IsOptional,
   IsString,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { IsSaleDateString } from './sale-date-string.validator';
 
@@ -35,7 +35,7 @@ export class CreateSaleDto {
   @MaxLength(50)
   source!: string;
 
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @Type(() => Number)
   @IsNumber()
   @Min(0)
