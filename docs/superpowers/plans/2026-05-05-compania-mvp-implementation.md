@@ -116,7 +116,9 @@ Run:
 
 ```powershell
 Set-Location C:\PROJECTS\compania_service\backend
-npm.cmd install @nestjs/config @nestjs/mapped-types @prisma/client class-validator class-transformer multer xlsx csv-parse decimal.js
+npm.cmd install @nestjs/config @nestjs/mapped-types @prisma/client class-validator class-transformer multer exceljs csv-parse decimal.js
+npm.cmd pkg set overrides.uuid=14.0.0
+npm.cmd install
 npm.cmd install -D prisma @types/multer
 ```
 
@@ -178,7 +180,7 @@ Project design is documented in [docs/superpowers/specs/2026-05-05-compania-ente
 3. Install backend dependencies with `npm.cmd install` inside `backend/`.
 4. Install frontend dependencies with `npm.cmd install` inside `frontend/`.
 5. Run backend tests with `npm.cmd test`.
-6. Run frontend tests with `npm.cmd test`.
+6. Run frontend verification with `npm.cmd run build`.
 
 Use `npm.cmd` from PowerShell on Windows.
 ```
@@ -2224,14 +2226,14 @@ Create `backend/src/import-batches/import-parser.service.ts`:
 ```typescript
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { parse } from 'csv-parse/sync';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { ParsedImportRow } from './import-validator.service';
 
 type InputRow = Record<string, unknown>;
 
 @Injectable()
 export class ImportParserService {
-  parseFile(file: Express.Multer.File): ParsedImportRow[] {
+  async parseFile(file: Express.Multer.File): Promise<ParsedImportRow[]> {
     const extension = file.originalname.toLowerCase().split('.').pop();
     if (extension === 'csv') return this.parseCsv(file.buffer);
     if (extension === 'xlsx' || extension === 'xls') return this.parseWorkbook(file.buffer);
@@ -2243,10 +2245,26 @@ export class ImportParserService {
     return this.normalizeRows(rows);
   }
 
-  private parseWorkbook(buffer: Buffer): ParsedImportRow[] {
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
-    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json<InputRow>(firstSheet, { defval: null });
+  private async parseWorkbook(buffer: Buffer): Promise<ParsedImportRow[]> {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) return [];
+
+    const headers = worksheet.getRow(1).values as unknown[];
+    const rows: InputRow[] = [];
+    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      if (rowNumber === 1) return;
+
+      const inputRow: InputRow = {};
+      headers.slice(1).forEach((header, index) => {
+        if (header !== undefined && header !== null && String(header).trim() !== '') {
+          inputRow[String(header).trim()] = row.getCell(index + 1).value ?? null;
+        }
+      });
+      rows.push(inputRow);
+    });
+
     return this.normalizeRows(rows);
   }
 
@@ -2416,7 +2434,7 @@ export class ImportBatchesService {
 
   async create(dto: CreateImportBatchDto, file: Express.Multer.File) {
     if (!file) throw new BadRequestException('Import file is required');
-    const parsedRows = this.parser.parseFile(file);
+    const parsedRows = await this.parser.parseFile(file);
     const validation = await this.validator.validateRows(dto.source, parsedRows);
 
     return this.prisma.$transaction(async (tx) => {

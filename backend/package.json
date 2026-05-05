@@ -30,10 +30,10 @@
     "class-validator": "^0.15.1",
     "csv-parse": "^6.2.1",
     "decimal.js": "^10.6.0",
+    "exceljs": "^4.4.0",
     "multer": "^2.1.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1",
-    "xlsx": "^0.18.5"
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -78,5 +78,8 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+  },
+  "overrides": {
+    "uuid": "14.0.0"
   }
 }
