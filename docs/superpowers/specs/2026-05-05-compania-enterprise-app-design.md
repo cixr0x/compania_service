@@ -20,7 +20,7 @@ NestJS is selected because the application is expected to grow. Its module syste
 Included:
 
 - CRUD REST APIs for products, pricing models, projects, stakeholders, project stakeholder splits, and sales.
-- Table view for each entity.
+- Table view for the user-facing entities. Project stakeholder splits are managed from the project form instead of a standalone navigation item.
 - Create button on each table view.
 - Double-click row navigation to an update form for that entity.
 - CSV/XLSX sales import into staging tables.
@@ -102,7 +102,7 @@ Rules:
 - The pair `id_project + id_stakeholder` must be unique.
 - Each `stake_percentage` must be greater than `0` and less than or equal to `100`.
 - The sum of all stakeholder percentages for one project must equal exactly `100`.
-- Row-by-row project stakeholder writes are accepted only when the resulting project split still totals exactly `100`; clients should use the batch replacement endpoint for multi-row split edits. The MVP frontend project-stakeholder create/edit form is a compact full-split editor that saves through that replacement endpoint.
+- Row-by-row project stakeholder writes are accepted only when the resulting project split still totals exactly `100`; clients should use the batch replacement endpoint for multi-row split edits. The MVP frontend manages project stakeholder splits as detail lines inside the project create/edit form and saves through that replacement endpoint.
 
 ### sales
 
@@ -192,6 +192,7 @@ CRUD resources:
 - `PATCH /api/products/:id`
 - `DELETE /api/products/:id`
 - Equivalent CRUD endpoints for `models`, `projects`, `stakeholders`, `project-stakeholders`, and `sales`.
+- `GET /api/stakeholders/:id` includes the stakeholder's project participation with project and product details for the stakeholder edit form.
 - `GET /api/project-stakeholders/projects/:id`: list the complete stakeholder split for one project.
 - `PUT /api/project-stakeholders/projects/:id`: atomically replace a project's full stakeholder split with an array of `{ idStakeholder, stakePercentage }` rows totaling exactly `100`.
 
@@ -217,7 +218,6 @@ Main navigation:
 - Models
 - Projects
 - Stakeholders
-- Project Stakeholders
 - Sales
 - Sales Imports
 
@@ -231,7 +231,9 @@ Entity pages:
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
 - Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
 - Project create/edit forms include an active flag plus unit cost, production cost, and administrative cost fields.
-- Project stakeholder split forms load projects and stakeholders, show readable option labels, and submit the selected project and stakeholder IDs to the API.
+- Project create/edit forms include a Stakeholder Split detail section. The section loads stakeholders by name, allows adding/removing stakeholder percentage lines, requires complete rows totaling exactly `100` when lines are present, and saves the project header before saving the split lines.
+- Project stakeholder splits are not exposed as a standalone primary navigation item in the MVP UI.
+- Stakeholder edit forms show the projects where the stakeholder participates, including the project label and stake percentage.
 - Sale create/edit forms load products and projects, show readable option labels, and submit the selected product and project IDs to the API. The backend rejects a manual sale if the selected project does not belong to the selected product.
 - Foreign key fields in create/edit forms should be selectors backed by the related entity list, not open numeric inputs.
 - Money fields in tables, forms, and import review screens should display with comma grouping and two decimals, for example `1,000,000.00`. Editable money fields may accept comma separators and submit numeric values to the API.

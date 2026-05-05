@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import type {
   EntityConfig,
   EntityField,
@@ -11,6 +11,7 @@ type EntityFormProps = {
   values: EntityRow
   onChange: (name: string, value: boolean | string) => void
   onSubmit: () => void
+  children?: ReactNode
   isCreate?: boolean
   isSaving?: boolean
   errorMessage?: string | null
@@ -108,6 +109,7 @@ export function EntityForm({
   values,
   onChange,
   onSubmit,
+  children,
   isCreate = false,
   isSaving = false,
   errorMessage = null,
@@ -279,6 +281,8 @@ export function EntityForm({
           </div>
         ),
       )}
+
+      {children}
 
       <div className="form-actions">
         <button className="primary-action" disabled={isSaving} type="submit">

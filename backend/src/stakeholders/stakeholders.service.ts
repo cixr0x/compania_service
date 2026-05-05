@@ -4,6 +4,19 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateStakeholderDto } from './dto/create-stakeholder.dto';
 import { UpdateStakeholderDto } from './dto/update-stakeholder.dto';
 
+const stakeholderDetailInclude = {
+  projects: {
+    include: {
+      project: {
+        include: {
+          product: true,
+        },
+      },
+    },
+    orderBy: { idProjectStakeholder: 'desc' as const },
+  },
+};
+
 @Injectable()
 export class StakeholdersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -24,7 +37,10 @@ export class StakeholdersService {
   }
 
   async findOne(id: number) {
-    const record = await this.prisma.stakeholder.findUnique({ where: { idStakeholder: id } });
+    const record = await this.prisma.stakeholder.findUnique({
+      where: { idStakeholder: id },
+      include: stakeholderDetailInclude,
+    });
     if (!record) throw new NotFoundException(`Stakeholder ${id} was not found`);
     return record;
   }

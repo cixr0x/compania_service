@@ -3,7 +3,6 @@ import {
   BriefcaseBusiness,
   CircleDollarSign,
   DatabaseZap,
-  Handshake,
   Layers3,
   UsersRound,
 } from 'lucide-react'
@@ -21,11 +20,6 @@ const navigationItems: NavigationItem[] = [
   { label: 'Models', path: '/models', icon: Layers3 },
   { label: 'Projects', path: '/projects', icon: BriefcaseBusiness },
   { label: 'Stakeholders', path: '/stakeholders', icon: UsersRound },
-  {
-    label: 'Project Stakeholders',
-    path: '/project-stakeholders',
-    icon: Handshake,
-  },
   { label: 'Sales', path: '/sales', icon: CircleDollarSign },
   { label: 'Sales Imports', path: '/imports', icon: DatabaseZap },
 ]

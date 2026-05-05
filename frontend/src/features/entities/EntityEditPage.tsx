@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { deleteJson, getJson, patchJson, postJson } from '../../api/client'
+import { deleteJson, getJson, patchJson, postJson, putJson } from '../../api/client'
 import { EntityForm } from '../../components/EntityForm'
 import { parseMoneyNumber } from '../../utils/money'
 import {
@@ -10,7 +10,18 @@ import {
   type EntityField,
   type EntityRow,
 } from './entityConfigs'
-import { ProjectStakeholderSplitEditor } from './ProjectStakeholderSplitEditor'
+import {
+  ProjectStakeholderLines,
+  type ProjectStakeholderSplitPayloadRow,
+  type ProjectStakeholderSplitState,
+} from './ProjectStakeholderLines'
+
+const EMPTY_PROJECT_SPLIT_STATE: ProjectStakeholderSplitState = {
+  errorMessage: null,
+  hasRows: false,
+  isValid: true,
+  rows: [],
+}
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
@@ -160,6 +171,103 @@ function resolveDynamicOptions(
   }
 }
 
+function getNumericId(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+
+  if (typeof value !== 'string' || value.trim() === '') {
+    return null
+  }
+
+  const numericValue = Number(value)
+  return Number.isFinite(numericValue) ? numericValue : null
+}
+
+function getProjectId(
+  record: EntityRow | null | undefined,
+  fallbackId: string | undefined,
+): number | null {
+  return getNumericId(record?.idProject) ?? getNumericId(fallbackId)
+}
+
+function formatPercentage(value: unknown): string {
+  const numericValue = Number(value)
+
+  if (!Number.isFinite(numericValue)) {
+    return ''
+  }
+
+  return `${Number.isInteger(numericValue) ? numericValue : numericValue.toFixed(2)}%`
+}
+
+function getNestedEntityName(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null
+  }
+
+  const name = (value as { name?: unknown }).name
+  return typeof name === 'string' && name.trim() !== '' ? name.trim() : null
+}
+
+function formatProjectParticipation(row: EntityRow): string {
+  const project =
+    row.project && typeof row.project === 'object' && !Array.isArray(row.project)
+      ? (row.project as EntityRow)
+      : null
+  const projectId = getNumericId(project?.idProject) ?? getNumericId(row.idProject)
+  const productName = getNestedEntityName(project?.product)
+
+  return productName && projectId !== null
+    ? `Project #${projectId} - ${productName}`
+    : `Project #${projectId ?? ''}`.trim()
+}
+
+function StakeholderProjectsSection({ stakeholder }: { stakeholder: EntityRow }) {
+  const projects = Array.isArray(stakeholder.projects)
+    ? (stakeholder.projects as EntityRow[])
+    : []
+
+  return (
+    <section
+      aria-labelledby="stakeholder-project-participation-heading"
+      className="detail-section"
+    >
+      <div className="section-heading-row">
+        <h3 id="stakeholder-project-participation-heading">
+          Project Participation
+        </h3>
+        <span>{projects.length} projects</span>
+      </div>
+
+      {projects.length === 0 ? (
+        <p className="muted-copy">
+          This stakeholder is not assigned to any projects.
+        </p>
+      ) : (
+        <div className="table-scroll">
+          <table className="data-table detail-table">
+            <thead>
+              <tr>
+                <th scope="col">Project</th>
+                <th scope="col">Stake %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projects.map((projectRow, index) => (
+                <tr key={`${projectRow.idProject ?? index}`}>
+                  <td>{formatProjectParticipation(projectRow)}</td>
+                  <td>{formatPercentage(projectRow.stakePercentage)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  )
+}
+
 export function EntityEditPage() {
   const { entityName, id } = useParams()
   const navigate = useNavigate()
@@ -168,6 +276,8 @@ export function EntityEditPage() {
   const [draftValues, setDraftValues] = useState<EntityRow>({})
   const [isDirty, setIsDirty] = useState(false)
   const [mutationError, setMutationError] = useState<string | null>(null)
+  const [projectSplitState, setProjectSplitState] =
+    useState<ProjectStakeholderSplitState>(EMPTY_PROJECT_SPLIT_STATE)
   const optionSources = useMemo(() => getOptionSources(config), [config])
   const optionSourceQueries = useQueries({
     queries: optionSources.map((path) => ({
@@ -196,10 +306,39 @@ export function EntityEditPage() {
   })
 
   const saveMutation = useMutation({
-    mutationFn: (body: EntityRow) =>
-      isCreate
-        ? postJson<EntityRow, EntityRow>(`/${config!.path}`, body)
-        : patchJson<EntityRow, EntityRow>(`/${config!.path}/${id}`, body),
+    mutationFn: async (body: EntityRow) => {
+      if (config!.path !== 'projects') {
+        return isCreate
+          ? postJson<EntityRow, EntityRow>(`/${config!.path}`, body)
+          : patchJson<EntityRow, EntityRow>(`/${config!.path}/${id}`, body)
+      }
+
+      if (projectSplitState.hasRows && !projectSplitState.isValid) {
+        throw new Error(
+          projectSplitState.errorMessage ??
+            'Project stakeholder split is not ready to save.',
+        )
+      }
+
+      const savedProject = isCreate
+        ? await postJson<EntityRow, EntityRow>('/projects', body)
+        : await patchJson<EntityRow, EntityRow>(`/projects/${id}`, body)
+
+      if (projectSplitState.hasRows) {
+        const projectId = getProjectId(savedProject, id)
+
+        if (projectId === null) {
+          throw new Error('Project ID is required to save stakeholder split.')
+        }
+
+        await putJson<EntityRow[], ProjectStakeholderSplitPayloadRow[]>(
+          `/project-stakeholders/projects/${projectId}`,
+          projectSplitState.rows,
+        )
+      }
+
+      return savedProject
+    },
     onError: (error) => setMutationError(getErrorMessage(error)),
     onSuccess: () => navigate(`/${config!.path}`),
   })
@@ -234,16 +373,6 @@ export function EntityEditPage() {
           The requested admin entity is not configured.
         </p>
       </section>
-    )
-  }
-
-  if (config.path === 'project-stakeholders') {
-    return (
-      <ProjectStakeholderSplitEditor
-        config={config}
-        id={id}
-        isCreate={isCreate}
-      />
     )
   }
 
@@ -290,8 +419,20 @@ export function EntityEditPage() {
           onChange={handleChange}
           onSubmit={handleSave}
           values={formValues}
-        />
+        >
+          {config.path === 'projects' ? (
+            <ProjectStakeholderLines
+              isCreate={isCreate}
+              onDraftChange={setProjectSplitState}
+              projectId={isCreate ? null : id}
+            />
+          ) : null}
+        </EntityForm>
       )}
+
+      {config.path === 'stakeholders' && !isCreate && detailQuery.data ? (
+        <StakeholderProjectsSection stakeholder={detailQuery.data} />
+      ) : null}
 
       {!isCreate ? (
         <div className="danger-zone">
