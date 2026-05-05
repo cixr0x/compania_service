@@ -25,22 +25,29 @@ Use `npm.cmd` from PowerShell on Windows.
 Backend:
 
 ```powershell
-Set-Location C:\PROJECTS\compania_service\backend
+Set-Location backend
 npm.cmd run start:dev
 ```
 
 Frontend:
 
 ```powershell
-Set-Location C:\PROJECTS\compania_service\frontend
+Set-Location frontend
 npm.cmd run dev -- --host 127.0.0.1
 ```
 
-Database migration:
+Local development database migration:
 
 ```powershell
-Set-Location C:\PROJECTS\compania_service\backend
+Set-Location backend
 npx.cmd prisma migrate dev --name init
 ```
 
-Run the migration command after `backend\.env` contains the real MySQL `DATABASE_URL`.
+Staging or production database migration:
+
+```powershell
+Set-Location backend
+npx.cmd prisma migrate deploy
+```
+
+Run migration commands after `backend\.env` contains the real MySQL `DATABASE_URL`.
