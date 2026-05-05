@@ -234,6 +234,7 @@ Entity pages:
 - Project stakeholder split forms load projects and stakeholders, show readable option labels, and submit the selected project and stakeholder IDs to the API.
 - Sale create/edit forms load products and projects, show readable option labels, and submit the selected product and project IDs to the API. The backend rejects a manual sale if the selected project does not belong to the selected product.
 - Foreign key fields in create/edit forms should be selectors backed by the related entity list, not open numeric inputs.
+- Money fields in tables, forms, and import review screens should display with comma grouping and two decimals, for example `1,000,000.00`. Editable money fields may accept comma separators and submit numeric values to the API.
 
 Sales import page:
 

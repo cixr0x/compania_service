@@ -29,6 +29,7 @@ export type EntityField = {
   }
   previewAltField?: string
   previewSourceField?: string
+  valueFormat?: 'money'
   valueType?: 'number' | 'string'
   min?: number
   max?: number
@@ -106,8 +107,12 @@ function imagePreview(
   return { name, label, previewSourceField, type: 'imagePreview', ...options }
 }
 
-function column(key: string, header: string): DataTableColumn<EntityRow> {
-  return { key, header }
+function column(
+  key: string,
+  header: string,
+  options: Omit<DataTableColumn<EntityRow>, 'header' | 'key'> = {},
+): DataTableColumn<EntityRow> {
+  return { key, header, ...options }
 }
 
 function formatProjectOption(row: EntityRow) {
@@ -236,9 +241,9 @@ export const entityConfigs = {
       column('idProduct', 'Product ID'),
       column('isActive', 'Active'),
       column('units', 'Units'),
-      column('unitCost', 'Unit Cost'),
-      column('productionCost', 'Production Cost'),
-      column('adminCost', 'Admin Cost'),
+      column('unitCost', 'Unit Cost', { valueFormat: 'money' }),
+      column('productionCost', 'Production Cost', { valueFormat: 'money' }),
+      column('adminCost', 'Admin Cost', { valueFormat: 'money' }),
     ],
     fields: [
       select('idProduct', 'Product', undefined, {
@@ -265,18 +270,21 @@ export const entityConfigs = {
         min: 0,
         prefix: '$',
         step: 0.01,
+        valueFormat: 'money',
       }),
       number('productionCost', 'Production Cost', {
         helperText: 'Currency production cost for the project.',
         min: 0,
         prefix: '$',
         step: 0.01,
+        valueFormat: 'money',
       }),
       number('adminCost', 'Admin Cost', {
         helperText: 'Currency cost for project administration.',
         min: 0,
         prefix: '$',
         step: 0.01,
+        valueFormat: 'money',
       }),
     ],
   },
@@ -345,9 +353,9 @@ export const entityConfigs = {
       column('idProduct', 'Product ID'),
       column('idProject', 'Project ID'),
       column('quantity', 'Quantity'),
-      column('amount', 'Amount'),
+      column('amount', 'Amount', { valueFormat: 'money' }),
       column('source', 'Source'),
-      column('fee', 'Fee'),
+      column('fee', 'Fee', { valueFormat: 'money' }),
     ],
     fields: [
       {
@@ -388,6 +396,7 @@ export const entityConfigs = {
         min: 0,
         prefix: '$',
         step: 0.01,
+        valueFormat: 'money',
       }),
       select(
         'source',
@@ -405,6 +414,7 @@ export const entityConfigs = {
         min: 0,
         prefix: '$',
         step: 0.01,
+        valueFormat: 'money',
       }),
     ],
   },

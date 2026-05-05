@@ -6,6 +6,7 @@ import { DataTable, type DataTableColumn } from './DataTable'
 
 type ProductRow = {
   id: number
+  amount?: string | number
   name: string
   tag: string
 }
@@ -78,5 +79,27 @@ describe('DataTable', () => {
 
     expect(onRowDoubleClick).toHaveBeenNthCalledWith(1, rows[0])
     expect(onRowDoubleClick).toHaveBeenNthCalledWith(2, rows[0])
+  })
+
+  it('formats money columns with commas and two decimal places', () => {
+    render(
+      <DataTable
+        columns={[
+          { key: 'name', header: 'Name' },
+          { key: 'amount', header: 'Amount', valueFormat: 'money' },
+        ]}
+        getRowId={(row) => row.id}
+        onRowDoubleClick={vi.fn()}
+        onSearchChange={vi.fn()}
+        rows={[
+          { id: 1, name: 'Large sale', tag: 'office', amount: 1000000 },
+          { id: 2, name: 'Decimal sale', tag: 'studio', amount: '1250.5' },
+        ]}
+        searchValue=""
+      />,
+    )
+
+    expect(screen.getByText('1,000,000.00')).toBeVisible()
+    expect(screen.getByText('1,250.50')).toBeVisible()
   })
 })

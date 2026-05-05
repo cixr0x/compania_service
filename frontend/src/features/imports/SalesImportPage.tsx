@@ -9,6 +9,7 @@ import type {
   ImportSource,
   ImportStageRow,
 } from '../../api/types'
+import { formatMoney } from '../../utils/money'
 
 type SalesImportPageProps = {
   initialBatchId?: number
@@ -70,7 +71,7 @@ function formatDecimal(value: ImportStageRow['amount']) {
     return 'Missing'
   }
 
-  return String(value)
+  return formatMoney(value)
 }
 
 function formatRowStatus(row: ImportStageRow) {

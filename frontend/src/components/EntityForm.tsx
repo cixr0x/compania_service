@@ -1,9 +1,10 @@
-import type { FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import type {
   EntityConfig,
   EntityField,
   EntityRow,
 } from '../features/entities/entityConfigs'
+import { formatMoney } from '../utils/money'
 
 type EntityFormProps = {
   config: EntityConfig
@@ -29,13 +30,21 @@ function normalizeDateValue(value: unknown): string {
   return dateMatch?.[1] ?? ''
 }
 
-function getInputValue(field: EntityField, value: unknown): string {
+function getInputValue(
+  field: EntityField,
+  value: unknown,
+  isFocused = false,
+): string {
   if (value === null || value === undefined) {
     return ''
   }
 
   if (field.type === 'date') {
     return normalizeDateValue(value)
+  }
+
+  if (field.valueFormat === 'money' && !isFocused) {
+    return formatMoney(value)
   }
 
   return String(value)
@@ -104,6 +113,7 @@ export function EntityForm({
   errorMessage = null,
 }: EntityFormProps) {
   const fieldGroups = groupFields(config.fields)
+  const [focusedFieldName, setFocusedFieldName] = useState<string | null>(null)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -112,7 +122,11 @@ export function EntityForm({
 
   function renderField(field: EntityField) {
     const value = values[field.name]
-    const inputValue = getInputValue(field, value)
+    const inputValue = getInputValue(
+      field,
+      value,
+      focusedFieldName === field.name,
+    )
     const helperId = field.helperText
       ? `${config.path}-${field.name}-helper`
       : undefined
@@ -128,6 +142,7 @@ export function EntityForm({
         : field.prefix || field.suffix
         ? 'field-control field-control-adorned'
         : 'field-control'
+    const isMoneyField = field.valueFormat === 'money'
 
     if (field.type === 'imagePreview') {
       const imageUrl = getPreviewValue(values, field.previewSourceField)
@@ -196,12 +211,29 @@ export function EntityForm({
             <input
               aria-describedby={helperId}
               id={fieldId}
+              inputMode={isMoneyField ? 'decimal' : undefined}
+              onBlur={() => {
+                if (isMoneyField) {
+                  setFocusedFieldName((currentFieldName) =>
+                    currentFieldName === field.name ? null : currentFieldName,
+                  )
+                }
+              }}
               onChange={(event) => onChange(field.name, event.target.value)}
+              onFocus={() => {
+                if (isMoneyField) {
+                  setFocusedFieldName(field.name)
+                }
+              }}
               max={field.max}
               min={field.min}
               required={isRequired}
-              step={field.type === 'number' ? (field.step ?? 'any') : undefined}
-              type={field.type}
+              step={
+                field.type === 'number' && !isMoneyField
+                  ? (field.step ?? 'any')
+                  : undefined
+              }
+              type={isMoneyField ? 'text' : field.type}
               value={inputValue}
             />
           )}

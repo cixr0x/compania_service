@@ -3,6 +3,7 @@ import { useMutation, useQueries, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { deleteJson, getJson, patchJson, postJson } from '../../api/client'
 import { EntityForm } from '../../components/EntityForm'
+import { parseMoneyNumber } from '../../utils/money'
 import {
   getEntityConfig,
   type EntityConfig,
@@ -39,6 +40,10 @@ function serializeFieldValue(
 ): boolean | string | number | undefined {
   if (field.type === 'checkbox') {
     return value === true || value === 'true'
+  }
+
+  if (field.valueFormat === 'money') {
+    return parseMoneyNumber(value) ?? undefined
   }
 
   if (field.type === 'number' || field.valueType === 'number') {

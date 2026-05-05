@@ -262,6 +262,8 @@ describe('EntityEditPage', () => {
     renderEntityEditPage('/sales/20', '/:entityName/:id')
 
     expect(await screen.findByLabelText('Date')).toHaveValue('2026-05-04')
+    expect(screen.getByLabelText('Amount')).toHaveValue('125.50')
+    expect(screen.getByLabelText('Fee')).toHaveValue('3.50')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
@@ -332,14 +334,16 @@ describe('EntityEditPage', () => {
     await user.selectOptions(productSelect, '101')
     await user.selectOptions(projectSelect, '501')
     await user.type(screen.getByLabelText('Quantity'), '2')
-    await user.type(screen.getByLabelText('Amount'), '120')
+    await user.type(screen.getByLabelText('Amount'), '1,000,000.00')
+    await user.type(screen.getByLabelText('Fee'), '1,250.50')
     await user.selectOptions(screen.getByLabelText('Source'), 'store')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/sales', {
-        amount: 120,
+        amount: 1000000,
         date: '2026-05-05',
+        fee: 1250.5,
         idProduct: 101,
         idProject: 501,
         quantity: 2,
@@ -373,21 +377,48 @@ describe('EntityEditPage', () => {
     await user.selectOptions(productSelect, '42')
     await user.click(screen.getByLabelText('Active'))
     await user.type(screen.getByLabelText('Units'), '10')
-    await user.type(screen.getByLabelText('Unit Cost'), '4.50')
-    await user.type(screen.getByLabelText('Production Cost'), '7.75')
-    await user.type(screen.getByLabelText('Admin Cost'), '2.25')
+    await user.type(screen.getByLabelText('Unit Cost'), '1,000,000.00')
+    await user.type(screen.getByLabelText('Production Cost'), '7,500.25')
+    await user.type(screen.getByLabelText('Admin Cost'), '2,250.50')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
-        adminCost: 2.25,
+        adminCost: 2250.5,
         idProduct: 42,
         isActive: true,
-        productionCost: 7.75,
-        unitCost: 4.5,
+        productionCost: 7500.25,
+        unitCost: 1000000,
         units: 10,
       })
     })
+  })
+
+  it('configures every money field and money table column for currency formatting', () => {
+    const moneyFields: Array<[EntityName, string]> = [
+      ['projects', 'unitCost'],
+      ['projects', 'productionCost'],
+      ['projects', 'adminCost'],
+      ['sales', 'amount'],
+      ['sales', 'fee'],
+    ]
+
+    for (const [entityName, fieldName] of moneyFields) {
+      const field = entityConfigs[entityName].fields.find(
+        (candidate) => candidate.name === fieldName,
+      )
+      const column = entityConfigs[entityName].columns.find(
+        (candidate) => candidate.key === fieldName,
+      )
+
+      expect(field, `${entityName}.${fieldName}`).toMatchObject({
+        prefix: '$',
+        valueFormat: 'money',
+      })
+      expect(column, `${entityName}.${fieldName}`).toMatchObject({
+        valueFormat: 'money',
+      })
+    }
   })
 
   it('renders sales source as the import-source select with numeric guidance', () => {

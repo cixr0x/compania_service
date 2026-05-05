@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
+import { formatMoney } from '../utils/money'
 
 export type DataTableColumn<Row extends Record<string, unknown>> = {
   key: keyof Row & string
   header: string
+  valueFormat?: 'money'
 }
 
 type SortDirection = 'asc' | 'desc'
@@ -18,9 +20,16 @@ type DataTableProps<Row extends Record<string, unknown>> = {
   emptyMessage?: string
 }
 
-function formatCellValue(value: unknown): string {
+function formatCellValue<Row extends Record<string, unknown>>(
+  value: unknown,
+  column?: DataTableColumn<Row>,
+): string {
   if (value === null || value === undefined || value === '') {
     return '-'
+  }
+
+  if (column?.valueFormat === 'money') {
+    return formatMoney(value)
   }
 
   return String(value)
@@ -59,8 +68,10 @@ export function DataTable<Row extends Record<string, unknown>>({
     const normalizedSearch = searchValue.trim().toLowerCase()
     const filteredRows = normalizedSearch
       ? rows.filter((row) =>
-          Object.values(row).some((value) =>
-            formatCellValue(value).toLowerCase().includes(normalizedSearch),
+          columns.some((column) =>
+            formatCellValue(row[column.key], column)
+              .toLowerCase()
+              .includes(normalizedSearch),
           ),
         )
       : rows
@@ -73,7 +84,7 @@ export function DataTable<Row extends Record<string, unknown>>({
       const result = compareValues(left[sort.key], right[sort.key])
       return sort.direction === 'asc' ? result : -result
     })
-  }, [rows, searchValue, sort])
+  }, [columns, rows, searchValue, sort])
 
   function updateSort(key: keyof Row & string) {
     setSort((currentSort) => {
@@ -155,7 +166,9 @@ export function DataTable<Row extends Record<string, unknown>>({
                   tabIndex={0}
                 >
                   {columns.map((column) => (
-                    <td key={column.key}>{formatCellValue(row[column.key])}</td>
+                    <td key={column.key}>
+                      {formatCellValue(row[column.key], column)}
+                    </td>
                   ))}
                 </tr>
               ))
