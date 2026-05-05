@@ -39,6 +39,7 @@ export type Project = {
   idProduct: number
   units: number
   unitCost: DecimalValue
+  productionCost: DecimalValue
   adminCost: DecimalValue
   product?: Product
   stakeholders?: ProjectStakeholder[]

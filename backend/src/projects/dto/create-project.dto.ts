@@ -20,5 +20,10 @@ export class CreateProjectDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
+  productionCost!: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
   adminCost!: number;
 }

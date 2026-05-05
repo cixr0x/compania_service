@@ -276,6 +276,7 @@ describe('EntityEditPage', () => {
     await user.selectOptions(productSelect, '42')
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '4.50')
+    await user.type(screen.getByLabelText('Production Cost'), '7.75')
     await user.type(screen.getByLabelText('Admin Cost'), '2.25')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -283,6 +284,7 @@ describe('EntityEditPage', () => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
         adminCost: 2.25,
         idProduct: 42,
+        productionCost: 7.75,
         unitCost: 4.5,
         units: 10,
       })

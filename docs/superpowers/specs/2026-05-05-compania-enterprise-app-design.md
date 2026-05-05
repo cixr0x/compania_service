@@ -41,7 +41,7 @@ A product is the item being purchased and sold. Products have multiple external 
 
 A model is a pricing model assigned to products.
 
-A project is a batch purchase of one product. It stores the purchased units and costs. Several stakeholders can participate in a project.
+A project is a batch purchase of one product. It stores the purchased units and costs, including unit, production, and administrative costs. Several stakeholders can participate in a project.
 
 A stakeholder is a person or organization participating in one or more projects.
 
@@ -79,6 +79,7 @@ A sale is a committed sales record for a product. Sales records are created manu
 - `id_product`: foreign key to `product`.
 - `units`: numeric quantity.
 - `unit_cost`: numeric cost per unit.
+- `production_cost`: numeric production cost for the project.
 - `admin_cost`: numeric administrative cost.
 
 ### stakeholder
@@ -225,6 +226,7 @@ Entity pages:
 - Product create/edit forms load pricing models and show model names in the model selector while submitting the selected model ID to the API.
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
 - Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
+- Project create/edit forms include unit cost, production cost, and administrative cost fields.
 
 Sales import page:
 

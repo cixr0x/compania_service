@@ -205,6 +205,7 @@ export const entityConfigs = {
       column('idProduct', 'Product ID'),
       column('units', 'Units'),
       column('unitCost', 'Unit Cost'),
+      column('productionCost', 'Production Cost'),
       column('adminCost', 'Admin Cost'),
     ],
     fields: [
@@ -225,6 +226,12 @@ export const entityConfigs = {
       }),
       number('unitCost', 'Unit Cost', {
         helperText: 'Currency cost per unit.',
+        min: 0,
+        prefix: '$',
+        step: 0.01,
+      }),
+      number('productionCost', 'Production Cost', {
+        helperText: 'Currency production cost for the project.',
         min: 0,
         prefix: '$',
         step: 0.01,

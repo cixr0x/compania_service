@@ -1,0 +1,2 @@
+ALTER TABLE `project`
+ADD COLUMN `production_cost` DECIMAL(12, 2) NOT NULL DEFAULT 0;
