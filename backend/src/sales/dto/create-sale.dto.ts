@@ -23,6 +23,11 @@ export class CreateSaleDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  idProject!: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   quantity!: number;
 
   @Transform(({ value }) => transformSaleNumber(value))

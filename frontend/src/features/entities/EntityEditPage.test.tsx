@@ -224,15 +224,33 @@ describe('EntityEditPage', () => {
   })
 
   it('normalizes existing sale ISO date values for display and update payloads', async () => {
-    vi.mocked(getJson).mockResolvedValue({
-      idSale: 20,
-      amount: 125.5,
-      date: '2026-05-04T14:30:00.000Z',
-      fee: 3.5,
-      idProduct: 101,
-      product: { id: 101, name: 'Walnut Desk' },
-      quantity: 2,
-      source: 'store',
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/projects') {
+        return [
+          {
+            idProject: 501,
+            idProduct: 101,
+            product: { id: 101, name: 'Walnut Desk' },
+          },
+        ]
+      }
+
+      if (path === '/sales/20') {
+        return {
+          idSale: 20,
+          amount: 125.5,
+          date: '2026-05-04T14:30:00.000Z',
+          fee: 3.5,
+          idProduct: 101,
+          idProject: 501,
+          product: { id: 101, name: 'Walnut Desk' },
+          project: { idProject: 501 },
+          quantity: 2,
+          source: 'store',
+        }
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
     })
     vi.mocked(patchJson).mockResolvedValue({ idSale: 20 })
 
@@ -247,10 +265,60 @@ describe('EntityEditPage', () => {
         date: '2026-05-04',
         fee: 3.5,
         idProduct: 101,
+        idProject: 501,
         quantity: 2,
         source: 'store',
       })
     })
+  })
+
+  it('requires a project selector when creating a sale and saves the selected project id', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        idProject: 501,
+        idProduct: 101,
+        product: { id: 101, name: 'Walnut Desk' },
+      },
+      {
+        idProject: 502,
+        idProduct: 102,
+        product: { id: 102, name: 'Maple Shelf' },
+      },
+    ])
+    vi.mocked(postJson).mockResolvedValue({ idSale: 30 })
+
+    renderEntityEditPage('/sales/new', '/:entityName/:id')
+
+    const projectSelect = await screen.findByLabelText('Project')
+    expect(projectSelect.tagName).toBe('SELECT')
+    expect(projectSelect).toBeRequired()
+    expect(
+      await screen.findByRole('option', { name: 'Project #501 - Walnut Desk' }),
+    ).toHaveValue('501')
+    expect(
+      screen.getByRole('option', { name: 'Project #502 - Maple Shelf' }),
+    ).toHaveValue('502')
+
+    await user.type(screen.getByLabelText('Date'), '2026-05-05')
+    await user.selectOptions(projectSelect, '501')
+    await user.type(screen.getByLabelText('Product ID'), '101')
+    await user.type(screen.getByLabelText('Quantity'), '2')
+    await user.type(screen.getByLabelText('Amount'), '120')
+    await user.selectOptions(screen.getByLabelText('Source'), 'store')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith('/sales', {
+        amount: 120,
+        date: '2026-05-05',
+        idProduct: 101,
+        idProject: 501,
+        quantity: 2,
+        source: 'store',
+      })
+    })
+    expect(getJson).toHaveBeenCalledWith('/projects')
   })
 
   it('renders project product choices by product name and saves the selected product id', async () => {

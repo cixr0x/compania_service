@@ -47,7 +47,7 @@ A stakeholder is a person or organization participating in one or more projects.
 
 A project stakeholder split relates a stakeholder to a project and defines that stakeholder's percentage participation in the project. The percentages for a project must total exactly `100`.
 
-A sale is a committed sales record for a product. Sales records are created manually through CRUD or by committing a staged import batch.
+A sale is a committed sales record for a product and the project that generated the sale. Sales records are created manually through CRUD or by committing a staged import batch.
 
 `product.ownership` is the product owner's retained profit percentage for that product. It is independent from project stakeholder participation and is stored now for future profit calculations.
 
@@ -109,6 +109,7 @@ Rules:
 - `id_sale`: primary key.
 - `date`: timestamp. For staged imports this is the user-selected import date.
 - `id_product`: foreign key to `product`.
+- `id_project`: required foreign key to `project`; the project must belong to the selected product.
 - `quantity`: integer.
 - `amount`: numeric sale amount.
 - `source`: text value selected by the user during import.
@@ -175,7 +176,7 @@ Validation errors for an import batch and optionally a specific staged row.
 11. User clicks commit.
 12. Backend revalidates the entire batch inside a transaction.
 13. If any error remains, no sales rows are inserted and errors remain visible.
-14. If the batch is valid, backend inserts all staged rows into `sales`, stamps `source`, stamps the selected import date into `sales.date`, sets `fee` to `0`, and marks the batch as `committed`.
+14. If the batch is valid, backend inserts all staged rows into `sales`, stamps `source`, stamps the selected import date into `sales.date`, links `sales.id_project` to the matched product's active project, sets `fee` to `0`, and marks the batch as `committed`.
 
 The final `sales` table should only contain committed, validated data.
 
@@ -231,6 +232,7 @@ Entity pages:
 - Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
 - Project create/edit forms include an active flag plus unit cost, production cost, and administrative cost fields.
 - Project stakeholder split forms load projects and stakeholders, show readable option labels, and submit the selected project and stakeholder IDs to the API.
+- Sale create/edit forms require a project selector. The backend rejects a manual sale if the selected project does not belong to the selected product.
 
 Sales import page:
 
@@ -257,6 +259,7 @@ Expected validation rules:
 - Import rows require external product ID, quantity, amount, and imported product description.
 - Import rows must match an existing product through the selected source's external ID field.
 - Import rows must match a product with an active project.
+- Sales require a project; manual sales validate that the selected project belongs to the selected product, and import commits use the matched product's active project.
 - Import commit revalidates staged rows inside the commit transaction before inserting `sales`; if revalidation fails, refreshed validation errors and `has_errors` status remain visible and no sales rows are inserted.
 
 Errors should be returned in a structured JSON shape containing field, message, and optional row number for import errors.

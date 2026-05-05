@@ -279,7 +279,7 @@ export class ImportBatchesService {
 
       if (
         validation.stageRows.length === 0 ||
-        validation.stageRows.some((row) => !isCompleteStageRow(row))
+        validation.stageRows.some((row) => !isCompleteValidatedStageRow(row))
       ) {
         throw new BadRequestException('Batch has incomplete staged rows');
       }
@@ -289,6 +289,7 @@ export class ImportBatchesService {
           date: batch.importDate as Date,
           source: batch.source,
           idProduct: row.idProduct as number,
+          idProject: row.idProject as number,
           quantity: row.quantity as number,
           amount: row.amount as Prisma.Decimal | number,
           fee: 0,
@@ -502,4 +503,8 @@ function isCompleteStageRow(row: {
     typeof row.importedProductDescription === 'string' &&
     row.importedProductDescription.trim() !== ''
   );
+}
+
+function isCompleteValidatedStageRow(row: ImportStageRowData): boolean {
+  return isCompleteStageRow(row) && row.idProject !== null;
 }

@@ -23,6 +23,7 @@ export type EntityField = {
   options?: { label: string; value: string }[]
   optionSource?: {
     labelField: string
+    labelFormatter?: (row: EntityRow) => string | null | undefined
     path: EntityName
     valueField: string
   }
@@ -107,6 +108,21 @@ function imagePreview(
 
 function column(key: string, header: string): DataTableColumn<EntityRow> {
   return { key, header }
+}
+
+function formatProjectOption(row: EntityRow) {
+  const product = row.product
+  const productName =
+    typeof product === 'object' &&
+    product !== null &&
+    'name' in product &&
+    typeof product.name === 'string'
+      ? product.name
+      : null
+
+  return productName
+    ? `Project #${String(row.idProject)} - ${productName}`
+    : `Project #${String(row.idProject)}`
 }
 
 export const entityConfigs = {
@@ -318,6 +334,7 @@ export const entityConfigs = {
       column('idSale', 'ID'),
       column('date', 'Date'),
       column('idProduct', 'Product ID'),
+      column('idProject', 'Project ID'),
       column('quantity', 'Quantity'),
       column('amount', 'Amount'),
       column('source', 'Source'),
@@ -335,6 +352,17 @@ export const entityConfigs = {
         helperText: 'Numeric product ID sold.',
         min: 1,
         step: 1,
+      }),
+      select('idProject', 'Project', undefined, {
+        helperText: 'Project linked to this sale. Required for all sales.',
+        optionSource: {
+          labelField: 'idProject',
+          labelFormatter: formatProjectOption,
+          path: 'projects',
+          valueField: 'idProject',
+        },
+        required: true,
+        valueType: 'number',
       }),
       number('quantity', 'Quantity', {
         helperText: 'Whole number of units sold.',

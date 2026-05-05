@@ -11,6 +11,9 @@ describe('SalesService', () => {
     product: {
       findUnique: jest.fn(),
     },
+    project: {
+      findUnique: jest.fn(),
+    },
   } as any;
 
   beforeEach(() => jest.resetAllMocks());
@@ -26,10 +29,14 @@ describe('SalesService', () => {
       fee: '0.00',
     });
     jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
+    jest
+      .spyOn(prisma.project, 'findUnique')
+      .mockResolvedValue({ idProject: 51, idProduct: 7 });
 
     const service = new SalesService(prisma as PrismaService);
     await service.create({
       date: '2026-05-05',
+      idProject: 51,
       idProduct: 7,
       quantity: 2,
       amount: 120,
@@ -39,6 +46,7 @@ describe('SalesService', () => {
     expect(prisma.sale.create).toHaveBeenCalledWith({
       data: {
         date: new Date('2026-05-05'),
+        idProject: 51,
         idProduct: 7,
         quantity: 2,
         amount: 120,
@@ -59,10 +67,14 @@ describe('SalesService', () => {
       fee: '1.50',
     });
     jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
+    jest
+      .spyOn(prisma.project, 'findUnique')
+      .mockResolvedValue({ idProject: 51, idProduct: 7 });
 
     const service = new SalesService(prisma as PrismaService);
     await service.create({
       date: '2026-05-05',
+      idProject: 51,
       idProduct: 7,
       quantity: 2,
       amount: 120,
@@ -80,6 +92,7 @@ describe('SalesService', () => {
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
+      idProject: 51,
       quantity: 2,
       amount: '120.00',
       source: 'ecommerce',
@@ -89,6 +102,7 @@ describe('SalesService', () => {
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
+      idProject: 51,
       quantity: 3,
       amount: '120.00',
       source: 'ecommerce',
@@ -109,6 +123,7 @@ describe('SalesService', () => {
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
+      idProject: 51,
       quantity: 2,
       amount: '120.00',
       source: 'ecommerce',
@@ -118,6 +133,7 @@ describe('SalesService', () => {
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
+      idProject: 51,
       quantity: 2,
       amount: '130.00',
       source: 'ecommerce',
@@ -133,6 +149,62 @@ describe('SalesService', () => {
     });
   });
 
+  it('creates a sale only after verifying the project belongs to the product', async () => {
+    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
+    jest
+      .spyOn(prisma.project, 'findUnique')
+      .mockResolvedValue({ idProject: 51, idProduct: 7 });
+    jest.spyOn(prisma.sale, 'create').mockResolvedValue({
+      idSale: 2,
+      date: new Date('2026-05-05T00:00:00.000Z'),
+      idProject: 51,
+      idProduct: 7,
+      quantity: 2,
+      amount: '120.00',
+      source: 'ecommerce',
+      fee: '0.00',
+    });
+
+    const service = new SalesService(prisma as PrismaService);
+    await service.create({
+      date: '2026-05-05',
+      idProject: 51,
+      idProduct: 7,
+      quantity: 2,
+      amount: 120,
+      source: 'ecommerce',
+    });
+
+    expect(prisma.project.findUnique).toHaveBeenCalledWith({
+      where: { idProject: 51 },
+      select: { idProject: true, idProduct: true },
+    });
+    expect(prisma.sale.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ idProject: 51, idProduct: 7 }),
+    });
+  });
+
+  it('throws a client error when create references a project for a different product', async () => {
+    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
+    jest
+      .spyOn(prisma.project, 'findUnique')
+      .mockResolvedValue({ idProject: 51, idProduct: 8 });
+
+    const service = new SalesService(prisma as PrismaService);
+
+    await expect(
+      service.create({
+        date: '2026-05-05',
+        idProject: 51,
+        idProduct: 7,
+        quantity: 2,
+        amount: 120,
+        source: 'ecommerce',
+      }),
+    ).rejects.toThrow('Project 51 does not belong to product 7');
+    expect(prisma.sale.create).not.toHaveBeenCalled();
+  });
+
   it('throws a client error when create references a missing product', async () => {
     jest.spyOn(prisma.product, 'findUnique').mockResolvedValue(null);
 
@@ -141,6 +213,7 @@ describe('SalesService', () => {
     await expect(
       service.create({
         date: '2026-05-05',
+        idProject: 51,
         idProduct: 999,
         quantity: 2,
         amount: 120,
@@ -148,6 +221,7 @@ describe('SalesService', () => {
       }),
     ).rejects.toThrow('Product 999 was not found');
     expect(prisma.sale.create).not.toHaveBeenCalled();
+    expect(prisma.project.findUnique).not.toHaveBeenCalled();
   });
 
   it('throws a client error when update references a missing product', async () => {
@@ -155,6 +229,7 @@ describe('SalesService', () => {
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
+      idProject: 51,
       quantity: 2,
       amount: '120.00',
       source: 'ecommerce',
@@ -166,6 +241,29 @@ describe('SalesService', () => {
 
     await expect(service.update(1, { idProduct: 999 })).rejects.toThrow(
       'Product 999 was not found',
+    );
+    expect(prisma.sale.update).not.toHaveBeenCalled();
+  });
+
+  it('validates the next project and product pair when updating either side', async () => {
+    jest.spyOn(prisma.sale, 'findUnique').mockResolvedValue({
+      idSale: 1,
+      date: new Date('2026-05-05T00:00:00.000Z'),
+      idProduct: 7,
+      idProject: 51,
+      quantity: 2,
+      amount: '120.00',
+      source: 'ecommerce',
+      fee: '1.50',
+    });
+    jest
+      .spyOn(prisma.project, 'findUnique')
+      .mockResolvedValue({ idProject: 52, idProduct: 8 });
+
+    const service = new SalesService(prisma as PrismaService);
+
+    await expect(service.update(1, { idProject: 52 })).rejects.toThrow(
+      'Project 52 does not belong to product 7',
     );
     expect(prisma.sale.update).not.toHaveBeenCalled();
   });

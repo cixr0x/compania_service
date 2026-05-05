@@ -26,6 +26,12 @@ export class UpdateSaleDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  idProject?: number;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   quantity?: number;
 
   @ValidateIf((_, value) => value !== undefined)

@@ -12,6 +12,7 @@ import { UpdateSaleDto } from './dto/update-sale.dto';
 
 const saleInclude = {
   product: true,
+  project: true,
 };
 
 @Injectable()
@@ -20,6 +21,7 @@ export class SalesService {
 
   async create(dto: CreateSaleDto) {
     await this.ensureProductExists(dto.idProduct);
+    await this.ensureProjectBelongsToProduct(dto.idProject, dto.idProduct);
     return this.prisma.sale.create({
       data: this.normalizeSaleCreateData(dto),
     });
@@ -46,9 +48,15 @@ export class SalesService {
   }
 
   async update(id: number, dto: UpdateSaleDto) {
-    await this.findOne(id);
+    const current = await this.findOne(id);
     if (dto.idProduct !== undefined) {
       await this.ensureProductExists(dto.idProduct);
+    }
+    if (dto.idProject !== undefined || dto.idProduct !== undefined) {
+      await this.ensureProjectBelongsToProduct(
+        dto.idProject ?? current.idProject,
+        dto.idProduct ?? current.idProduct,
+      );
     }
     return this.prisma.sale.update({
       where: { idSale: id },
@@ -73,7 +81,7 @@ export class SalesService {
   private normalizeSaleUpdateData(
     dto: UpdateSaleDto,
   ): Prisma.SaleUncheckedUpdateInput {
-    return this.normalizeSaleWriteData(dto) as Prisma.SaleUncheckedUpdateInput;
+    return this.normalizeSaleWriteData(dto);
   }
 
   private normalizeSaleWriteData(dto: CreateSaleDto | UpdateSaleDto) {
@@ -106,6 +114,26 @@ export class SalesService {
     });
     if (!product) {
       throw new BadRequestException(`Product ${idProduct} was not found`);
+    }
+  }
+
+  private async ensureProjectBelongsToProduct(
+    idProject: number,
+    idProduct: number,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { idProject },
+      select: { idProject: true, idProduct: true },
+    });
+
+    if (!project) {
+      throw new BadRequestException(`Project ${idProject} was not found`);
+    }
+
+    if (project.idProduct !== idProduct) {
+      throw new BadRequestException(
+        `Project ${idProject} does not belong to product ${idProduct}`,
+      );
     }
   }
 }

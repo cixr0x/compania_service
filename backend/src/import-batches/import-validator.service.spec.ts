@@ -38,7 +38,7 @@ describe('ImportValidatorService', () => {
         },
       },
     });
-    expect(result.stageRows).toMatchObject([{ idProduct: 7 }]);
+    expect(result.stageRows).toMatchObject([{ idProduct: 7, idProject: 70 }]);
     expect(result.errors).toEqual([]);
   });
 
@@ -52,7 +52,9 @@ describe('ImportValidatorService', () => {
       row({ rowNumber: 3, externalProductId: 'S-7' }),
     ]);
 
-    expect(result.stageRows).toMatchObject([{ rowNumber: 3, idProduct: 7 }]);
+    expect(result.stageRows).toMatchObject([
+      { rowNumber: 3, idProduct: 7, idProject: null },
+    ]);
     expect(result.errors).toEqual([
       {
         rowNumber: 3,
@@ -70,7 +72,9 @@ describe('ImportValidatorService', () => {
       row({ rowNumber: 3, externalProductId: 'S-999' }),
     ]);
 
-    expect(result.stageRows).toMatchObject([{ rowNumber: 3, idProduct: null }]);
+    expect(result.stageRows).toMatchObject([
+      { rowNumber: 3, idProduct: null, idProject: null },
+    ]);
     expect(result.errors).toEqual([
       {
         rowNumber: 3,

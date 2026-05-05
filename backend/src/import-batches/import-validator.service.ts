@@ -22,6 +22,7 @@ export type ImportRowError = {
 
 export type ImportStageRowData = ParsedImportRow & {
   idProduct: number | null;
+  idProject: number | null;
 };
 
 type ProductLookup = {
@@ -142,6 +143,7 @@ export class ImportValidatorService {
         amount: row.amount,
         rawRow: row.rawRow,
         idProduct: product?.id ?? null,
+        idProject: product?.projects[0]?.idProject ?? null,
       };
     });
 

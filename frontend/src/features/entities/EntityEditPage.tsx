@@ -110,17 +110,22 @@ function buildFieldOptions(field: EntityField, rows: EntityRow[] | undefined) {
   return rows.flatMap((row) => {
     const rawValue = row[optionSource.valueField]
     const rawLabel = row[optionSource.labelField]
+    const formattedLabel = optionSource.labelFormatter?.(row)
 
     if (rawValue === null || rawValue === undefined) {
       return []
     }
 
-    const label =
+    const fallbackLabel =
       rawLabel === null ||
       rawLabel === undefined ||
       String(rawLabel).trim() === ''
         ? String(rawValue)
         : String(rawLabel)
+    const label =
+      typeof formattedLabel === 'string' && formattedLabel.trim() !== ''
+        ? formattedLabel
+        : fallbackLabel
 
     return [{ label, value: String(rawValue) }]
   })

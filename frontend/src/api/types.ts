@@ -59,11 +59,13 @@ export type Sale = {
   idSale: number
   date: IsoDateTime
   idProduct: number
+  idProject: number
   quantity: number
   amount: DecimalValue
   source: string
   fee: DecimalValue
   product?: Product
+  project?: Project
 }
 
 export type ImportBatch = {

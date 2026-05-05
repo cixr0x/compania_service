@@ -7,6 +7,7 @@ import { UpdateSaleDto } from './update-sale.dto';
 describe('Sale DTO validation', () => {
   it.each([
     'date',
+    'idProject',
     'idProduct',
     'quantity',
     'source',
@@ -25,6 +26,7 @@ describe('Sale DTO validation', () => {
     async (field) => {
       const dto = plainToInstance(CreateSaleDto, {
         date: '2026-05-05',
+        idProject: 51,
         idProduct: 7,
         quantity: 2,
         amount: 120,
@@ -52,6 +54,7 @@ describe('Sale DTO validation', () => {
   it('rejects explicit null for create fee', async () => {
     const dto = plainToInstance(CreateSaleDto, {
       date: '2026-05-05',
+      idProject: 51,
       idProduct: 7,
       quantity: 2,
       amount: 120,
@@ -64,9 +67,24 @@ describe('Sale DTO validation', () => {
     expect(errors.map((error) => error.property)).toContain('fee');
   });
 
+  it('requires a project when creating a sale', async () => {
+    const dto = plainToInstance(CreateSaleDto, {
+      date: '2026-05-05',
+      idProduct: 7,
+      quantity: 2,
+      amount: 120,
+      source: 'ecommerce',
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.map((error) => error.property)).toContain('idProject');
+  });
+
   it('rejects rollover calendar dates', async () => {
     const dto = plainToInstance(CreateSaleDto, {
       date: '2026-02-31',
+      idProject: 51,
       idProduct: 7,
       quantity: 2,
       amount: 120,
@@ -81,6 +99,7 @@ describe('Sale DTO validation', () => {
   it('rejects source that becomes blank after trim', async () => {
     const dto = plainToInstance(CreateSaleDto, {
       date: '2026-05-05',
+      idProject: 51,
       idProduct: 7,
       quantity: 2,
       amount: 120,
