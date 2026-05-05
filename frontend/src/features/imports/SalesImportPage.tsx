@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { api, getJson, patchJson, postJson } from '../../api/client'
 import type {
   ImportBatch,
@@ -29,12 +30,34 @@ const sourceLabels: Record<ImportSource, string> = {
 
 function queryKeys(batchId: number) {
   return {
+    batch: ['import-batches', batchId] as const,
     errors: ['import-batches', batchId, 'errors'] as const,
     stage: ['import-batches', batchId, 'stage'] as const,
   }
 }
 
 function getOperationErrorMessage(error: unknown) {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof error.response === 'object' &&
+    error.response !== null &&
+    'data' in error.response
+  ) {
+    const data = error.response.data
+    if (typeof data === 'object' && data !== null && 'message' in data) {
+      const message = data.message
+      if (Array.isArray(message)) {
+        return message.join(', ')
+      }
+
+      if (typeof message === 'string') {
+        return message
+      }
+    }
+  }
+
   if (error instanceof Error) {
     return error.message
   }
@@ -62,20 +85,45 @@ function formatRowStatus(row: ImportStageRow) {
   return 'Valid'
 }
 
+function isCompleteStageRow(row: ImportStageRow) {
+  return (
+    row.idProduct !== null &&
+    row.quantity !== null &&
+    row.amount !== null &&
+    row.amount !== undefined &&
+    row.amount !== '' &&
+    row.product !== null &&
+    row.product !== undefined
+  )
+}
+
+function normalizeBatchDate(batch: ImportBatch | undefined) {
+  return batch?.importDate?.slice(0, 10) ?? ''
+}
+
 export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
+  const params = useParams()
+  const navigate = useNavigate()
+  const routeBatchId = params.id ? Number(params.id) : null
   const queryClient = useQueryClient()
   const [activeBatchId, setActiveBatchId] = useState<number | null>(
-    initialBatchId ?? null,
+    initialBatchId ?? (Number.isFinite(routeBatchId) ? routeBatchId : null),
   )
   const [source, setSource] = useState<ImportSource>('ecommerce')
   const [lockedSource, setLockedSource] = useState<ImportSource | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [importDate, setImportDate] = useState('')
+  const [isImportDateDirty, setIsImportDateDirty] = useState(false)
   const [operationError, setOperationError] = useState<string | null>(null)
 
   const activeKeys = activeBatchId ? queryKeys(activeBatchId) : null
   const hasActiveBatch = activeBatchId !== null
 
+  const batchQuery = useQuery({
+    enabled: hasActiveBatch,
+    queryKey: activeKeys?.batch ?? ['import-batches', 'inactive'],
+    queryFn: () => getJson<ImportBatch>(`/import-batches/${activeBatchId}`),
+  })
   const stageQuery = useQuery({
     enabled: hasActiveBatch,
     queryKey: activeKeys?.stage ?? ['import-batches', 'inactive', 'stage'],
@@ -91,10 +139,19 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
 
   const rows = stageQuery.data ?? []
   const errors = errorsQuery.data ?? []
-  const canCommit =
-    hasActiveBatch && importDate !== '' && errors.length === 0 && rows.length > 0
+  const selectedSource = hasActiveBatch
+    ? (batchQuery.data?.source ?? lockedSource ?? source)
+    : source
+  const selectedImportDate =
+    hasActiveBatch && !isImportDateDirty
+      ? normalizeBatchDate(batchQuery.data)
+      : importDate
   const operationErrors = useMemo(() => {
     const queryErrors = []
+
+    if (batchQuery.error) {
+      queryErrors.push(getOperationErrorMessage(batchQuery.error))
+    }
 
     if (stageQuery.error) {
       queryErrors.push(getOperationErrorMessage(stageQuery.error))
@@ -109,14 +166,27 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     }
 
     return queryErrors
-  }, [errorsQuery.error, operationError, stageQuery.error])
+  }, [batchQuery.error, errorsQuery.error, operationError, stageQuery.error])
 
   async function refreshBatch(batchId: number) {
     const keys = queryKeys(batchId)
     await Promise.all([
+      queryClient.invalidateQueries({ queryKey: keys.batch }),
       queryClient.invalidateQueries({ queryKey: keys.stage }),
       queryClient.invalidateQueries({ queryKey: keys.errors }),
     ])
+  }
+
+  function resetImport() {
+    setActiveBatchId(null)
+    setLockedSource(null)
+    setFile(null)
+    setImportDate('')
+    setIsImportDateDirty(false)
+    setOperationError(null)
+    if (params.id) {
+      navigate('/imports')
+    }
   }
 
   const uploadMutation = useMutation({
@@ -143,6 +213,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
       setSource(batch.source)
       setLockedSource(batch.source)
       setImportDate(batch.importDate?.slice(0, 10) ?? '')
+      setIsImportDateDirty(false)
       await refreshBatch(batch.idImportBatch)
     },
   })
@@ -164,7 +235,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     onMutate: () => {
       setOperationError(null)
     },
-    onSuccess: async () => {
+    onSettled: async () => {
       if (activeBatchId) {
         await refreshBatch(activeBatchId)
       }
@@ -179,7 +250,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
 
       await patchJson<ImportBatch, { importDate: string }>(
         `/import-batches/${activeBatchId}`,
-        { importDate },
+        { importDate: selectedImportDate },
       )
 
       return postJson<ImportBatch, Record<string, never>>(
@@ -193,7 +264,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     onMutate: () => {
       setOperationError(null)
     },
-    onSuccess: async () => {
+    onSettled: async () => {
       if (activeBatchId) {
         await refreshBatch(activeBatchId)
       }
@@ -202,8 +273,35 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
 
   function handleUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (hasActiveBatch) {
+      return
+    }
     uploadMutation.mutate()
   }
+
+  const isAnyMutationPending =
+    uploadMutation.isPending || validateMutation.isPending || commitMutation.isPending
+  const isAnyOperationPending =
+    isAnyMutationPending ||
+    batchQuery.isFetching ||
+    stageQuery.isFetching ||
+    errorsQuery.isFetching
+  const areRowsComplete = rows.every(isCompleteStageRow)
+  const canCommit =
+    hasActiveBatch &&
+    batchQuery.data?.status === 'validated' &&
+    selectedImportDate !== '' &&
+    batchQuery.isSuccess &&
+    stageQuery.isSuccess &&
+    errorsQuery.isSuccess &&
+    !isAnyOperationPending &&
+    !batchQuery.error &&
+    !stageQuery.error &&
+    !errorsQuery.error &&
+    errors.length === 0 &&
+    rows.length > 0 &&
+    areRowsComplete
+  const isUploadDisabled = hasActiveBatch || uploadMutation.isPending
 
   return (
     <section className="page-panel import-workflow" aria-labelledby="imports-heading">
@@ -222,7 +320,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
           Source
           <select
             disabled={hasActiveBatch}
-            value={source}
+            value={selectedSource}
             onChange={(event) => setSource(event.target.value as ImportSource)}
           >
             {importSources.map((sourceOption) => (
@@ -237,8 +335,11 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
           Import date
           <input
             type="date"
-            value={importDate}
-            onChange={(event) => setImportDate(event.target.value)}
+            value={selectedImportDate}
+            onChange={(event) => {
+              setIsImportDateDirty(true)
+              setImportDate(event.target.value)
+            }}
           />
         </label>
 
@@ -246,6 +347,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
           Sales file
           <input
             accept=".csv,.xlsx"
+            disabled={hasActiveBatch}
             type="file"
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
@@ -254,7 +356,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
         <div className="import-actions">
           <button
             className="primary-action"
-            disabled={uploadMutation.isPending}
+            disabled={isUploadDisabled}
             type="submit"
           >
             {uploadMutation.isPending ? 'Uploading' : 'Upload'}
@@ -275,13 +377,23 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
           >
             {commitMutation.isPending ? 'Committing' : 'Commit'}
           </button>
+          {hasActiveBatch ? (
+            <button
+              className="secondary-action"
+              disabled={isAnyMutationPending}
+              type="button"
+              onClick={resetImport}
+            >
+              New import
+            </button>
+          ) : null}
         </div>
       </form>
 
       {hasActiveBatch ? (
         <p className="source-lock-note">
           Source is locked for the active batch
-          {lockedSource ? `: ${sourceLabels[lockedSource]}.` : '.'}
+          {hasActiveBatch ? `: ${sourceLabels[selectedSource]}.` : '.'}
         </p>
       ) : null}
 

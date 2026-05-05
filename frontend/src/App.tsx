@@ -10,6 +10,7 @@ function App() {
       <Route element={<AppLayout />}>
         <Route index element={<Navigate replace to="/products" />} />
         <Route path="imports" element={<SalesImportPage />} />
+        <Route path="imports/:id" element={<SalesImportPage />} />
         <Route path=":entityName" element={<EntityListPage />} />
         <Route path=":entityName/new" element={<EntityEditPage />} />
         <Route path=":entityName/:id" element={<EntityEditPage />} />
