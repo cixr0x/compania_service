@@ -327,4 +327,34 @@ describe('ImportBatchesService', () => {
       prisma.importBatch.findUnique.mock.invocationCallOrder[0],
     ).toBeLessThan(prisma.importError.deleteMany.mock.invocationCallOrder[0]);
   });
+
+  it('locks and rereads before cancelling and rejects committed batches', async () => {
+    jest.spyOn(prisma.importBatch, 'findUnique').mockResolvedValue({
+      idImportBatch: 1,
+      status: 'committed',
+      _count: { stageRows: 1, errors: 0 },
+    });
+    const service = new ImportBatchesService(
+      prisma as PrismaService,
+      parser,
+      validator,
+    );
+
+    await expect(service.cancel(1)).rejects.toThrow(
+      new BadRequestException('Committed batches cannot be cancelled'),
+    );
+
+    expect(prisma.$queryRaw).toHaveBeenCalled();
+    expect(prisma.importBatch.findUnique).toHaveBeenCalledWith({
+      where: { idImportBatch: 1 },
+      include: expect.any(Object),
+    });
+    expect(prisma.importBatch.update).not.toHaveBeenCalled();
+    expect(prisma.$transaction.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.importBatch.findUnique.mock.invocationCallOrder[0],
+    );
+    expect(prisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.importBatch.findUnique.mock.invocationCallOrder[0],
+    );
+  });
 });

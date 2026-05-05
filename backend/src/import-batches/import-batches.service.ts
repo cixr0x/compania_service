@@ -293,18 +293,28 @@ export class ImportBatchesService {
   }
 
   async cancel(id: number) {
-    const batch = await this.findOne(id);
-    if (batch.status === 'committed') {
-      throw new BadRequestException('Committed batches cannot be cancelled');
-    }
-    if (batch.status === 'cancelled') {
-      return batch;
-    }
+    return this.prisma.$transaction(async (tx) => {
+      await this.lockImportBatch(tx, id);
+      const batch = await tx.importBatch.findUnique({
+        where: { idImportBatch: id },
+        include: batchDetailInclude,
+      });
+      if (!batch) {
+        throw new NotFoundException(`Import batch ${id} was not found`);
+      }
 
-    return this.prisma.importBatch.update({
-      where: { idImportBatch: id },
-      data: { status: 'cancelled' },
-      include: batchDetailInclude,
+      if (batch.status === 'committed') {
+        throw new BadRequestException('Committed batches cannot be cancelled');
+      }
+      if (batch.status === 'cancelled') {
+        return batch;
+      }
+
+      return tx.importBatch.update({
+        where: { idImportBatch: id },
+        data: { status: 'cancelled' },
+        include: batchDetailInclude,
+      });
     });
   }
 
