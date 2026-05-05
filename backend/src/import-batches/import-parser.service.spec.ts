@@ -43,6 +43,34 @@ describe('ImportParserService', () => {
     ]);
   });
 
+  it('parses CSV headers with spaces', async () => {
+    const service = new ImportParserService();
+    const file = {
+      originalname: 'sales.csv',
+      buffer: Buffer.from(
+        'External ID,Product Description,Quantity,Amount\nS-1,Shirt,2,25.50\n',
+      ),
+    } as Express.Multer.File;
+
+    const rows = await service.parse(file);
+
+    expect(rows).toEqual([
+      {
+        rowNumber: 2,
+        externalProductId: 'S-1',
+        importedProductDescription: 'Shirt',
+        quantity: 2,
+        amount: 25.5,
+        rawRow: {
+          'External ID': 'S-1',
+          'Product Description': 'Shirt',
+          Quantity: '2',
+          Amount: '25.50',
+        },
+      },
+    ]);
+  });
+
   it('rejects unsupported file extensions', async () => {
     const service = new ImportParserService();
     const file = {

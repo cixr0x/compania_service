@@ -98,11 +98,36 @@ export class ImportBatchesService {
   async update(id: number, dto: UpdateImportBatchDto) {
     const batch = await this.findOne(id);
     this.ensureBatchCanMutate(batch.status);
+    const data = this.normalizeUpdateData(dto);
+    const sourceChanged =
+      dto.source !== undefined && dto.source !== batch.source;
 
-    return this.prisma.importBatch.update({
-      where: { idImportBatch: id },
-      data: this.normalizeUpdateData(dto),
-      include: batchDetailInclude,
+    if (!sourceChanged) {
+      return this.prisma.importBatch.update({
+        where: { idImportBatch: id },
+        data,
+        include: batchDetailInclude,
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.importError.deleteMany({
+        where: { idImportBatch: id, field: 'source' },
+      });
+      await tx.importError.create({
+        data: {
+          idImportBatch: id,
+          rowNumber: null,
+          field: 'source',
+          message: `Source changed from ${batch.source} to ${dto.source}; validate before committing`,
+        },
+      });
+
+      return tx.importBatch.update({
+        where: { idImportBatch: id },
+        data: { ...data, status: 'has_errors' },
+        include: batchDetailInclude,
+      });
     });
   }
 

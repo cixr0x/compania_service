@@ -5,7 +5,7 @@ import { extname } from 'path';
 import { ParsedImportRow } from './import-validator.service';
 
 const HEADER_ALIASES = {
-  externalProductId: new Set(['externalproductid', 'id']),
+  externalProductId: new Set(['externalproductid', 'externalid', 'id']),
   importedProductDescription: new Set(['productdescription', 'description']),
   quantity: new Set(['quantity', 'qty']),
   amount: new Set(['amount', 'total']),
@@ -139,7 +139,7 @@ function findValue(
 }
 
 function normalizeHeader(header: string): string {
-  return header.replace(/_/g, '').trim().toLowerCase();
+  return header.replace(/[\s_]/g, '').trim().toLowerCase();
 }
 
 function cellToString(value: unknown): string {

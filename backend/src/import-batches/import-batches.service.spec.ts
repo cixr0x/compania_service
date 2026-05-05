@@ -13,6 +13,8 @@ describe('ImportBatchesService', () => {
     },
     importError: {
       count: jest.fn(),
+      create: jest.fn(),
+      deleteMany: jest.fn(),
     },
     importStage: {
       findMany: jest.fn(),
@@ -137,6 +139,49 @@ describe('ImportBatchesService', () => {
       where: { idImportBatch: 1 },
       data: { status: 'committed', committedAt: expect.any(Date) },
       include: expect.any(Object),
+    });
+  });
+
+  it('marks validated batches with a source-change error before commit can use stale product matches', async () => {
+    jest.spyOn(prisma.importBatch, 'findUnique').mockResolvedValue({
+      idImportBatch: 1,
+      status: 'validated',
+      source: 'store',
+      importDate: new Date('2026-05-05T00:00:00.000Z'),
+      _count: { stageRows: 1, errors: 0 },
+    });
+    jest
+      .spyOn(prisma.importError, 'deleteMany')
+      .mockResolvedValue({ count: 0 });
+    jest.spyOn(prisma.importError, 'create').mockResolvedValue({
+      idImportError: 20,
+    });
+    jest.spyOn(prisma.importBatch, 'update').mockResolvedValue({
+      idImportBatch: 1,
+      status: 'has_errors',
+      source: 'event',
+    });
+    const service = new ImportBatchesService(
+      prisma as PrismaService,
+      parser,
+      validator,
+    );
+
+    await service.update(1, { source: 'event' });
+
+    expect(prisma.importBatch.update).toHaveBeenCalledWith({
+      where: { idImportBatch: 1 },
+      data: { source: 'event', status: 'has_errors' },
+      include: expect.any(Object),
+    });
+    expect(prisma.importError.create).toHaveBeenCalledWith({
+      data: {
+        idImportBatch: 1,
+        rowNumber: null,
+        field: 'source',
+        message:
+          'Source changed from store to event; validate before committing',
+      },
     });
   });
 });
