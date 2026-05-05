@@ -253,6 +253,42 @@ describe('EntityEditPage', () => {
     })
   })
 
+  it('renders project product choices by product name and saves the selected product id', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockResolvedValue([
+      { id: 42, name: 'Maple Shelf', idModel: 7 },
+      { id: 43, name: 'Walnut Desk', idModel: 7 },
+    ])
+    vi.mocked(postJson).mockResolvedValue({ idProject: 501 })
+
+    renderEntityEditPage('/projects/new', '/:entityName/:id')
+
+    const productSelect = await screen.findByLabelText('Product')
+    expect(productSelect.tagName).toBe('SELECT')
+    expect(
+      await screen.findByRole('option', { name: 'Maple Shelf' }),
+    ).toHaveValue('42')
+    expect(screen.getByRole('option', { name: 'Walnut Desk' })).toHaveValue(
+      '43',
+    )
+    expect(screen.queryByRole('option', { name: '42' })).not.toBeInTheDocument()
+
+    await user.selectOptions(productSelect, '42')
+    await user.type(screen.getByLabelText('Units'), '10')
+    await user.type(screen.getByLabelText('Unit Cost'), '4.50')
+    await user.type(screen.getByLabelText('Admin Cost'), '2.25')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith('/projects', {
+        adminCost: 2.25,
+        idProduct: 42,
+        unitCost: 4.5,
+        units: 10,
+      })
+    })
+  })
+
   it('renders sales source as the import-source select with numeric guidance', () => {
     renderEntityEditPage('/sales/new', '/:entityName/:id')
 

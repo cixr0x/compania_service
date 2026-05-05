@@ -224,6 +224,7 @@ Entity pages:
 - Forms use backend validation responses for field-level error display.
 - Product create/edit forms load pricing models and show model names in the model selector while submitting the selected model ID to the API.
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
+- Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
 
 Sales import page:
 

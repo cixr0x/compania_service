@@ -208,10 +208,15 @@ export const entityConfigs = {
       column('adminCost', 'Admin Cost'),
     ],
     fields: [
-      number('idProduct', 'Product ID', {
-        helperText: 'Numeric product ID this project will produce or sell.',
-        min: 1,
-        step: 1,
+      select('idProduct', 'Product', undefined, {
+        helperText: 'Product this batch purchase will produce or sell.',
+        optionSource: {
+          labelField: 'name',
+          path: 'products',
+          valueField: 'id',
+        },
+        requiredOnCreate: true,
+        valueType: 'number',
       }),
       number('units', 'Units', {
         helperText: 'Whole number of units planned for the project.',
