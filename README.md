@@ -19,3 +19,28 @@ Project design is documented in [docs/superpowers/specs/2026-05-05-compania-ente
 6. Run frontend verification with `npm.cmd run build`.
 
 Use `npm.cmd` from PowerShell on Windows.
+
+## Development Commands
+
+Backend:
+
+```powershell
+Set-Location C:\PROJECTS\compania_service\backend
+npm.cmd run start:dev
+```
+
+Frontend:
+
+```powershell
+Set-Location C:\PROJECTS\compania_service\frontend
+npm.cmd run dev -- --host 127.0.0.1
+```
+
+Database migration:
+
+```powershell
+Set-Location C:\PROJECTS\compania_service\backend
+npx.cmd prisma migrate dev --name init
+```
+
+Run the migration command after `backend\.env` contains the real MySQL `DATABASE_URL`.
