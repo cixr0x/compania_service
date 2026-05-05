@@ -33,7 +33,7 @@ export function EntityEditPage() {
   const { entityName, id } = useParams()
   const navigate = useNavigate()
   const config = getEntityConfig(entityName)
-  const isCreate = id === 'new'
+  const isCreate = id === undefined || id === 'new'
   const [draftValues, setDraftValues] = useState<EntityRow>({})
   const [isDirty, setIsDirty] = useState(false)
   const [mutationError, setMutationError] = useState<string | null>(null)

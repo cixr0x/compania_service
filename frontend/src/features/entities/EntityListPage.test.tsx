@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -36,6 +36,7 @@ function renderProductsList() {
 
 describe('EntityListPage', () => {
   afterEach(() => {
+    cleanup()
     vi.clearAllMocks()
   })
 
@@ -51,6 +52,30 @@ describe('EntityListPage', () => {
       'href',
       '/products/new',
     )
+  })
+
+  it('shows product external ID columns', async () => {
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        id: 101,
+        idEcommerce: 'EC-101',
+        idEvent: 'EV-101',
+        idStore: 'ST-101',
+        idSurface: 'SF-101',
+        name: 'Walnut Desk',
+      },
+    ])
+
+    renderProductsList()
+
+    expect(await screen.findByText('Ecommerce ID')).toBeVisible()
+    expect(screen.getByText('Store ID')).toBeVisible()
+    expect(screen.getByText('Event ID')).toBeVisible()
+    expect(screen.getByText('Surface ID')).toBeVisible()
+    expect(await screen.findByText('EC-101')).toBeVisible()
+    expect(screen.getByText('ST-101')).toBeVisible()
+    expect(screen.getByText('EV-101')).toBeVisible()
+    expect(screen.getByText('SF-101')).toBeVisible()
   })
 
   it('navigates to a product edit route when a row is double-clicked', async () => {

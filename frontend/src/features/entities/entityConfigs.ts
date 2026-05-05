@@ -48,6 +48,10 @@ export const entityConfigs = {
     columns: [
       column('id', 'ID'),
       column('name', 'Name'),
+      column('idEcommerce', 'Ecommerce ID'),
+      column('idStore', 'Store ID'),
+      column('idEvent', 'Event ID'),
+      column('idSurface', 'Surface ID'),
       column('ownership', 'Ownership'),
       column('tag', 'Tag'),
       column('idModel', 'Model ID'),
