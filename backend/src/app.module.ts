@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ModelsModule } from './models/models.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ProjectStakeholdersModule } from './project-stakeholders/project-stakeholders.module';
+import { ProjectsModule } from './projects/projects.module';
 import { ProductsModule } from './products/products.module';
 import { StakeholdersModule } from './stakeholders/stakeholders.module';
 
@@ -12,6 +14,8 @@ import { StakeholdersModule } from './stakeholders/stakeholders.module';
     ModelsModule,
     ProductsModule,
     StakeholdersModule,
+    ProjectsModule,
+    ProjectStakeholdersModule,
   ],
 })
 export class AppModule {}
