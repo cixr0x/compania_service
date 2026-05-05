@@ -10,6 +10,7 @@ type EntityFormProps = {
   values: EntityRow
   onChange: (name: string, value: string) => void
   onSubmit: () => void
+  isCreate?: boolean
   isSaving?: boolean
   errorMessage?: string | null
 }
@@ -58,11 +59,43 @@ function groupFields(fields: EntityField[]) {
   return groups
 }
 
+function getPreviewValue(values: EntityRow, fieldName: string | undefined) {
+  if (!fieldName) {
+    return ''
+  }
+
+  const value = values[fieldName]
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function ImageUrlPreview({
+  altText,
+  imageUrl,
+}: {
+  altText: string
+  imageUrl: string
+}) {
+  if (!imageUrl) {
+    return (
+      <div className="image-preview-placeholder">
+        Add an image URL to preview it here.
+      </div>
+    )
+  }
+
+  return (
+    <div className="image-preview-frame">
+      <img alt={altText} src={imageUrl} />
+    </div>
+  )
+}
+
 export function EntityForm({
   config,
   values,
   onChange,
   onSubmit,
+  isCreate = false,
   isSaving = false,
   errorMessage = null,
 }: EntityFormProps) {
@@ -82,16 +115,34 @@ export function EntityForm({
     const fieldId = `${config.path}-${field.name}-field`
     const fieldClassName =
       field.span === 'full' ? 'form-field form-field-full' : 'form-field'
+    const isRequired = Boolean(
+      field.required || (field.requiredOnCreate && isCreate),
+    )
     const controlClassName =
       field.prefix || field.suffix
         ? 'field-control field-control-adorned'
         : 'field-control'
 
+    if (field.type === 'imagePreview') {
+      const imageUrl = getPreviewValue(values, field.previewSourceField)
+      const previewName = getPreviewValue(values, field.previewAltField)
+      const altText = `${previewName || config.singularTitle} image preview`
+
+      return (
+        <div className="form-field image-preview-field" key={field.name}>
+          <span className="field-label-row">
+            <span>{field.label}</span>
+          </span>
+          <ImageUrlPreview altText={altText} imageUrl={imageUrl} />
+        </div>
+      )
+    }
+
     return (
       <div className={fieldClassName} key={field.name}>
         <span className="field-label-row">
           <label htmlFor={fieldId}>{field.label}</label>
-          {field.required ? (
+          {isRequired ? (
             <span aria-hidden="true" className="field-required">
               Required
             </span>
@@ -108,7 +159,7 @@ export function EntityForm({
               aria-describedby={helperId}
               id={fieldId}
               onChange={(event) => onChange(field.name, event.target.value)}
-              required={field.required}
+              required={isRequired}
               rows={4}
               value={inputValue}
             />
@@ -117,7 +168,7 @@ export function EntityForm({
               aria-describedby={helperId}
               id={fieldId}
               onChange={(event) => onChange(field.name, event.target.value)}
-              required={field.required}
+              required={isRequired}
               value={inputValue}
             >
               <option value="">Select...</option>
@@ -134,8 +185,8 @@ export function EntityForm({
               onChange={(event) => onChange(field.name, event.target.value)}
               max={field.max}
               min={field.min}
-              required={field.required}
-              step={field.type === 'number' ? field.step ?? 'any' : undefined}
+              required={isRequired}
+              step={field.type === 'number' ? (field.step ?? 'any') : undefined}
               type={field.type}
               value={inputValue}
             />

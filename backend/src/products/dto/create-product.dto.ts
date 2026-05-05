@@ -1,5 +1,14 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
@@ -35,11 +44,11 @@ export class CreateProductDto {
   @MaxLength(255)
   idSurface?: string;
 
-  @IsOptional()
   @Type(() => Number)
+  @IsNotEmpty()
   @IsInt()
   @Min(1)
-  idModel?: number;
+  idModel!: number;
 
   @IsOptional()
   @Type(() => Number)

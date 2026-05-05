@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { deleteJson, getJson, patchJson, postJson } from '../../api/client'
 import { EntityForm } from '../../components/EntityForm'
@@ -37,9 +37,13 @@ function serializeFieldValue(
   value: unknown,
   field: EntityField,
 ): string | number | undefined {
-  if (field.type === 'number') {
+  if (field.type === 'number' || field.valueType === 'number') {
     const trimmedValue = typeof value === 'string' ? value.trim() : value
-    if (trimmedValue === '' || trimmedValue === null || trimmedValue === undefined) {
+    if (
+      trimmedValue === '' ||
+      trimmedValue === null ||
+      trimmedValue === undefined
+    ) {
       return undefined
     }
 
@@ -53,20 +57,93 @@ function serializeFieldValue(
   }
 
   if (typeof value !== 'string') {
-    return value === null || value === undefined ? undefined : String(value).trim()
+    return value === null || value === undefined
+      ? undefined
+      : String(value).trim()
   }
 
   const trimmedValue = value.trim()
   return trimmedValue || undefined
 }
 
-function buildEntityPayload(config: EntityConfig, values: EntityRow): EntityRow {
+function buildEntityPayload(
+  config: EntityConfig,
+  values: EntityRow,
+): EntityRow {
   return Object.fromEntries(
     config.fields.flatMap((field) => {
+      if (field.type === 'imagePreview') {
+        return []
+      }
+
       const value = serializeFieldValue(values[field.name], field)
       return value === undefined ? [] : [[field.name, value]]
     }),
   )
+}
+
+function getOptionSources(config: EntityConfig | null) {
+  if (!config) {
+    return []
+  }
+
+  return Array.from(
+    new Set(
+      config.fields
+        .map((field) => field.optionSource?.path)
+        .filter((path): path is EntityConfig['path'] => Boolean(path)),
+    ),
+  )
+}
+
+function buildFieldOptions(field: EntityField, rows: EntityRow[] | undefined) {
+  const optionSource = field.optionSource
+
+  if (!optionSource || !Array.isArray(rows)) {
+    return field.options
+  }
+
+  return rows.flatMap((row) => {
+    const rawValue = row[optionSource.valueField]
+    const rawLabel = row[optionSource.labelField]
+
+    if (rawValue === null || rawValue === undefined) {
+      return []
+    }
+
+    const label =
+      rawLabel === null ||
+      rawLabel === undefined ||
+      String(rawLabel).trim() === ''
+        ? String(rawValue)
+        : String(rawLabel)
+
+    return [{ label, value: String(rawValue) }]
+  })
+}
+
+function resolveDynamicOptions(
+  config: EntityConfig | null,
+  optionRowsByPath: Partial<Record<EntityConfig['path'], EntityRow[]>>,
+): EntityConfig | null {
+  if (!config) {
+    return null
+  }
+
+  return {
+    ...config,
+    fields: config.fields.map((field) =>
+      field.optionSource
+        ? {
+            ...field,
+            options: buildFieldOptions(
+              field,
+              optionRowsByPath[field.optionSource.path],
+            ),
+          }
+        : field,
+    ),
+  }
 }
 
 export function EntityEditPage() {
@@ -77,6 +154,24 @@ export function EntityEditPage() {
   const [draftValues, setDraftValues] = useState<EntityRow>({})
   const [isDirty, setIsDirty] = useState(false)
   const [mutationError, setMutationError] = useState<string | null>(null)
+  const optionSources = useMemo(() => getOptionSources(config), [config])
+  const optionSourceQueries = useQueries({
+    queries: optionSources.map((path) => ({
+      enabled: Boolean(config),
+      queryKey: ['entity-options', path],
+      queryFn: () => getJson<EntityRow[]>(`/${path}`),
+    })),
+  })
+  const formConfig = useMemo(() => {
+    const optionRowsByPath = Object.fromEntries(
+      optionSources.map((path, index) => [
+        path,
+        optionSourceQueries[index]?.data ?? [],
+      ]),
+    ) as Partial<Record<EntityConfig['path'], EntityRow[]>>
+
+    return resolveDynamicOptions(config, optionRowsByPath)
+  }, [config, optionSourceQueries, optionSources])
 
   const detailQuery = useQuery({
     enabled: Boolean(
@@ -113,9 +208,10 @@ export function EntityEditPage() {
     return null
   }, [config?.title, detailQuery.isError, mutationError])
 
-  const formValues = isCreate || isDirty ? draftValues : detailQuery.data ?? {}
+  const formValues =
+    isCreate || isDirty ? draftValues : (detailQuery.data ?? {})
 
-  if (!config) {
+  if (!config || !formConfig) {
     return (
       <section className="page-panel" aria-labelledby="unknown-entity-heading">
         <p className="eyebrow">Workspace</p>
@@ -140,14 +236,14 @@ export function EntityEditPage() {
   function handleChange(name: string, value: string) {
     setIsDirty(true)
     setDraftValues((currentValues) => ({
-      ...(isDirty ? currentValues : detailQuery.data ?? {}),
+      ...(isDirty ? currentValues : (detailQuery.data ?? {})),
       [name]: value,
     }))
   }
 
   function handleSave() {
     setMutationError(null)
-    saveMutation.mutate(buildEntityPayload(config!, formValues))
+    saveMutation.mutate(buildEntityPayload(formConfig!, formValues))
   }
 
   return (
@@ -173,8 +269,9 @@ export function EntityEditPage() {
         <p className="page-description">Loading record...</p>
       ) : (
         <EntityForm
-          config={config}
+          config={formConfig}
           errorMessage={errorMessage}
+          isCreate={isCreate}
           isSaving={saveMutation.isPending}
           onChange={handleChange}
           onSubmit={handleSave}

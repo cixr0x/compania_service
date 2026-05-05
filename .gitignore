@@ -13,3 +13,4 @@ build/
 coverage/
 .superpowers/
 .worktrees/
+.codex-runtime/

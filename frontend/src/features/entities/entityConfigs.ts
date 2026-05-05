@@ -5,14 +5,23 @@ export type EntityRow = Record<string, unknown>
 export type EntityField = {
   name: string
   label: string
-  type: 'date' | 'number' | 'select' | 'text' | 'textarea'
+  type: 'date' | 'imagePreview' | 'number' | 'select' | 'text' | 'textarea'
   helperText?: string
   required?: boolean
+  requiredOnCreate?: boolean
   section?: string
   span?: 'full'
   prefix?: string
   suffix?: string
   options?: { label: string; value: string }[]
+  optionSource?: {
+    labelField: string
+    path: EntityName
+    valueField: string
+  }
+  previewAltField?: string
+  previewSourceField?: string
+  valueType?: 'number' | 'string'
   min?: number
   max?: number
   step?: number
@@ -55,7 +64,7 @@ function number(
 function select(
   name: string,
   label: string,
-  options: EntityField['options'],
+  options?: EntityField['options'],
   fieldOptions: Omit<EntityField, 'label' | 'name' | 'options' | 'type'> = {},
 ): EntityField {
   return { name, label, options, type: 'select', ...fieldOptions }
@@ -67,6 +76,18 @@ function textarea(
   options: Omit<EntityField, 'label' | 'name' | 'type'> = {},
 ): EntityField {
   return { name, label, type: 'textarea', ...options }
+}
+
+function imagePreview(
+  name: string,
+  label: string,
+  previewSourceField: string,
+  options: Omit<
+    EntityField,
+    'label' | 'name' | 'previewSourceField' | 'type'
+  > = {},
+): EntityField {
+  return { name, label, previewSourceField, type: 'imagePreview', ...options }
 }
 
 function column(key: string, header: string): DataTableColumn<EntityRow> {
@@ -96,6 +117,10 @@ export const entityConfigs = {
         required: true,
         section: 'Product details',
       }),
+      imagePreview('imagePreview', 'Image preview', 'image', {
+        previewAltField: 'name',
+        section: 'Product details',
+      }),
       textarea('description', 'Description', {
         helperText: 'Short internal description for identifying this product.',
         section: 'Product details',
@@ -122,14 +147,20 @@ export const entityConfigs = {
         helperText: 'External product ID used by surface imports.',
         section: 'Channel mapping',
       }),
-      number('idModel', 'Model ID', {
-        helperText: 'Numeric model ID that classifies this product.',
-        min: 1,
+      select('idModel', 'Model', undefined, {
+        helperText: 'Pricing model that classifies this product.',
+        optionSource: {
+          labelField: 'name',
+          path: 'models',
+          valueField: 'idModel',
+        },
+        requiredOnCreate: true,
         section: 'Commercial attributes',
-        step: 1,
+        valueType: 'number',
       }),
       number('ownership', 'Owner-retained profit', {
-        helperText: 'Percentage of profit retained by the owner for this product.',
+        helperText:
+          'Percentage of profit retained by the owner for this product.',
         max: 100,
         min: 0,
         section: 'Commercial attributes',

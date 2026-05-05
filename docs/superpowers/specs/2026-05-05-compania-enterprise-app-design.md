@@ -222,6 +222,8 @@ Entity pages:
 - Create button on the table view.
 - Double-click table row navigates to edit form.
 - Forms use backend validation responses for field-level error display.
+- Product create/edit forms load pricing models and show model names in the model selector while submitting the selected model ID to the API.
+- Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
 
 Sales import page:
 
