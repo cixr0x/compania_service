@@ -107,3 +107,33 @@ export type ImportError = {
   message: string
   createdAt: IsoDateTime
 }
+
+export type SalesReportSource = ImportSource
+
+export type SalesReportSourceTotals = {
+  amount: number
+  quantity: number
+}
+
+export type SalesReportRow = Record<SalesReportSource, SalesReportSourceTotals> & {
+  fee: number
+  income: number
+  model: string
+  ownerProfit: number
+  productName: string
+  profit: number
+  projectId: number
+  totalAmount: number
+  totalCost: number
+  totalQuantity: number
+}
+
+export type SalesReportSummary = {
+  rows: SalesReportRow[]
+  sources: SalesReportSource[]
+}
+
+export type SalesReportPeriod = {
+  months: number[]
+  year: number
+}

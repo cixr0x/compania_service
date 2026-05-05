@@ -4,7 +4,7 @@
 
 This application manages products, stakeholders, projects, and sales for batch product purchases where costs and future profit calculations may be split across stakeholders. The first version is an internal single-user web application with separate frontend and backend projects in the same repository.
 
-The MVP focuses on entity CRUD screens and a staged CSV/XLSX sales import workflow. Authentication, authorization, and reporting are intentionally deferred.
+The MVP focuses on entity CRUD screens, a staged CSV/XLSX sales import workflow, and an initial sales summary report. Authentication, authorization, and broader reporting are intentionally deferred.
 
 ## Technology Stack
 
@@ -25,12 +25,13 @@ Included:
 - Double-click row navigation to an update form for that entity.
 - CSV/XLSX sales import into staging tables.
 - Import review screen where the user selects source and import date, checks imported descriptions against matched products, reviews validation errors, and commits validated rows to final sales.
+- Sales summary report by year or month.
 - Gitignored environment credential files with example templates.
 
 Deferred:
 
 - Authentication and roles.
-- Reports and dashboards.
+- Additional reports and dashboards.
 - Fee calculation logic.
 - Profit allocation logic.
 - Source-specific scheduled or automated imports.
@@ -180,6 +181,37 @@ Validation errors for an import batch and optionally a specific staged row.
 
 The final `sales` table should only contain committed, validated data.
 
+## Sales Summary Report
+
+The first report is a sales summary table grouped by product and project. If the same product has sales linked to multiple projects, each project appears as a separate row. The first column is `Project ID`; the product column contains only the product name.
+
+The report supports yearly and monthly timeframes. The backend exposes the years and months that have sales data, and the frontend lets the user choose from those available periods. Selecting only a year returns a yearly report; selecting a year and month returns a monthly report.
+
+Columns:
+
+- `Project ID`
+- `Product`
+- Source groups for `Store`, `Ecommerce`, and `Event`, each with `Quantity` and `Amount`
+- `Surface` source group only when the selected report period contains surface sales
+- `Total Quantity`
+- `Total Amount`
+- `Model`
+- `Fee`
+- `Total Cost`
+- `Income`
+- `Profit`
+- `Owner Profit`
+
+Calculations:
+
+- Source quantity and amount are summed from `sales.quantity` and `sales.amount` for each source.
+- `Total Quantity` and `Total Amount` are summed across all sources for the row.
+- `Fee` is summed from `sales.fee`.
+- `Total Cost` is the linked project's `production_cost + admin_cost` and is counted once for that project row.
+- `Income` is `Total Amount - Total Cost`.
+- `Profit` is `Income - Fee`.
+- `Owner Profit` is `Profit * product.ownership / 100`.
+
 ## REST API Design
 
 The backend exposes JSON REST services under `/api`.
@@ -195,6 +227,12 @@ CRUD resources:
 - `GET /api/stakeholders/:id` includes the stakeholder's project participation with project and product details for the stakeholder edit form.
 - `GET /api/project-stakeholders/projects/:id`: list the complete stakeholder split for one project.
 - `PUT /api/project-stakeholders/projects/:id`: atomically replace a project's full stakeholder split with an array of `{ idStakeholder, stakePercentage }` rows totaling exactly `100`.
+
+Report resources:
+
+- `GET /api/reports/sales-summary/periods`: list years and months with available sales data.
+- `GET /api/reports/sales-summary?year=YYYY`: get a yearly sales summary grouped by product and project.
+- `GET /api/reports/sales-summary?year=YYYY&month=M`: get a monthly sales summary grouped by product and project.
 
 Import resources:
 
@@ -220,6 +258,7 @@ Main navigation:
 - Stakeholders
 - Sales
 - Sales Imports
+- Sales Report
 
 Entity pages:
 
@@ -247,6 +286,14 @@ Sales import page:
 - Staged row table with row number, external product ID, imported product description, matched product name, quantity, amount, and status.
 - Error panel for import errors.
 - Commit button enabled only when required metadata is present and the batch has no validation errors.
+
+Sales report page:
+
+- Year selector populated from report periods that have sales data.
+- Month selector populated with months that have sales data for the selected year, plus a full-year option.
+- Report table with grouped source headers, using `Quantity` and `Amount` under each source group.
+- `Surface` source group hidden unless the selected period has surface sales.
+- Money fields displayed with comma grouping and two decimals.
 
 ## Validation And Error Handling
 
@@ -276,6 +323,7 @@ Backend tests:
 - Unit tests for source-specific product matching.
 - Unit tests for staged import parsing and validation.
 - Integration tests for import commit transaction behavior.
+- Unit tests for sales summary period discovery and product-project report aggregation.
 - Controller tests for CRUD validation responses.
 
 Frontend tests:
@@ -283,6 +331,7 @@ Frontend tests:
 - Component tests for reusable tables and forms.
 - Import page tests for displaying matched product name beside imported product description.
 - Import page tests for disabled commit button when metadata or validation is incomplete.
+- Sales report page tests for period selectors, grouped source headers, project ID column, and dynamic surface source visibility.
 
 End-to-end tests should be added once the MVP screens are stable enough to avoid brittle early tests.
 
@@ -311,4 +360,4 @@ This file is the canonical project design document. Design changes should update
 
 ## Open Decisions
 
-No blocking open decisions remain for the MVP design. Reports, auth, fee calculation, and profit allocation are intentionally future work.
+No blocking open decisions remain for the MVP design. Additional reports, auth, fee calculation, and profit allocation are intentionally future work.

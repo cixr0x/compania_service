@@ -1,6 +1,7 @@
 import {
   Boxes,
   BriefcaseBusiness,
+  ChartNoAxesColumnIncreasing,
   CircleDollarSign,
   DatabaseZap,
   Layers3,
@@ -22,6 +23,11 @@ const navigationItems: NavigationItem[] = [
   { label: 'Stakeholders', path: '/stakeholders', icon: UsersRound },
   { label: 'Sales', path: '/sales', icon: CircleDollarSign },
   { label: 'Sales Imports', path: '/imports', icon: DatabaseZap },
+  {
+    label: 'Sales Report',
+    path: '/reports/sales',
+    icon: ChartNoAxesColumnIncreasing,
+  },
 ]
 
 export function AppLayout() {

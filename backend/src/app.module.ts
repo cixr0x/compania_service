@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ProjectStakeholdersModule } from './project-stakeholders/project-stakeholders.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ProductsModule } from './products/products.module';
+import { ReportsModule } from './reports/reports.module';
 import { SalesModule } from './sales/sales.module';
 import { StakeholdersModule } from './stakeholders/stakeholders.module';
 
@@ -20,6 +21,7 @@ import { StakeholdersModule } from './stakeholders/stakeholders.module';
     ProjectStakeholdersModule,
     SalesModule,
     ImportBatchesModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}

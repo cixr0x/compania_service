@@ -651,6 +651,27 @@ button {
   min-width: 520px;
 }
 
+.report-page {
+  display: grid;
+  gap: 18px;
+}
+
+.report-controls {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(140px, 180px));
+  max-width: 400px;
+}
+
+.report-table {
+  min-width: 1420px;
+}
+
+.report-table thead tr:first-child th {
+  text-align: center;
+}
+
 .danger-action {
   background: #9f2f21;
   border: 1px solid #9f2f21;
