@@ -17,6 +17,7 @@ import {
   putJson,
 } from '../../api/client'
 import { EntityEditPage } from './EntityEditPage'
+import { entityConfigs, type EntityName } from './entityConfigs'
 
 vi.mock('../../api/client', () => ({
   deleteJson: vi.fn(),
@@ -225,6 +226,10 @@ describe('EntityEditPage', () => {
 
   it('normalizes existing sale ISO date values for display and update payloads', async () => {
     vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products') {
+        return [{ id: 101, name: 'Walnut Desk' }]
+      }
+
       if (path === '/projects') {
         return [
           {
@@ -272,23 +277,46 @@ describe('EntityEditPage', () => {
     })
   })
 
-  it('requires a project selector when creating a sale and saves the selected project id', async () => {
+  it('requires product and project selectors when creating a sale and saves their ids', async () => {
     const user = userEvent.setup()
-    vi.mocked(getJson).mockResolvedValue([
-      {
-        idProject: 501,
-        idProduct: 101,
-        product: { id: 101, name: 'Walnut Desk' },
-      },
-      {
-        idProject: 502,
-        idProduct: 102,
-        product: { id: 102, name: 'Maple Shelf' },
-      },
-    ])
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products') {
+        return [
+          { id: 101, name: 'Walnut Desk' },
+          { id: 102, name: 'Maple Shelf' },
+        ]
+      }
+
+      if (path === '/projects') {
+        return [
+          {
+            idProject: 501,
+            idProduct: 101,
+            product: { id: 101, name: 'Walnut Desk' },
+          },
+          {
+            idProject: 502,
+            idProduct: 102,
+            product: { id: 102, name: 'Maple Shelf' },
+          },
+        ]
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
     vi.mocked(postJson).mockResolvedValue({ idSale: 30 })
 
     renderEntityEditPage('/sales/new', '/:entityName/:id')
+
+    const productSelect = await screen.findByLabelText('Product')
+    expect(productSelect.tagName).toBe('SELECT')
+    expect(productSelect).toBeRequired()
+    expect(
+      await screen.findByRole('option', { name: 'Walnut Desk' }),
+    ).toHaveValue('101')
+    expect(screen.getByRole('option', { name: 'Maple Shelf' })).toHaveValue(
+      '102',
+    )
 
     const projectSelect = await screen.findByLabelText('Project')
     expect(projectSelect.tagName).toBe('SELECT')
@@ -301,8 +329,8 @@ describe('EntityEditPage', () => {
     ).toHaveValue('502')
 
     await user.type(screen.getByLabelText('Date'), '2026-05-05')
+    await user.selectOptions(productSelect, '101')
     await user.selectOptions(projectSelect, '501')
-    await user.type(screen.getByLabelText('Product ID'), '101')
     await user.type(screen.getByLabelText('Quantity'), '2')
     await user.type(screen.getByLabelText('Amount'), '120')
     await user.selectOptions(screen.getByLabelText('Source'), 'store')
@@ -318,6 +346,7 @@ describe('EntityEditPage', () => {
         source: 'store',
       })
     })
+    expect(getJson).toHaveBeenCalledWith('/products')
     expect(getJson).toHaveBeenCalledWith('/projects')
   })
 
@@ -382,6 +411,29 @@ describe('EntityEditPage', () => {
       /currency/i,
     )
     expect(screen.getAllByText('$')).toHaveLength(2)
+  })
+
+  it('configures every foreign key form field as a select', () => {
+    const foreignKeyFields: Array<[EntityName, string]> = [
+      ['products', 'idModel'],
+      ['projects', 'idProduct'],
+      ['project-stakeholders', 'idProject'],
+      ['project-stakeholders', 'idStakeholder'],
+      ['sales', 'idProduct'],
+      ['sales', 'idProject'],
+    ]
+
+    for (const [entityName, fieldName] of foreignKeyFields) {
+      const field = entityConfigs[entityName].fields.find(
+        (candidate) => candidate.name === fieldName,
+      )
+
+      expect(field, `${entityName}.${fieldName}`).toMatchObject({
+        type: 'select',
+        valueType: 'number',
+      })
+      expect(field?.optionSource, `${entityName}.${fieldName}`).toBeDefined()
+    }
   })
 
   it('saves a new project stakeholder split from project and stakeholder selectors', async () => {

@@ -306,15 +306,24 @@ export const entityConfigs = {
       column('stakePercentage', 'Stake Percentage'),
     ],
     fields: [
-      number('idProject', 'Project ID', {
+      select('idProject', 'Project', undefined, {
         helperText: 'Project whose stakeholder split must total 100%.',
-        min: 1,
-        step: 1,
+        optionSource: {
+          labelField: 'idProject',
+          labelFormatter: formatProjectOption,
+          path: 'projects',
+          valueField: 'idProject',
+        },
+        valueType: 'number',
       }),
-      number('idStakeholder', 'Stakeholder ID', {
+      select('idStakeholder', 'Stakeholder', undefined, {
         helperText: 'Stakeholder receiving this share.',
-        min: 1,
-        step: 1,
+        optionSource: {
+          labelField: 'name',
+          path: 'stakeholders',
+          valueField: 'idStakeholder',
+        },
+        valueType: 'number',
       }),
       number('stakePercentage', 'Stake Percentage', {
         helperText: 'Percentage share for this stakeholder.',
@@ -348,10 +357,15 @@ export const entityConfigs = {
         helperText: 'Sale date.',
         required: true,
       },
-      number('idProduct', 'Product ID', {
-        helperText: 'Numeric product ID sold.',
-        min: 1,
-        step: 1,
+      select('idProduct', 'Product', undefined, {
+        helperText: 'Product sold in this sale.',
+        optionSource: {
+          labelField: 'name',
+          path: 'products',
+          valueField: 'id',
+        },
+        required: true,
+        valueType: 'number',
       }),
       select('idProject', 'Project', undefined, {
         helperText: 'Project linked to this sale. Required for all sales.',

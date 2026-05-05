@@ -232,7 +232,8 @@ Entity pages:
 - Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
 - Project create/edit forms include an active flag plus unit cost, production cost, and administrative cost fields.
 - Project stakeholder split forms load projects and stakeholders, show readable option labels, and submit the selected project and stakeholder IDs to the API.
-- Sale create/edit forms require a project selector. The backend rejects a manual sale if the selected project does not belong to the selected product.
+- Sale create/edit forms load products and projects, show readable option labels, and submit the selected product and project IDs to the API. The backend rejects a manual sale if the selected project does not belong to the selected product.
+- Foreign key fields in create/edit forms should be selectors backed by the related entity list, not open numeric inputs.
 
 Sales import page:
 
