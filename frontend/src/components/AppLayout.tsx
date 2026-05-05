@@ -1,82 +1,90 @@
 import {
-  Boxes,
-  BriefcaseBusiness,
-  ChartNoAxesColumnIncreasing,
-  CircleDollarSign,
-  DatabaseZap,
-  Layers3,
-  UsersRound,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
+  AppstoreOutlined,
+  BarChartOutlined,
+  DollarOutlined,
+  ImportOutlined,
+  ProjectOutlined,
+  TagsOutlined,
+  TeamOutlined,
+} from '@ant-design/icons'
+import { Layout, Menu, Tag, Typography } from 'antd'
+import type { MenuProps } from 'antd'
+import type { ReactNode } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 
 type NavigationItem = {
   label: string
   path: string
-  icon: LucideIcon
+  icon: ReactNode
 }
 
 const navigationItems: NavigationItem[] = [
-  { label: 'Products', path: '/products', icon: Boxes },
-  { label: 'Models', path: '/models', icon: Layers3 },
-  { label: 'Projects', path: '/projects', icon: BriefcaseBusiness },
-  { label: 'Stakeholders', path: '/stakeholders', icon: UsersRound },
-  { label: 'Sales', path: '/sales', icon: CircleDollarSign },
-  { label: 'Sales Imports', path: '/imports', icon: DatabaseZap },
+  { label: 'Products', path: '/products', icon: <AppstoreOutlined /> },
+  { label: 'Models', path: '/models', icon: <TagsOutlined /> },
+  { label: 'Projects', path: '/projects', icon: <ProjectOutlined /> },
+  { label: 'Stakeholders', path: '/stakeholders', icon: <TeamOutlined /> },
+  { label: 'Sales', path: '/sales', icon: <DollarOutlined /> },
+  { label: 'Sales Imports', path: '/imports', icon: <ImportOutlined /> },
   {
     label: 'Sales Report',
     path: '/reports/sales',
-    icon: ChartNoAxesColumnIncreasing,
+    icon: <BarChartOutlined />,
   },
 ]
 
 export function AppLayout() {
+  const location = useLocation()
+  const selectedPath =
+    navigationItems.find(
+      (item) =>
+        location.pathname === item.path ||
+        location.pathname.startsWith(`${item.path}/`),
+    )?.path ?? '/products'
+  const menuItems: MenuProps['items'] = navigationItems.map((item) => ({
+    icon: item.icon,
+    key: item.path,
+    label: <NavLink to={item.path}>{item.label}</NavLink>,
+  }))
+
   return (
-    <div className="app-shell">
-      <aside className="sidebar" aria-label="Primary navigation">
-        <div className="brand-block">
-          <div className="brand-mark" aria-hidden="true">
-            CS
-          </div>
+    <Layout className="app-shell">
+      <Layout.Sider
+        breakpoint="lg"
+        className="app-sider"
+        collapsedWidth={0}
+        theme="dark"
+        width={256}
+      >
+        <div className="brand-block" aria-label="Compania Service">
+          <div className="brand-mark" aria-hidden="true">CS</div>
           <div>
-            <p className="brand-name">Compania Service</p>
-            <p className="brand-context">Operations Admin</p>
+            <Typography.Text className="brand-name">Compania Service</Typography.Text>
+            <Typography.Text className="brand-context">Operations Admin</Typography.Text>
           </div>
         </div>
 
-        <nav className="nav-list">
-          {navigationItems.map((item) => {
-            const Icon = item.icon
+        <Menu
+          aria-label="Primary navigation"
+          items={menuItems}
+          mode="inline"
+          selectedKeys={[selectedPath]}
+          theme="dark"
+        />
+      </Layout.Sider>
 
-            return (
-              <NavLink
-                className={({ isActive }) =>
-                  isActive ? 'nav-link is-active' : 'nav-link'
-                }
-                key={item.path}
-                to={item.path}
-              >
-                <Icon aria-hidden="true" size={18} strokeWidth={1.8} />
-                <span>{item.label}</span>
-              </NavLink>
-            )
-          })}
-        </nav>
-      </aside>
-
-      <div className="content-frame">
-        <header className="topbar">
+      <Layout className="content-frame">
+        <Layout.Header className="topbar">
           <div>
-            <p className="eyebrow">Admin Console</p>
-            <h1>Commercial Operations</h1>
+            <Typography.Text className="eyebrow">Admin Console</Typography.Text>
+            <Typography.Title level={1}>Commercial Operations</Typography.Title>
           </div>
-          <div className="environment-pill">MVP</div>
-        </header>
+          <Tag color="blue">MVP</Tag>
+        </Layout.Header>
 
-        <main className="page-content">
+        <Layout.Content className="page-content">
           <Outlet />
-        </main>
-      </div>
-    </div>
+        </Layout.Content>
+      </Layout>
+    </Layout>
   )
 }

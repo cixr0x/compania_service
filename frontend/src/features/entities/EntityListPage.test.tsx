@@ -82,10 +82,10 @@ describe('EntityListPage', () => {
 
     renderProductsList()
 
-    expect(await screen.findByText('Ecommerce ID')).toBeVisible()
-    expect(screen.getByText('Store ID')).toBeVisible()
-    expect(screen.getByText('Event ID')).toBeVisible()
-    expect(screen.getByText('Surface ID')).toBeVisible()
+    expect(await screen.findAllByText('Ecommerce ID')).not.toHaveLength(0)
+    expect(screen.getAllByText('Store ID')).not.toHaveLength(0)
+    expect(screen.getAllByText('Event ID')).not.toHaveLength(0)
+    expect(screen.getAllByText('Surface ID')).not.toHaveLength(0)
     expect(await screen.findByText('EC-101')).toBeVisible()
     expect(screen.getByText('ST-101')).toBeVisible()
     expect(screen.getByText('EV-101')).toBeVisible()
@@ -125,7 +125,7 @@ describe('EntityListPage', () => {
     renderEntityList('/projects')
 
     expect(await screen.findByRole('heading', { name: 'Projects' })).toBeVisible()
-    expect(screen.getByText('Total Cost')).toBeVisible()
+    expect(screen.getAllByText('Total Cost')).not.toHaveLength(0)
     expect(await screen.findByText('9,750.75')).toBeVisible()
   })
 })

@@ -9,7 +9,7 @@ The MVP focuses on entity CRUD screens, a staged CSV/XLSX sales import workflow,
 ## Technology Stack
 
 - Backend: NestJS, TypeScript, REST services, MySQL, Prisma ORM, class-validator DTO validation.
-- Frontend: React, TypeScript, Vite, React Router, a shared REST API client, reusable table and form components.
+- Frontend: React, TypeScript, Vite, React Router, Ant Design, a shared REST API client, reusable table and form components.
 - Database: MySQL with migration-managed schema.
 - Repository layout: `backend/` and `frontend/` as separate projects under this repository.
 
@@ -253,6 +253,18 @@ Import resources:
 ## Frontend Design
 
 The frontend is an internal admin-style application. It should prioritize dense, readable tables and predictable forms over marketing-style presentation.
+
+The UI design system is Ant Design. Frontend work should use Ant Design components, layout primitives, feedback components, and design tokens by default, with custom CSS limited to application-specific composition and small spacing/layout adjustments. Future UI development should follow Ant Design's enterprise design values of Natural, Certain, Meaningful, and Growing, and use its design patterns for feedback, data entry, data display, navigation, buttons, copywriting, and data formatting.
+
+Ant Design application rules for this project:
+
+- Keep interactions natural and low-friction by matching user tasks to clear controls and reducing extra operations.
+- Maintain certainty through consistent components, spacing, table behavior, labels, and feedback patterns.
+- Keep screens meaningful by emphasizing the user's work mission, clear goals, and immediate operation results.
+- Design for growth by favoring reusable modules and discoverable workflows over one-off custom UI.
+- Use Ant Design `Table` for structured operational data, with search/filtering, sorting, pagination, loading, and empty states where useful.
+- Use Ant Design data-entry components for forms and keep labels, hints, validation, and formatting close to the relevant field.
+- Use Ant Design feedback components such as `Alert`, `Message`, `Notification`, `Spin`, `Modal`, and `Popconfirm` according to feedback severity.
 
 Main navigation:
 

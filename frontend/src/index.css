@@ -1,15 +1,15 @@
 :root {
-  --bg: #f6f7f4;
+  --bg: #f5f5f5;
   --panel: #ffffff;
-  --panel-muted: #f1f4f3;
-  --text: #1f2933;
-  --text-muted: #64707d;
-  --border: #d9dfdc;
-  --accent: #126a5b;
-  --accent-strong: #0b4f43;
-  --accent-soft: #e3f2ef;
-  --warning: #8a5a13;
-  --shadow: 0 12px 30px rgba(31, 41, 51, 0.08);
+  --panel-muted: #fafafa;
+  --text: #141414;
+  --text-muted: #667085;
+  --border: #d9d9d9;
+  --accent: #1677ff;
+  --accent-strong: #0958d9;
+  --accent-soft: #e6f4ff;
+  --warning: #ad6800;
+  --shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
   --sans:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
@@ -50,32 +50,27 @@ button {
 }
 
 .app-shell {
-  display: grid;
-  grid-template-columns: 264px minmax(0, 1fr);
   min-height: 100svh;
+  background: var(--bg);
 }
 
-.sidebar {
-  background: #24332f;
-  color: #f7faf7;
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  padding: 18px;
+.app-sider {
+  min-height: 100svh;
 }
 
 .brand-block {
   align-items: center;
   display: flex;
   gap: 12px;
-  min-height: 48px;
+  min-height: 64px;
+  padding: 14px 18px;
 }
 
 .brand-mark {
   align-items: center;
-  background: #d9efe9;
+  background: #e6f4ff;
   border-radius: 6px;
-  color: #123c35;
+  color: #0958d9;
   display: flex;
   font-weight: 800;
   height: 38px;
@@ -93,39 +88,20 @@ button {
 }
 
 .brand-name {
+  color: #ffffff;
+  display: block;
   font-weight: 700;
 }
 
 .brand-context {
-  color: #bdd0ca;
+  color: rgba(255, 255, 255, 0.62);
+  display: block;
   font-size: 12px;
 }
 
-.nav-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.nav-link {
-  align-items: center;
-  border-radius: 6px;
-  color: #dbe7e3;
-  display: flex;
-  gap: 10px;
-  min-height: 38px;
-  padding: 8px 10px;
+.ant-menu a {
+  color: inherit;
   text-decoration: none;
-}
-
-.nav-link:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-}
-
-.nav-link.is-active {
-  background: #d9efe9;
-  color: #123c35;
 }
 
 .content-frame {
@@ -140,6 +116,8 @@ button {
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
+  height: auto;
+  line-height: normal;
   min-height: 72px;
   padding: 14px 28px;
 }
@@ -152,22 +130,16 @@ button {
   margin: 0;
 }
 
+.topbar .ant-typography {
+  margin: 0;
+}
+
 .eyebrow {
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0;
   text-transform: uppercase;
-}
-
-.environment-pill {
-  background: #fff7e6;
-  border: 1px solid #e5c881;
-  border-radius: 999px;
-  color: var(--warning);
-  font-size: 12px;
-  font-weight: 700;
-  padding: 5px 10px;
 }
 
 .page-content {
@@ -178,7 +150,6 @@ button {
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
-  box-shadow: var(--shadow);
   padding: 20px;
 }
 
@@ -293,6 +264,30 @@ button {
   display: grid;
   gap: 14px;
   margin-top: 18px;
+}
+
+.entity-data-table .ant-table {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.entity-data-table .ant-table-thead > tr > th {
+  background: var(--panel-muted);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.entity-data-table .ant-table-cell {
+  white-space: nowrap;
+}
+
+.entity-data-table .ant-table-row {
+  cursor: pointer;
+}
+
+.entity-data-table .ant-pagination {
+  margin-bottom: 0;
 }
 
 .table-scroll {
@@ -878,24 +873,7 @@ button {
 
 @media (max-width: 780px) {
   .app-shell {
-    display: block;
-  }
-
-  .sidebar {
-    gap: 12px;
-    padding: 12px;
-  }
-
-  .nav-list {
-    flex-direction: row;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    scrollbar-gutter: stable;
-  }
-
-  .nav-link {
-    flex: 0 0 auto;
-    white-space: nowrap;
+    min-height: 100svh;
   }
 
   .topbar,
@@ -910,7 +888,6 @@ button {
     padding: 16px;
   }
 
-  .environment-pill,
   .primary-action,
   .secondary-action,
   .danger-action {
@@ -970,9 +947,4 @@ button {
     width: 34px;
   }
 
-  .nav-link {
-    gap: 7px;
-    min-height: 34px;
-    padding: 7px 8px;
-  }
 }

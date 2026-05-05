@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { Input, Table } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import { formatMoney } from '../utils/money'
 
 export type DataTableColumn<Row extends Record<string, unknown>> = {
@@ -56,6 +58,8 @@ function getColumnValue<Row extends Record<string, unknown>>(
 ): unknown {
   return column.valueGetter ? column.valueGetter(row) : row[column.key]
 }
+
+const DEFAULT_PAGE_SIZE = 10
 
 export function DataTable<Row extends Record<string, unknown>>({
   rows,
@@ -115,89 +119,72 @@ export function DataTable<Row extends Record<string, unknown>>({
     })
   }
 
+  const tableColumns: ColumnsType<Row> = columns.map((column) => ({
+    dataIndex: column.key,
+    key: column.key,
+    title: (
+      <button
+        className="table-sort-button"
+        onClick={() => updateSort(column.key)}
+        type="button"
+      >
+        <span>{column.header}</span>
+        <span aria-hidden="true">
+          {sort?.key === column.key
+            ? sort.direction === 'asc'
+              ? 'Asc'
+              : 'Desc'
+            : 'Sort'}
+        </span>
+      </button>
+    ),
+    render: (_value: unknown, row: Row) =>
+      formatCellValue(getColumnValue(row, column), column),
+  }))
+
   return (
     <div className="table-stack">
-      <label className="search-field">
+      <label className="search-field ant-search-field">
         <span>Search</span>
-        <input
+        <Input.Search
+          allowClear
           onChange={(event) => onSearchChange(event.target.value)}
           placeholder="Search records"
-          type="search"
           value={searchValue}
         />
       </label>
 
-      <div className="table-scroll">
-        <table className="data-table">
-          <thead>
-            <tr>
-              {columns.map((column) => (
-                <th
-                  aria-sort={
-                    sort?.key === column.key
-                      ? sort.direction === 'asc'
-                        ? 'ascending'
-                        : 'descending'
-                      : 'none'
-                  }
-                  key={column.key}
-                  scope="col"
-                >
-                  <button
-                    className="table-sort-button"
-                    onClick={() => updateSort(column.key)}
-                    type="button"
-                  >
-                    <span>{column.header}</span>
-                    <span aria-hidden="true">
-                      {sort?.key === column.key
-                        ? sort.direction === 'asc'
-                          ? 'Asc'
-                          : 'Desc'
-                        : 'Sort'}
-                    </span>
-                  </button>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr>
-                <td className="table-state" colSpan={columns.length}>
-                  Loading records...
-                </td>
-              </tr>
-            ) : visibleRows.length > 0 ? (
-              visibleRows.map((row) => (
-                <tr
-                  key={getRowId(row)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      onRowDoubleClick(row)
-                    }
-                  }}
-                  onDoubleClick={() => onRowDoubleClick(row)}
-                  tabIndex={0}
-                >
-                  {columns.map((column) => (
-                    <td key={column.key}>
-                      {formatCellValue(getColumnValue(row, column), column)}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td className="table-state" colSpan={columns.length}>
-                  {emptyMessage}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Table<Row>
+        className="entity-data-table"
+        columns={tableColumns}
+        dataSource={visibleRows}
+        loading={isLoading}
+        locale={{
+          emptyText: isLoading ? 'Loading records...' : emptyMessage,
+        }}
+        onRow={(row) => ({
+          onDoubleClick: () => onRowDoubleClick(row),
+          onKeyDown: (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              onRowDoubleClick(row)
+            }
+          },
+          tabIndex: 0,
+        })}
+        pagination={
+          visibleRows.length > DEFAULT_PAGE_SIZE
+            ? {
+                pageSize: DEFAULT_PAGE_SIZE,
+                showSizeChanger: false,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
+              }
+            : false
+        }
+        rowKey={(row) => String(getRowId(row))}
+        scroll={{ x: 'max-content' }}
+        size="middle"
+      />
     </div>
   )
 }

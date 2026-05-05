@@ -106,6 +106,27 @@ describe('DataTable', () => {
     expect(screen.getByText('1,250.50')).toBeVisible()
   })
 
+  it('paginates longer datasets with a result range summary', () => {
+    render(
+      <DataTable
+        columns={columns}
+        getRowId={(row) => row.id}
+        onRowDoubleClick={vi.fn()}
+        onSearchChange={vi.fn()}
+        rows={Array.from({ length: 12 }, (_, index) => ({
+          id: index + 1,
+          name: `Project ${index + 1}`,
+          tag: 'batch',
+        }))}
+        searchValue=""
+      />,
+    )
+
+    expect(screen.getByText('1-10 of 12')).toBeVisible()
+    expect(screen.getByText('Project 1')).toBeVisible()
+    expect(screen.queryByText('Project 12')).not.toBeInTheDocument()
+  })
+
   it('renders, filters, and sorts derived column values', async () => {
     const user = userEvent.setup()
 
