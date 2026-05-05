@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ImportBatchesModule } from './import-batches/import-batches.module';
 import { ModelsModule } from './models/models.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProjectStakeholdersModule } from './project-stakeholders/project-stakeholders.module';
@@ -18,6 +19,7 @@ import { StakeholdersModule } from './stakeholders/stakeholders.module';
     ProjectsModule,
     ProjectStakeholdersModule,
     SalesModule,
+    ImportBatchesModule,
   ],
 })
 export class AppModule {}

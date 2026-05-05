@@ -1,0 +1,142 @@
+import { BadRequestException } from '@nestjs/common';
+import { ImportBatchesService } from './import-batches.service';
+import { ImportParserService } from './import-parser.service';
+import { ImportValidatorService } from './import-validator.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+describe('ImportBatchesService', () => {
+  const prisma = {
+    $transaction: jest.fn(),
+    importBatch: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    importError: {
+      count: jest.fn(),
+    },
+    importStage: {
+      findMany: jest.fn(),
+    },
+    sale: {
+      createMany: jest.fn(),
+    },
+  } as any;
+  const parser = {} as ImportParserService;
+  const validator = {} as ImportValidatorService;
+
+  beforeEach(() => {
+    jest.resetAllMocks();
+    jest
+      .spyOn(prisma, '$transaction')
+      .mockImplementation(async (callback) => callback(prisma));
+  });
+
+  it('rejects commit when import date is missing', async () => {
+    jest.spyOn(prisma.importBatch, 'findUnique').mockResolvedValue({
+      idImportBatch: 1,
+      status: 'validated',
+      importDate: null,
+      source: 'store',
+    });
+    const service = new ImportBatchesService(
+      prisma as PrismaService,
+      parser,
+      validator,
+    );
+
+    await expect(service.commit(1)).rejects.toThrow(
+      new BadRequestException('Import date is required before commit'),
+    );
+    expect(prisma.sale.createMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects commit with validation errors or incomplete staged rows without creating sales', async () => {
+    jest.spyOn(prisma.importBatch, 'findUnique').mockResolvedValue({
+      idImportBatch: 1,
+      status: 'has_errors',
+      importDate: new Date('2026-05-05T00:00:00.000Z'),
+      source: 'store',
+    });
+    jest.spyOn(prisma.importError, 'count').mockResolvedValue(1);
+    const service = new ImportBatchesService(
+      prisma as PrismaService,
+      parser,
+      validator,
+    );
+
+    await expect(service.commit(1)).rejects.toThrow(
+      new BadRequestException('Batch has validation errors'),
+    );
+    expect(prisma.importStage.findMany).not.toHaveBeenCalled();
+    expect(prisma.sale.createMany).not.toHaveBeenCalled();
+  });
+
+  it('creates sales with selected import date, batch source, and fee zero on commit', async () => {
+    const importDate = new Date('2026-05-05T00:00:00.000Z');
+    jest.spyOn(prisma.importBatch, 'findUnique').mockResolvedValue({
+      idImportBatch: 1,
+      status: 'validated',
+      importDate,
+      source: 'event',
+    });
+    jest.spyOn(prisma.importError, 'count').mockResolvedValue(0);
+    jest.spyOn(prisma.importStage, 'findMany').mockResolvedValue([
+      {
+        idImportStage: 10,
+        externalProductId: 'EV-7',
+        importedProductDescription: 'Ticket',
+        idProduct: 7,
+        quantity: 2,
+        amount: '30.50',
+      },
+      {
+        idImportStage: 11,
+        externalProductId: 'EV-8',
+        importedProductDescription: 'Pass',
+        idProduct: 8,
+        quantity: 1,
+        amount: 12,
+      },
+    ]);
+    jest.spyOn(prisma.sale, 'createMany').mockResolvedValue({ count: 2 });
+    jest.spyOn(prisma.importBatch, 'update').mockResolvedValue({
+      idImportBatch: 1,
+      status: 'committed',
+      importDate,
+      source: 'event',
+    });
+    const service = new ImportBatchesService(
+      prisma as PrismaService,
+      parser,
+      validator,
+    );
+
+    await service.commit(1);
+
+    expect(prisma.sale.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          date: importDate,
+          source: 'event',
+          idProduct: 7,
+          quantity: 2,
+          amount: '30.50',
+          fee: 0,
+        },
+        {
+          date: importDate,
+          source: 'event',
+          idProduct: 8,
+          quantity: 1,
+          amount: 12,
+          fee: 0,
+        },
+      ],
+    });
+    expect(prisma.importBatch.update).toHaveBeenCalledWith({
+      where: { idImportBatch: 1 },
+      data: { status: 'committed', committedAt: expect.any(Date) },
+      include: expect.any(Object),
+    });
+  });
+});
