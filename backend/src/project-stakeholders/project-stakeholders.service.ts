@@ -52,23 +52,21 @@ export class ProjectStakeholdersService {
 
   async update(id: number, dto: UpdateProjectStakeholderDto) {
     return this.prisma.$transaction(async (tx) => {
-      let current = await this.findOneWithClient(tx, id);
+      await this.lockProjectStakeholder(tx, id);
+      const current = await this.findOneWithClient(tx, id);
       const destinationProjectId = dto.idProject ?? current.idProject;
 
       await this.lockProjects(tx, [current.idProject, destinationProjectId]);
-      current = await this.findOneWithClient(tx, id);
-
-      const lockedDestinationProjectId = dto.idProject ?? current.idProject;
       const nextStakePercentage =
         dto.stakePercentage === undefined
           ? Number(current.stakePercentage)
           : dto.stakePercentage;
       const idProjectStakeholderToExclude =
-        current.idProject === lockedDestinationProjectId ? id : undefined;
+        current.idProject === destinationProjectId ? id : undefined;
 
       await this.assertProjectTotalDoesNotExceed100(
         tx,
-        lockedDestinationProjectId,
+        destinationProjectId,
         nextStakePercentage,
         idProjectStakeholderToExclude,
       );
@@ -116,6 +114,15 @@ export class ProjectStakeholdersService {
     });
     if (!record) throw new NotFoundException(`Project stakeholder ${id} was not found`);
     return record;
+  }
+
+  private async lockProjectStakeholder(
+    client: Pick<ProjectStakeholderWriteClient, '$queryRaw'>,
+    idProjectStakeholder: number,
+  ) {
+    await client.$queryRaw(
+      Prisma.sql`SELECT id_project_stakeholder FROM project_stakeholder WHERE id_project_stakeholder = ${idProjectStakeholder} FOR UPDATE`,
+    );
   }
 
   private async lockProjects(

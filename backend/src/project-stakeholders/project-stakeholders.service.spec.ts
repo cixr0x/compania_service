@@ -130,4 +130,44 @@ describe('ProjectStakeholdersService', () => {
       data: { idProject: 20 },
     });
   });
+
+  it('locks the project stakeholder row before reading project identity during update', async () => {
+    const operations: string[] = [];
+    jest.spyOn(transactionPrisma, '$queryRaw').mockImplementation(() => {
+      operations.push('raw-lock');
+      return Promise.resolve([]);
+    });
+    jest.spyOn(transactionPrisma.projectStakeholder, 'findUnique').mockImplementation(() => {
+      operations.push('read-row');
+      return Promise.resolve({
+        idProjectStakeholder: 1,
+        idProject: 10,
+        idStakeholder: 2,
+        stakePercentage: '30.00',
+      });
+    });
+    jest.spyOn(transactionPrisma.projectStakeholder, 'findMany').mockImplementation(() => {
+      operations.push('validate-total');
+      return Promise.resolve([
+        { idProjectStakeholder: 1, idProject: 10, idStakeholder: 2, stakePercentage: '30.00' },
+        { idProjectStakeholder: 3, idProject: 10, idStakeholder: 3, stakePercentage: '60.00' },
+      ]);
+    });
+    jest.spyOn(transactionPrisma.projectStakeholder, 'update').mockImplementation(() => {
+      operations.push('update-row');
+      return Promise.resolve({
+        idProjectStakeholder: 1,
+        idProject: 10,
+        idStakeholder: 2,
+        stakePercentage: '40.00',
+      });
+    });
+
+    const service = new ProjectStakeholdersService(prisma);
+    await service.update(1, { stakePercentage: 40 });
+
+    expect(operations[0]).toBe('raw-lock');
+    expect(operations.indexOf('read-row')).toBeGreaterThan(operations.indexOf('raw-lock'));
+    expect(operations.indexOf('update-row')).toBeGreaterThan(operations.lastIndexOf('raw-lock'));
+  });
 });
