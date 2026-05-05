@@ -1,4 +1,10 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import type {
   EntityConfig,
   EntityField,
@@ -116,6 +122,13 @@ export function EntityForm({
 }: EntityFormProps) {
   const fieldGroups = groupFields(config.fields)
   const [focusedFieldName, setFocusedFieldName] = useState<string | null>(null)
+  const moneyInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  useLayoutEffect(() => {
+    if (focusedFieldName) {
+      moneyInputRefs.current[focusedFieldName]?.select()
+    }
+  }, [focusedFieldName])
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -242,6 +255,11 @@ export function EntityForm({
               max={field.max}
               min={field.min}
               required={isRequired}
+              ref={(input) => {
+                if (isMoneyField) {
+                  moneyInputRefs.current[field.name] = input
+                }
+              }}
               step={
                 field.type === 'number' && !isMoneyField
                   ? (field.step ?? 'any')

@@ -435,6 +435,50 @@ describe('EntityEditPage', () => {
     )
   })
 
+  it('recalculates project total cost while replacing existing cost values', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products') {
+        return [{ id: 42, name: 'Maple Shelf', idModel: 7 }]
+      }
+
+      if (path === '/stakeholders?pageSize=100') {
+        return []
+      }
+
+      if (path === '/projects/77') {
+        return {
+          adminCost: 250,
+          idProduct: 42,
+          idProject: 77,
+          isActive: true,
+          productionCost: 7500,
+          unitCost: 10,
+          units: 100,
+        }
+      }
+
+      if (path === '/project-stakeholders/projects/77') {
+        return []
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
+
+    renderEntityEditPage('/projects/77', '/:entityName/:id')
+
+    const totalCostInput = await screen.findByLabelText('Total Cost')
+    expect(totalCostInput).toHaveValue('7,750.00')
+
+    await user.click(screen.getByLabelText('Production Cost'))
+    await user.keyboard('1000')
+    expect(totalCostInput).toHaveValue('1,250.00')
+
+    await user.click(screen.getByLabelText('Admin Cost'))
+    await user.keyboard('500')
+    expect(totalCostInput).toHaveValue('1,500.00')
+  })
+
   it('configures every money field and money table column for currency formatting', () => {
     const moneyFields: Array<[EntityName, string]> = [
       ['projects', 'unitCost'],
