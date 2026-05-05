@@ -1,8 +1,13 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProjectStakeholderDto } from './dto/create-project-stakeholder.dto';
+import { ReplaceProjectStakeholderDto } from './dto/replace-project-stakeholder.dto';
 import { UpdateProjectStakeholderDto } from './dto/update-project-stakeholder.dto';
 
 const projectStakeholderInclude = {
@@ -14,7 +19,13 @@ type ProjectStakeholderWriteClient = {
   $queryRaw: PrismaService['$queryRaw'];
   projectStakeholder: Pick<
     PrismaService['projectStakeholder'],
-    'create' | 'update' | 'findUnique' | 'findMany'
+    | 'create'
+    | 'createMany'
+    | 'delete'
+    | 'deleteMany'
+    | 'update'
+    | 'findUnique'
+    | 'findMany'
   >;
 };
 
@@ -25,7 +36,11 @@ export class ProjectStakeholdersService {
   async create(dto: CreateProjectStakeholderDto) {
     return this.prisma.$transaction(async (tx) => {
       await this.lockProjects(tx, [dto.idProject]);
-      await this.assertProjectTotalDoesNotExceed100(tx, dto.idProject, dto.stakePercentage);
+      await this.assertProjectTotalEquals100(
+        tx,
+        dto.idProject,
+        dto.stakePercentage,
+      );
       return tx.projectStakeholder.create({ data: dto });
     });
   }
@@ -41,12 +56,21 @@ export class ProjectStakeholdersService {
     });
   }
 
+  findByProject(idProject: number) {
+    return this.prisma.projectStakeholder.findMany({
+      where: { idProject },
+      include: projectStakeholderInclude,
+      orderBy: { idProjectStakeholder: 'desc' },
+    });
+  }
+
   async findOne(id: number) {
     const record = await this.prisma.projectStakeholder.findUnique({
       where: { idProjectStakeholder: id },
       include: projectStakeholderInclude,
     });
-    if (!record) throw new NotFoundException(`Project stakeholder ${id} was not found`);
+    if (!record)
+      throw new NotFoundException(`Project stakeholder ${id} was not found`);
     return record;
   }
 
@@ -64,7 +88,11 @@ export class ProjectStakeholdersService {
       const idProjectStakeholderToExclude =
         current.idProject === destinationProjectId ? id : undefined;
 
-      await this.assertProjectTotalDoesNotExceed100(
+      if (current.idProject !== destinationProjectId) {
+        await this.assertProjectTotalEquals100(tx, current.idProject, 0, id);
+      }
+
+      await this.assertProjectTotalEquals100(
         tx,
         destinationProjectId,
         nextStakePercentage,
@@ -79,11 +107,44 @@ export class ProjectStakeholdersService {
   }
 
   async remove(id: number) {
-    await this.findOne(id);
-    return this.prisma.projectStakeholder.delete({ where: { idProjectStakeholder: id } });
+    return this.prisma.$transaction(async (tx) => {
+      await this.lockProjectStakeholder(tx, id);
+      const current = await this.findOneWithClient(tx, id);
+      await this.lockProjects(tx, [current.idProject]);
+      await this.assertProjectTotalEquals100(tx, current.idProject, 0, id);
+      return tx.projectStakeholder.delete({
+        where: { idProjectStakeholder: id },
+      });
+    });
   }
 
-  private async assertProjectTotalDoesNotExceed100(
+  async replaceProjectSplit(
+    idProject: number,
+    dto: ReplaceProjectStakeholderDto[],
+  ) {
+    this.assertSubmittedProjectTotalEquals100(dto);
+    this.assertStakeholdersAreUnique(dto);
+
+    return this.prisma.$transaction(async (tx) => {
+      await this.lockProjects(tx, [idProject]);
+      await tx.projectStakeholder.deleteMany({ where: { idProject } });
+      await tx.projectStakeholder.createMany({
+        data: dto.map((row) => ({
+          idProject,
+          idStakeholder: row.idStakeholder,
+          stakePercentage: row.stakePercentage,
+        })),
+      });
+
+      return tx.projectStakeholder.findMany({
+        where: { idProject },
+        include: projectStakeholderInclude,
+        orderBy: { idProjectStakeholder: 'desc' },
+      });
+    });
+  }
+
+  private async assertProjectTotalEquals100(
     client: Pick<ProjectStakeholderWriteClient, 'projectStakeholder'>,
     idProject: number,
     stakePercentage: number,
@@ -94,13 +155,41 @@ export class ProjectStakeholdersService {
       select: { idProjectStakeholder: true, stakePercentage: true },
     });
     const existingTotal = rows.reduce((sum, row) => {
-      if (row.idProjectStakeholder === idProjectStakeholderToExclude) return sum;
+      if (row.idProjectStakeholder === idProjectStakeholderToExclude)
+        return sum;
       return sum + Number(row.stakePercentage);
     }, 0);
-    const nextTotal = existingTotal + stakePercentage;
+    const nextTotalCents =
+      toPercentageCents(existingTotal) + toPercentageCents(stakePercentage);
 
-    if (Math.round(nextTotal * 100) > 10000) {
-      throw new BadRequestException('Project stakeholder total cannot exceed 100');
+    if (nextTotalCents !== 10000) {
+      throw new BadRequestException('Project stakeholder total must equal 100');
+    }
+  }
+
+  private assertSubmittedProjectTotalEquals100(
+    dto: ReplaceProjectStakeholderDto[],
+  ) {
+    const totalCents = dto.reduce(
+      (sum, row) => sum + toPercentageCents(row.stakePercentage),
+      0,
+    );
+
+    if (totalCents !== 10000) {
+      throw new BadRequestException('Project stakeholder total must equal 100');
+    }
+  }
+
+  private assertStakeholdersAreUnique(dto: ReplaceProjectStakeholderDto[]) {
+    const stakeholderIds = new Set<number>();
+
+    for (const row of dto) {
+      if (stakeholderIds.has(row.idStakeholder)) {
+        throw new BadRequestException(
+          'Project split cannot contain duplicate stakeholders',
+        );
+      }
+      stakeholderIds.add(row.idStakeholder);
     }
   }
 
@@ -112,7 +201,8 @@ export class ProjectStakeholdersService {
       where: { idProjectStakeholder: id },
       include: projectStakeholderInclude,
     });
-    if (!record) throw new NotFoundException(`Project stakeholder ${id} was not found`);
+    if (!record)
+      throw new NotFoundException(`Project stakeholder ${id} was not found`);
     return record;
   }
 
@@ -137,4 +227,8 @@ export class ProjectStakeholdersService {
       );
     }
   }
+}
+
+function toPercentageCents(value: number | string | Prisma.Decimal): number {
+  return Math.round(Number(value) * 100);
 }

@@ -37,14 +37,14 @@ describe('buildApiUrl', () => {
   })
 
   it('returns response data from JSON helpers', async () => {
-    const { api, deleteJson, getJson, patchJson, postJson } = await import(
-      './client'
-    )
+    const { api, deleteJson, getJson, patchJson, postJson, putJson } =
+      await import('./client')
     const payload = { ok: true }
     const response = { data: payload } as AxiosResponse<typeof payload>
 
     const getSpy = vi.spyOn(api, 'get').mockResolvedValue(response)
     const postSpy = vi.spyOn(api, 'post').mockResolvedValue(response)
+    const putSpy = vi.spyOn(api, 'put').mockResolvedValue(response)
     const patchSpy = vi.spyOn(api, 'patch').mockResolvedValue(response)
     const deleteSpy = vi.spyOn(api, 'delete').mockResolvedValue(response)
 
@@ -52,6 +52,11 @@ describe('buildApiUrl', () => {
     await expect(
       postJson<typeof payload, { name: string }>('/products', {
         name: 'Product',
+      }),
+    ).resolves.toBe(payload)
+    await expect(
+      putJson<typeof payload, { name: string }>('/products/1', {
+        name: 'Replaced',
       }),
     ).resolves.toBe(payload)
     await expect(
@@ -65,6 +70,7 @@ describe('buildApiUrl', () => {
 
     expect(getSpy).toHaveBeenCalledWith('/products')
     expect(postSpy).toHaveBeenCalledWith('/products', { name: 'Product' })
+    expect(putSpy).toHaveBeenCalledWith('/products/1', { name: 'Replaced' })
     expect(patchSpy).toHaveBeenCalledWith('/products/1', { name: 'Updated' })
     expect(deleteSpy).toHaveBeenCalledWith('/products/1')
   })

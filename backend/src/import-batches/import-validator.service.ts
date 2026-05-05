@@ -29,6 +29,9 @@ type ProductLookup = {
   id: number;
   [field: string]: number | string | null;
 };
+type ProductLookupClient = {
+  product: Pick<PrismaService['product'], 'findMany'>;
+};
 
 @Injectable()
 export class ImportValidatorService {
@@ -37,6 +40,7 @@ export class ImportValidatorService {
   async validateRows(
     source: ImportSource,
     rows: ParsedImportRow[],
+    client: ProductLookupClient = this.prisma,
   ): Promise<{ stageRows: ImportStageRowData[]; errors: ImportRowError[] }> {
     const externalIdField = getProductExternalIdField(source);
     const externalIds = [
@@ -46,7 +50,11 @@ export class ImportValidatorService {
           .filter((value): value is string => value !== null),
       ),
     ];
-    const products = await this.findProducts(externalIdField, externalIds);
+    const products = await this.findProducts(
+      client,
+      externalIdField,
+      externalIds,
+    );
     const productsByExternalId = new Map<string, ProductLookup>();
 
     for (const product of products) {
@@ -128,12 +136,16 @@ export class ImportValidatorService {
     return { stageRows, errors };
   }
 
-  private findProducts(externalIdField: string, externalIds: string[]) {
+  private findProducts(
+    client: ProductLookupClient,
+    externalIdField: string,
+    externalIds: string[],
+  ) {
     if (externalIds.length === 0) {
       return Promise.resolve([] as ProductLookup[]);
     }
 
-    return this.prisma.product.findMany({
+    return client.product.findMany({
       where: { [externalIdField]: { in: externalIds } },
       select: { id: true, [externalIdField]: true },
     } as Prisma.ProductFindManyArgs) as unknown as Promise<ProductLookup[]>;

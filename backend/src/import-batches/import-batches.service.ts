@@ -30,6 +30,9 @@ type StageForParse = {
   amount: Prisma.Decimal | number | string | null;
   rawRow: Prisma.JsonValue | null;
 };
+type StageForValidationUpdate = StageForParse & {
+  idImportStage: number;
+};
 
 @Injectable()
 export class ImportBatchesService {
@@ -194,37 +197,19 @@ export class ImportBatchesService {
       const validation = await this.validator.validateRows(
         batch.source as CreateImportBatchDto['source'],
         batch.stageRows.map((row) => this.toParsedRow(row)),
+        tx,
       );
-      const stageByRowNumber = new Map(
-        batch.stageRows.map((row) => [row.rowNumber, row]),
+      const stageByRowNumber = await this.applyValidationToStageRows(
+        tx,
+        batch.stageRows,
+        validation.stageRows,
       );
-
-      for (const row of validation.stageRows) {
-        const stage = stageByRowNumber.get(row.rowNumber);
-        if (stage) {
-          await tx.importStage.update({
-            where: { idImportStage: stage.idImportStage },
-            data: {
-              externalProductId: row.externalProductId,
-              importedProductDescription: row.importedProductDescription,
-              quantity: row.quantity,
-              amount: row.amount,
-              idProduct: row.idProduct,
-            },
-          });
-        }
-      }
-
-      await tx.importError.deleteMany({ where: { idImportBatch: id } });
-      if (validation.errors.length > 0) {
-        await tx.importError.createMany({
-          data: validation.errors.map((error) => ({
-            ...this.toErrorCreateData(id, error),
-            idImportStage:
-              stageByRowNumber.get(error.rowNumber)?.idImportStage ?? null,
-          })),
-        });
-      }
+      await this.replaceValidationErrors(
+        tx,
+        id,
+        stageByRowNumber,
+        validation.errors,
+      );
 
       return tx.importBatch.update({
         where: { idImportBatch: id },
@@ -237,7 +222,7 @@ export class ImportBatchesService {
   }
 
   async commit(id: number) {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       await this.lockImportBatch(tx, id);
       const batch = await tx.importBatch.findUnique({
         where: { idImportBatch: id },
@@ -255,13 +240,6 @@ export class ImportBatchesService {
         throw new BadRequestException('Import date is required before commit');
       }
 
-      const errorCount = await tx.importError.count({
-        where: { idImportBatch: id },
-      });
-      if (errorCount > 0) {
-        throw new BadRequestException('Batch has validation errors');
-      }
-
       const stageRows = await tx.importStage.findMany({
         where: { idImportBatch: id },
         orderBy: { rowNumber: 'asc' },
@@ -273,8 +251,41 @@ export class ImportBatchesService {
         throw new BadRequestException('Batch has incomplete staged rows');
       }
 
+      const validation = await this.validator.validateRows(
+        batch.source as CreateImportBatchDto['source'],
+        stageRows.map((row) => this.toParsedRow(row)),
+        tx,
+      );
+      const stageByRowNumber = await this.applyValidationToStageRows(
+        tx,
+        stageRows,
+        validation.stageRows,
+      );
+      await this.replaceValidationErrors(
+        tx,
+        id,
+        stageByRowNumber,
+        validation.errors,
+      );
+
+      if (validation.errors.length > 0) {
+        const updatedBatch = await tx.importBatch.update({
+          where: { idImportBatch: id },
+          data: { status: 'has_errors' },
+          include: batchDetailInclude,
+        });
+        return { rejected: true, batch: updatedBatch };
+      }
+
+      if (
+        validation.stageRows.length === 0 ||
+        validation.stageRows.some((row) => !isCompleteStageRow(row))
+      ) {
+        throw new BadRequestException('Batch has incomplete staged rows');
+      }
+
       await tx.sale.createMany({
-        data: stageRows.map((row) => ({
+        data: validation.stageRows.map((row) => ({
           date: batch.importDate as Date,
           source: batch.source,
           idProduct: row.idProduct as number,
@@ -290,6 +301,12 @@ export class ImportBatchesService {
         include: batchDetailInclude,
       });
     });
+
+    if ('rejected' in result && result.rejected) {
+      throw new BadRequestException('Batch has validation errors');
+    }
+
+    return result;
   }
 
   async cancel(id: number) {
@@ -353,6 +370,52 @@ export class ImportBatchesService {
       WHERE id_import_batch = ${id}
       FOR UPDATE
     `;
+  }
+
+  private async applyValidationToStageRows(
+    tx: TransactionClient,
+    stageRows: StageForValidationUpdate[],
+    validationRows: ImportStageRowData[],
+  ) {
+    const stageByRowNumber = new Map(
+      stageRows.map((row) => [row.rowNumber, row]),
+    );
+
+    for (const row of validationRows) {
+      const stage = stageByRowNumber.get(row.rowNumber);
+      if (stage) {
+        await tx.importStage.update({
+          where: { idImportStage: stage.idImportStage },
+          data: {
+            externalProductId: row.externalProductId,
+            importedProductDescription: row.importedProductDescription,
+            quantity: row.quantity,
+            amount: row.amount,
+            idProduct: row.idProduct,
+          },
+        });
+      }
+    }
+
+    return stageByRowNumber;
+  }
+
+  private async replaceValidationErrors(
+    tx: TransactionClient,
+    idImportBatch: number,
+    stageByRowNumber: Map<number, StageForValidationUpdate>,
+    errors: ImportRowError[],
+  ) {
+    await tx.importError.deleteMany({ where: { idImportBatch } });
+    if (errors.length > 0) {
+      await tx.importError.createMany({
+        data: errors.map((error) => ({
+          ...this.toErrorCreateData(idImportBatch, error),
+          idImportStage:
+            stageByRowNumber.get(error.rowNumber)?.idImportStage ?? null,
+        })),
+      });
+    }
   }
 
   private toStageCreateData(

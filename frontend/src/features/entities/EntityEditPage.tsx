@@ -9,6 +9,7 @@ import {
   type EntityField,
   type EntityRow,
 } from './entityConfigs'
+import { ProjectStakeholderSplitEditor } from './ProjectStakeholderSplitEditor'
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
@@ -78,7 +79,9 @@ export function EntityEditPage() {
   const [mutationError, setMutationError] = useState<string | null>(null)
 
   const detailQuery = useQuery({
-    enabled: Boolean(config && !isCreate && id),
+    enabled: Boolean(
+      config && config.path !== 'project-stakeholders' && !isCreate && id,
+    ),
     queryKey: ['entity', config?.path, id],
     queryFn: () => getJson<EntityRow>(`/${config!.path}/${id}`),
   })
@@ -121,6 +124,16 @@ export function EntityEditPage() {
           The requested admin entity is not configured.
         </p>
       </section>
+    )
+  }
+
+  if (config.path === 'project-stakeholders') {
+    return (
+      <ProjectStakeholderSplitEditor
+        config={config}
+        id={id}
+        isCreate={isCreate}
+      />
     )
   }
 

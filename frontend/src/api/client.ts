@@ -35,6 +35,14 @@ export async function postJson<TResponse, TBody>(
   return response.data
 }
 
+export async function putJson<TResponse, TBody>(
+  path: string,
+  body: TBody,
+): Promise<TResponse> {
+  const response = await api.put<TResponse>(path, body)
+  return response.data
+}
+
 export async function patchJson<TResponse, TBody>(
   path: string,
   body: TBody,

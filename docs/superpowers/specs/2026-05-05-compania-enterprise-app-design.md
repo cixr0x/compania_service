@@ -99,6 +99,7 @@ Rules:
 - The pair `id_project + id_stakeholder` must be unique.
 - Each `stake_percentage` must be greater than `0` and less than or equal to `100`.
 - The sum of all stakeholder percentages for one project must equal exactly `100`.
+- Row-by-row project stakeholder writes are accepted only when the resulting project split still totals exactly `100`; clients should use the batch replacement endpoint for multi-row split edits. The MVP frontend project-stakeholder create/edit form is a compact full-split editor that saves through that replacement endpoint.
 
 ### sales
 
@@ -186,6 +187,8 @@ CRUD resources:
 - `PATCH /api/products/:id`
 - `DELETE /api/products/:id`
 - Equivalent CRUD endpoints for `models`, `projects`, `stakeholders`, `project-stakeholders`, and `sales`.
+- `GET /api/project-stakeholders/projects/:id`: list the complete stakeholder split for one project.
+- `PUT /api/project-stakeholders/projects/:id`: atomically replace a project's full stakeholder split with an array of `{ idStakeholder, stakePercentage }` rows totaling exactly `100`.
 
 Import resources:
 
@@ -243,7 +246,7 @@ Expected validation rules:
 - Import date is required before commit.
 - Import rows require external product ID, quantity, amount, and imported product description.
 - Import rows must match an existing product through the selected source's external ID field.
-- Import commit is all-or-nothing.
+- Import commit revalidates staged rows inside the commit transaction before inserting `sales`; if revalidation fails, refreshed validation errors and `has_errors` status remain visible and no sales rows are inserted.
 
 Errors should be returned in a structured JSON shape containing field, message, and optional row number for import errors.
 

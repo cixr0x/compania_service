@@ -3,7 +3,13 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { deleteJson, getJson, patchJson, postJson } from '../../api/client'
+import {
+  deleteJson,
+  getJson,
+  patchJson,
+  postJson,
+  putJson,
+} from '../../api/client'
 import { EntityEditPage } from './EntityEditPage'
 
 vi.mock('../../api/client', () => ({
@@ -11,6 +17,7 @@ vi.mock('../../api/client', () => ({
   getJson: vi.fn(),
   patchJson: vi.fn(),
   postJson: vi.fn(),
+  putJson: vi.fn(),
 }))
 
 function renderEntityEditPage(initialEntry: string, editPath: string) {
@@ -131,5 +138,93 @@ describe('EntityEditPage', () => {
         source: 'store',
       })
     })
+  })
+
+  it('saves a new project stakeholder split with PUT for the full project total', async () => {
+    const user = userEvent.setup()
+    vi.mocked(putJson).mockResolvedValue([
+      { idProject: 77, idStakeholder: 10, stakePercentage: 60 },
+      { idProject: 77, idStakeholder: 11, stakePercentage: 40 },
+    ])
+
+    renderEntityEditPage('/project-stakeholders/new', '/:entityName/:id')
+
+    expect(
+      screen.getByRole('heading', { name: 'Create Project Stakeholders' }),
+    ).toBeVisible()
+
+    await user.type(screen.getByLabelText('Project ID'), '77')
+    await user.type(screen.getAllByLabelText('Stakeholder ID')[0], '10')
+    await user.type(screen.getAllByLabelText('Stake Percentage')[0], '60')
+    await user.click(screen.getByRole('button', { name: 'Add row' }))
+    await user.type(screen.getAllByLabelText('Stakeholder ID')[1], '11')
+    await user.type(screen.getAllByLabelText('Stake Percentage')[1], '40')
+
+    expect(screen.getByText('Total: 100%')).toBeVisible()
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(putJson).toHaveBeenCalledWith('/project-stakeholders/projects/77', [
+        { idStakeholder: 10, stakePercentage: 60 },
+        { idStakeholder: 11, stakePercentage: 40 },
+      ])
+    })
+    expect(postJson).not.toHaveBeenCalled()
+    expect(patchJson).not.toHaveBeenCalled()
+  })
+
+  it('preloads an existing project stakeholder split and saves all rows for that project', async () => {
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/project-stakeholders/501') {
+        return {
+          idProjectStakeholder: 501,
+          idProject: 77,
+          idStakeholder: 10,
+          stakePercentage: 60,
+        }
+      }
+
+      if (path === '/project-stakeholders/projects/77') {
+        return [
+          {
+            idProjectStakeholder: 501,
+            idProject: 77,
+            idStakeholder: 10,
+            stakePercentage: 60,
+          },
+          {
+            idProjectStakeholder: 502,
+            idProject: 77,
+            idStakeholder: 11,
+            stakePercentage: 40,
+          },
+        ]
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
+    vi.mocked(putJson).mockResolvedValue([
+      { idProject: 77, idStakeholder: 10, stakePercentage: 60 },
+      { idProject: 77, idStakeholder: 11, stakePercentage: 40 },
+    ])
+
+    renderEntityEditPage('/project-stakeholders/501', '/:entityName/:id')
+
+    expect(await screen.findByDisplayValue('77')).toBeVisible()
+    expect(screen.getByDisplayValue('10')).toBeVisible()
+    expect(screen.getByDisplayValue('11')).toBeVisible()
+    expect(screen.getByText('Total: 100%')).toBeVisible()
+    expect(getJson).toHaveBeenCalledWith('/project-stakeholders/projects/77')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(putJson).toHaveBeenCalledWith('/project-stakeholders/projects/77', [
+        { idStakeholder: 10, stakePercentage: 60 },
+        { idStakeholder: 11, stakePercentage: 40 },
+      ])
+    })
+    expect(patchJson).not.toHaveBeenCalled()
   })
 })

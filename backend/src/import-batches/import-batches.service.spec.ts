@@ -15,6 +15,7 @@ describe('ImportBatchesService', () => {
     importError: {
       count: jest.fn(),
       create: jest.fn(),
+      createMany: jest.fn(),
       deleteMany: jest.fn(),
     },
     importStage: {
@@ -56,14 +57,14 @@ describe('ImportBatchesService', () => {
     expect(prisma.sale.createMany).not.toHaveBeenCalled();
   });
 
-  it('rejects commit with validation errors or incomplete staged rows without creating sales', async () => {
+  it('rejects commit with incomplete staged rows without creating sales', async () => {
     jest.spyOn(prisma.importBatch, 'findUnique').mockResolvedValue({
       idImportBatch: 1,
       status: 'validated',
       importDate: new Date('2026-05-05T00:00:00.000Z'),
       source: 'store',
     });
-    jest.spyOn(prisma.importError, 'count').mockResolvedValue(1);
+    jest.spyOn(prisma.importStage, 'findMany').mockResolvedValue([]);
     const service = new ImportBatchesService(
       prisma as PrismaService,
       parser,
@@ -71,9 +72,8 @@ describe('ImportBatchesService', () => {
     );
 
     await expect(service.commit(1)).rejects.toThrow(
-      new BadRequestException('Batch has validation errors'),
+      new BadRequestException('Batch has incomplete staged rows'),
     );
-    expect(prisma.importStage.findMany).not.toHaveBeenCalled();
     expect(prisma.sale.createMany).not.toHaveBeenCalled();
   });
 
@@ -89,21 +89,54 @@ describe('ImportBatchesService', () => {
     jest.spyOn(prisma.importStage, 'findMany').mockResolvedValue([
       {
         idImportStage: 10,
+        rowNumber: 1,
         externalProductId: 'EV-7',
         importedProductDescription: 'Ticket',
-        idProduct: 7,
+        idProduct: 70,
         quantity: 2,
         amount: '30.50',
+        rawRow: { id: 'EV-7' },
       },
       {
         idImportStage: 11,
+        rowNumber: 2,
         externalProductId: 'EV-8',
         importedProductDescription: 'Pass',
-        idProduct: 8,
+        idProduct: 80,
         quantity: 1,
         amount: 12,
+        rawRow: { id: 'EV-8' },
       },
     ]);
+    jest.spyOn(validator, 'validateRows').mockResolvedValue({
+      stageRows: [
+        {
+          rowNumber: 1,
+          externalProductId: 'EV-7',
+          importedProductDescription: 'Ticket',
+          quantity: 2,
+          amount: 30.5,
+          rawRow: { id: 'EV-7' },
+          idProduct: 7,
+        },
+        {
+          rowNumber: 2,
+          externalProductId: 'EV-8',
+          importedProductDescription: 'Pass',
+          quantity: 1,
+          amount: 12,
+          rawRow: { id: 'EV-8' },
+          idProduct: 8,
+        },
+      ],
+      errors: [],
+    });
+    jest.spyOn(prisma.importStage, 'update').mockResolvedValue({
+      idImportStage: 10,
+    });
+    jest
+      .spyOn(prisma.importError, 'deleteMany')
+      .mockResolvedValue({ count: 0 });
     jest.spyOn(prisma.sale, 'createMany').mockResolvedValue({ count: 2 });
     jest.spyOn(prisma.importBatch, 'update').mockResolvedValue({
       idImportBatch: 1,
@@ -119,6 +152,38 @@ describe('ImportBatchesService', () => {
 
     await service.commit(1);
 
+    expect(validator.validateRows).toHaveBeenCalledWith(
+      'event',
+      [
+        {
+          rowNumber: 1,
+          externalProductId: 'EV-7',
+          importedProductDescription: 'Ticket',
+          quantity: 2,
+          amount: 30.5,
+          rawRow: { id: 'EV-7' },
+        },
+        {
+          rowNumber: 2,
+          externalProductId: 'EV-8',
+          importedProductDescription: 'Pass',
+          quantity: 1,
+          amount: 12,
+          rawRow: { id: 'EV-8' },
+        },
+      ],
+      prisma,
+    );
+    expect(prisma.importStage.update).toHaveBeenCalledWith({
+      where: { idImportStage: 10 },
+      data: {
+        externalProductId: 'EV-7',
+        importedProductDescription: 'Ticket',
+        quantity: 2,
+        amount: 30.5,
+        idProduct: 7,
+      },
+    });
     expect(prisma.sale.createMany).toHaveBeenCalledWith({
       data: [
         {
@@ -126,7 +191,7 @@ describe('ImportBatchesService', () => {
           source: 'event',
           idProduct: 7,
           quantity: 2,
-          amount: '30.50',
+          amount: 30.5,
           fee: 0,
         },
         {
@@ -144,6 +209,102 @@ describe('ImportBatchesService', () => {
       data: { status: 'committed', committedAt: expect.any(Date) },
       include: expect.any(Object),
     });
+  });
+
+  it('persists fresh validation errors and rejects commit when revalidation fails', async () => {
+    const importDate = new Date('2026-05-05T00:00:00.000Z');
+    jest.spyOn(prisma.importBatch, 'findUnique').mockResolvedValue({
+      idImportBatch: 1,
+      status: 'validated',
+      importDate,
+      source: 'store',
+    });
+    jest.spyOn(prisma.importError, 'count').mockResolvedValue(0);
+    jest.spyOn(prisma.importStage, 'findMany').mockResolvedValue([
+      {
+        idImportStage: 10,
+        rowNumber: 1,
+        externalProductId: 'S-7',
+        importedProductDescription: 'Shirt',
+        idProduct: 7,
+        quantity: 2,
+        amount: '30.50',
+        rawRow: { id: 'S-7' },
+      },
+    ]);
+    jest.spyOn(validator, 'validateRows').mockResolvedValue({
+      stageRows: [
+        {
+          rowNumber: 1,
+          externalProductId: 'S-7',
+          importedProductDescription: 'Shirt',
+          quantity: 2,
+          amount: 30.5,
+          rawRow: { id: 'S-7' },
+          idProduct: null,
+        },
+      ],
+      errors: [
+        {
+          rowNumber: 1,
+          field: 'externalProductId',
+          message: 'No product matched external ID S-7 for source store',
+        },
+      ],
+    });
+    jest
+      .spyOn(prisma.importStage, 'update')
+      .mockResolvedValue({ idImportStage: 10 });
+    jest
+      .spyOn(prisma.importError, 'deleteMany')
+      .mockResolvedValue({ count: 0 });
+    jest
+      .spyOn(prisma.importError, 'createMany')
+      .mockResolvedValue({ count: 1 });
+    jest.spyOn(prisma.importBatch, 'update').mockResolvedValue({
+      idImportBatch: 1,
+      status: 'has_errors',
+    });
+    const service = new ImportBatchesService(
+      prisma as PrismaService,
+      parser,
+      validator,
+    );
+
+    await expect(service.commit(1)).rejects.toThrow(
+      new BadRequestException('Batch has validation errors'),
+    );
+
+    expect(prisma.importStage.update).toHaveBeenCalledWith({
+      where: { idImportStage: 10 },
+      data: {
+        externalProductId: 'S-7',
+        importedProductDescription: 'Shirt',
+        quantity: 2,
+        amount: 30.5,
+        idProduct: null,
+      },
+    });
+    expect(prisma.importError.deleteMany).toHaveBeenCalledWith({
+      where: { idImportBatch: 1 },
+    });
+    expect(prisma.importError.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          idImportBatch: 1,
+          rowNumber: 1,
+          field: 'externalProductId',
+          message: 'No product matched external ID S-7 for source store',
+          idImportStage: 10,
+        },
+      ],
+    });
+    expect(prisma.importBatch.update).toHaveBeenCalledWith({
+      where: { idImportBatch: 1 },
+      data: { status: 'has_errors' },
+      include: expect.any(Object),
+    });
+    expect(prisma.sale.createMany).not.toHaveBeenCalled();
   });
 
   it('rejects commit when status is not validated even if errors were cleared', async () => {
@@ -189,13 +350,35 @@ describe('ImportBatchesService', () => {
     jest.spyOn(prisma.importStage, 'findMany').mockResolvedValue([
       {
         idImportStage: 10,
+        rowNumber: 1,
         externalProductId: 'EV-7',
         importedProductDescription: 'Ticket',
         idProduct: 7,
         quantity: 2,
         amount: '30.50',
+        rawRow: { id: 'EV-7' },
       },
     ]);
+    jest.spyOn(validator, 'validateRows').mockResolvedValue({
+      stageRows: [
+        {
+          rowNumber: 1,
+          externalProductId: 'EV-7',
+          importedProductDescription: 'Ticket',
+          quantity: 2,
+          amount: 30.5,
+          rawRow: { id: 'EV-7' },
+          idProduct: 7,
+        },
+      ],
+      errors: [],
+    });
+    jest.spyOn(prisma.importStage, 'update').mockResolvedValue({
+      idImportStage: 10,
+    });
+    jest
+      .spyOn(prisma.importError, 'deleteMany')
+      .mockResolvedValue({ count: 0 });
     jest.spyOn(prisma.sale, 'createMany').mockResolvedValue({ count: 1 });
     jest.spyOn(prisma.importBatch, 'update').mockResolvedValue({
       idImportBatch: 1,
