@@ -230,6 +230,7 @@ Entity pages:
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
 - Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
 - Project create/edit forms include an active flag plus unit cost, production cost, and administrative cost fields.
+- Project stakeholder split forms load projects and stakeholders, show readable option labels, and submit the selected project and stakeholder IDs to the API.
 
 Sales import page:
 

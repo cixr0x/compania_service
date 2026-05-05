@@ -8,6 +8,7 @@ const EMPTY_SPLIT_ROW = {
   idStakeholder: '',
   stakePercentage: '',
 }
+const OPTION_LIST_PAGE_SIZE = 100
 
 type SplitDraftRow = {
   rowKey: string
@@ -62,6 +63,38 @@ function formatTotal(total: number): string {
   return Number.isInteger(total) ? String(total) : total.toFixed(2)
 }
 
+function getNestedName(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null
+  }
+
+  const name = (value as { name?: unknown }).name
+  return typeof name === 'string' && name.trim() !== '' ? name.trim() : null
+}
+
+function buildProjectOption(row: EntityRow) {
+  const value = toInputValue(row.idProject)
+  const productName = getNestedName(row.product)
+
+  return {
+    label: productName ? `Project #${value} - ${productName}` : `Project #${value}`,
+    value,
+  }
+}
+
+function buildStakeholderOption(row: EntityRow) {
+  const value = toInputValue(row.idStakeholder)
+  const stakeholderName =
+    typeof row.name === 'string' && row.name.trim() !== ''
+      ? row.name.trim()
+      : null
+
+  return {
+    label: stakeholderName ?? `Stakeholder #${value}`,
+    value,
+  }
+}
+
 function buildDraftRow(row: EntityRow, index: number): SplitDraftRow {
   return {
     rowKey: `existing-${toInputValue(row.idProjectStakeholder) || index}`,
@@ -89,6 +122,17 @@ export function ProjectStakeholderSplitEditor({
   )
   const [nextRowIndex, setNextRowIndex] = useState(1)
   const [mutationError, setMutationError] = useState<string | null>(null)
+
+  const projectsQuery = useQuery({
+    queryKey: ['project-stakeholder-options', 'projects'],
+    queryFn: () => getJson<EntityRow[]>(`/projects?pageSize=${OPTION_LIST_PAGE_SIZE}`),
+  })
+
+  const stakeholdersQuery = useQuery({
+    queryKey: ['project-stakeholder-options', 'stakeholders'],
+    queryFn: () =>
+      getJson<EntityRow[]>(`/stakeholders?pageSize=${OPTION_LIST_PAGE_SIZE}`),
+  })
 
   const detailQuery = useQuery({
     enabled: !isCreate && Boolean(id),
@@ -131,6 +175,14 @@ export function ProjectStakeholderSplitEditor({
     rows: [{ rowKey: 'new-0', ...EMPTY_SPLIT_ROW }],
   }
   const activeDraft = draft ?? loadedDraft ?? fallbackDraft
+  const projectOptions = useMemo(
+    () => (projectsQuery.data ?? []).map(buildProjectOption),
+    [projectsQuery.data],
+  )
+  const stakeholderOptions = useMemo(
+    () => (stakeholdersQuery.data ?? []).map(buildStakeholderOption),
+    [stakeholdersQuery.data],
+  )
 
   const totalPercentage = useMemo(
     () =>
@@ -162,7 +214,12 @@ export function ProjectStakeholderSplitEditor({
       return mutationError
     }
 
-    if (detailQuery.isError || projectRowsQuery.isError) {
+    if (
+      detailQuery.isError ||
+      projectRowsQuery.isError ||
+      projectsQuery.isError ||
+      stakeholdersQuery.isError
+    ) {
       return `Unable to load ${config.title.toLowerCase()}.`
     }
 
@@ -172,10 +229,15 @@ export function ProjectStakeholderSplitEditor({
     detailQuery.isError,
     mutationError,
     projectRowsQuery.isError,
+    projectsQuery.isError,
+    stakeholdersQuery.isError,
   ])
 
   const isLoading =
-    detailQuery.isLoading || (!isCreate && projectRowsQuery.isLoading)
+    projectsQuery.isLoading ||
+    stakeholdersQuery.isLoading ||
+    detailQuery.isLoading ||
+    (!isCreate && projectRowsQuery.isLoading)
 
   function handleProjectIdChange(value: string) {
     setMutationError(null)
@@ -294,21 +356,32 @@ export function ProjectStakeholderSplitEditor({
           <div className="split-summary">
             <div className="form-field">
               <span className="field-label-row">
-                <label htmlFor="split-project-id">Project ID</label>
+                <label htmlFor="split-project-id">Project</label>
                 <span aria-hidden="true" className="field-required">
                   Required
                 </span>
               </span>
-              <input
+              <select
                 aria-describedby="split-project-helper"
+                disabled={!isCreate}
                 id="split-project-id"
                 onChange={(event) => handleProjectIdChange(event.target.value)}
-                readOnly={!isCreate}
-                min={1}
-                step={1}
-                type="number"
                 value={activeDraft.projectId}
-              />
+              >
+                <option value="">Select project...</option>
+                {projectOptions.some(
+                  (option) => option.value === activeDraft.projectId,
+                ) || !activeDraft.projectId ? null : (
+                  <option value={activeDraft.projectId}>
+                    Project #{activeDraft.projectId}
+                  </option>
+                )}
+                {projectOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
               <span className="field-helper" id="split-project-helper">
                 Project that all stakeholder rows belong to.
               </span>
@@ -332,16 +405,15 @@ export function ProjectStakeholderSplitEditor({
                 <div className="form-field">
                   <span className="field-label-row">
                     <label htmlFor={`split-stakeholder-${row.rowKey}`}>
-                      Stakeholder ID
+                      Stakeholder
                     </label>
                     <span aria-hidden="true" className="field-required">
                       Required
                     </span>
                   </span>
-                  <input
+                  <select
                     aria-describedby={`split-stakeholder-${row.rowKey}-helper`}
                     id={`split-stakeholder-${row.rowKey}`}
-                    min={1}
                     onChange={(event) =>
                       handleRowChange(
                         row.rowKey,
@@ -349,10 +421,22 @@ export function ProjectStakeholderSplitEditor({
                         event.target.value,
                       )
                     }
-                    step={1}
-                    type="number"
                     value={row.idStakeholder}
-                  />
+                  >
+                    <option value="">Select stakeholder...</option>
+                    {stakeholderOptions.some(
+                      (option) => option.value === row.idStakeholder,
+                    ) || !row.idStakeholder ? null : (
+                      <option value={row.idStakeholder}>
+                        Stakeholder #{row.idStakeholder}
+                      </option>
+                    )}
+                    {stakeholderOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                   <span
                     className="field-helper"
                     id={`split-stakeholder-${row.rowKey}-helper`}

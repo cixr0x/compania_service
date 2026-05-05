@@ -266,7 +266,7 @@ describe('EntityEditPage', () => {
     const productSelect = await screen.findByLabelText('Product')
     expect(productSelect.tagName).toBe('SELECT')
     expect(
-    await screen.findByRole('option', { name: 'Maple Shelf' }),
+      await screen.findByRole('option', { name: 'Maple Shelf' }),
     ).toHaveValue('42')
     expect(screen.getByRole('option', { name: 'Walnut Desk' })).toHaveValue(
       '43',
@@ -316,8 +316,25 @@ describe('EntityEditPage', () => {
     expect(screen.getAllByText('$')).toHaveLength(2)
   })
 
-  it('saves a new project stakeholder split with PUT for the full project total', async () => {
+  it('saves a new project stakeholder split from project and stakeholder selectors', async () => {
     const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/projects?pageSize=100') {
+        return [
+          { idProject: 77, product: { name: 'Maple Shelf' } },
+          { idProject: 88, product: { name: 'Walnut Desk' } },
+        ]
+      }
+
+      if (path === '/stakeholders?pageSize=100') {
+        return [
+          { idStakeholder: 10, name: 'Alicia' },
+          { idStakeholder: 11, name: 'Bruno' },
+        ]
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
     vi.mocked(putJson).mockResolvedValue([
       { idProject: 77, idStakeholder: 10, stakePercentage: 60 },
       { idProject: 77, idStakeholder: 11, stakePercentage: 40 },
@@ -331,10 +348,26 @@ describe('EntityEditPage', () => {
       }),
     ).toBeVisible()
 
-    expect(screen.getByLabelText('Project ID')).toHaveAccessibleDescription(
+    const projectSelect = await screen.findByLabelText('Project')
+    expect(projectSelect.tagName).toBe('SELECT')
+    expect(
+      screen.getByRole('option', { name: 'Project #77 - Maple Shelf' }),
+    ).toHaveValue('77')
+    expect(
+      screen.getByRole('option', { name: 'Project #88 - Walnut Desk' }),
+    ).toHaveValue('88')
+    expect(projectSelect).toHaveAccessibleDescription(
       /all stakeholder rows/i,
     )
-    expect(screen.getByLabelText('Stakeholder ID')).toHaveAccessibleDescription(
+    expect(
+      screen.queryByRole('option', { name: '77' }),
+    ).not.toBeInTheDocument()
+
+    const stakeholderSelect = screen.getByLabelText('Stakeholder')
+    expect(stakeholderSelect.tagName).toBe('SELECT')
+    expect(screen.getByRole('option', { name: 'Alicia' })).toHaveValue('10')
+    expect(screen.getByRole('option', { name: 'Bruno' })).toHaveValue('11')
+    expect(stakeholderSelect).toHaveAccessibleDescription(
       /stakeholder receiving/i,
     )
     expect(
@@ -342,11 +375,11 @@ describe('EntityEditPage', () => {
     ).not.toBeInTheDocument()
     expect(screen.getByText(/total must equal 100%/i)).toBeVisible()
 
-    await user.type(screen.getByLabelText('Project ID'), '77')
-    await user.type(screen.getAllByLabelText('Stakeholder ID')[0], '10')
+    await user.selectOptions(projectSelect, '77')
+    await user.selectOptions(stakeholderSelect, '10')
     await user.type(screen.getAllByLabelText('Stake Percentage')[0], '60')
     await user.click(screen.getByRole('button', { name: 'Add row' }))
-    await user.type(screen.getAllByLabelText('Stakeholder ID')[1], '11')
+    await user.selectOptions(screen.getAllByLabelText('Stakeholder')[1], '11')
     await user.type(screen.getAllByLabelText('Stake Percentage')[1], '40')
 
     expect(screen.getByText('Total allocation: 100%')).toBeVisible()
@@ -368,6 +401,17 @@ describe('EntityEditPage', () => {
 
   it('preloads an existing project stakeholder split and saves all rows for that project', async () => {
     vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/projects?pageSize=100') {
+        return [{ idProject: 77, product: { name: 'Maple Shelf' } }]
+      }
+
+      if (path === '/stakeholders?pageSize=100') {
+        return [
+          { idStakeholder: 10, name: 'Alicia' },
+          { idStakeholder: 11, name: 'Bruno' },
+        ]
+      }
+
       if (path === '/project-stakeholders/501') {
         return {
           idProjectStakeholder: 501,
@@ -403,9 +447,11 @@ describe('EntityEditPage', () => {
 
     renderEntityEditPage('/project-stakeholders/501', '/:entityName/:id')
 
-    expect(await screen.findByDisplayValue('77')).toBeVisible()
-    expect(screen.getByDisplayValue('10')).toBeVisible()
-    expect(screen.getByDisplayValue('11')).toBeVisible()
+    const projectSelect = await screen.findByLabelText('Project')
+    expect(projectSelect).toHaveValue('77')
+    expect(projectSelect).toBeDisabled()
+    expect(screen.getAllByLabelText('Stakeholder')[0]).toHaveValue('10')
+    expect(screen.getAllByLabelText('Stakeholder')[1]).toHaveValue('11')
     expect(screen.getByText('Total allocation: 100%')).toBeVisible()
     expect(getJson).toHaveBeenCalledWith('/project-stakeholders/projects/77')
 
