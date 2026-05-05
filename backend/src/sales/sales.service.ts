@@ -102,6 +102,7 @@ export class SalesService {
   private async ensureProductExists(idProduct: number) {
     const product = await this.prisma.product.findUnique({
       where: { id: idProduct },
+      select: { id: true },
     });
     if (!product) {
       throw new BadRequestException(`Product ${idProduct} was not found`);

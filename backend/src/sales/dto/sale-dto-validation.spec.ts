@@ -5,10 +5,43 @@ import { CreateSaleDto } from './create-sale.dto';
 import { UpdateSaleDto } from './update-sale.dto';
 
 describe('Sale DTO validation', () => {
-  it.each(['date', 'source', 'amount', 'fee'] as const)(
-    'rejects explicit null for update %s',
+  it.each([
+    'date',
+    'idProduct',
+    'quantity',
+    'source',
+    'amount',
+    'fee',
+  ] as const)('rejects explicit null for update %s', async (field) => {
+    const dto = plainToInstance(UpdateSaleDto, { [field]: null });
+
+    const errors = await validate(dto);
+
+    expect(errors.map((error) => error.property)).toContain(field);
+  });
+
+  it.each(['amount', 'fee'] as const)(
+    'rejects empty string for create %s',
     async (field) => {
-      const dto = plainToInstance(UpdateSaleDto, { [field]: null });
+      const dto = plainToInstance(CreateSaleDto, {
+        date: '2026-05-05',
+        idProduct: 7,
+        quantity: 2,
+        amount: 120,
+        source: 'ecommerce',
+        [field]: '',
+      });
+
+      const errors = await validate(dto);
+
+      expect(errors.map((error) => error.property)).toContain(field);
+    },
+  );
+
+  it.each(['amount', 'fee'] as const)(
+    'rejects empty string for update %s',
+    async (field) => {
+      const dto = plainToInstance(UpdateSaleDto, { [field]: '' });
 
       const errors = await validate(dto);
 
