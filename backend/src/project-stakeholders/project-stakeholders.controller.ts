@@ -1,19 +1,10 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { Type } from 'class-transformer';
-import { IsInt, Min } from 'class-validator';
 import { IdParamDto } from '../common/dto/id-param.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { CreateProjectStakeholderDto } from './dto/create-project-stakeholder.dto';
 import { UpdateProjectStakeholderDto } from './dto/update-project-stakeholder.dto';
 import { ProjectStakeholdersTotalService } from './project-stakeholders-total.service';
 import { ProjectStakeholdersService } from './project-stakeholders.service';
-
-class ProjectIdParamDto {
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  idProject!: number;
-}
 
 @Controller('project-stakeholders')
 export class ProjectStakeholdersController {
@@ -32,9 +23,9 @@ export class ProjectStakeholdersController {
     return this.projectStakeholdersService.findAll(query);
   }
 
-  @Post(':idProject/validate-total')
-  validateTotal(@Param() params: ProjectIdParamDto) {
-    return this.projectStakeholdersTotalService.validateTotal(params.idProject);
+  @Post('projects/:id/validate-total')
+  validateTotal(@Param() params: IdParamDto) {
+    return this.projectStakeholdersTotalService.validateTotal(params.id);
   }
 
   @Get(':id')
