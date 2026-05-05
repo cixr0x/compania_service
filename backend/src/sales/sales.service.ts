@@ -1,8 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
+import { parseSaleDate } from './dto/sale-date-string.validator';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 
 const saleInclude = {
@@ -13,7 +18,8 @@ const saleInclude = {
 export class SalesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(dto: CreateSaleDto) {
+  async create(dto: CreateSaleDto) {
+    await this.ensureProductExists(dto.idProduct);
     return this.prisma.sale.create({
       data: this.normalizeSaleCreateData(dto),
     });
@@ -41,6 +47,9 @@ export class SalesService {
 
   async update(id: number, dto: UpdateSaleDto) {
     await this.findOne(id);
+    if (dto.idProduct !== undefined) {
+      await this.ensureProductExists(dto.idProduct);
+    }
     return this.prisma.sale.update({
       where: { idSale: id },
       data: this.normalizeSaleUpdateData(dto),
@@ -71,13 +80,31 @@ export class SalesService {
     const data: Record<string, unknown> = { ...dto };
 
     if (typeof data.date === 'string') {
-      data.date = new Date(data.date);
+      const parsedDate = parseSaleDate(data.date);
+      if (!parsedDate) {
+        throw new BadRequestException(
+          'Date must be a valid calendar date in YYYY-MM-DD format',
+        );
+      }
+      data.date = parsedDate;
     }
 
     if (typeof data.source === 'string') {
       data.source = data.source.trim();
+      if (data.source === '') {
+        throw new BadRequestException('Source cannot be blank');
+      }
     }
 
     return data;
+  }
+
+  private async ensureProductExists(idProduct: number) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: idProduct },
+    });
+    if (!product) {
+      throw new BadRequestException(`Product ${idProduct} was not found`);
+    }
   }
 }

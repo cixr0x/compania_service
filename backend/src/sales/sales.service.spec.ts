@@ -8,9 +8,12 @@ describe('SalesService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    product: {
+      findUnique: jest.fn(),
+    },
   } as any;
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => jest.resetAllMocks());
 
   it('creates a sale with a default fee of zero when fee is omitted', async () => {
     jest.spyOn(prisma.sale, 'create').mockResolvedValue({
@@ -22,6 +25,7 @@ describe('SalesService', () => {
       source: 'ecommerce',
       fee: '0.00',
     });
+    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
 
     const service = new SalesService(prisma as PrismaService);
     await service.create({
@@ -54,6 +58,7 @@ describe('SalesService', () => {
       source: 'ecommerce',
       fee: '1.50',
     });
+    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
 
     const service = new SalesService(prisma as PrismaService);
     await service.create({
@@ -126,5 +131,42 @@ describe('SalesService', () => {
       where: { idSale: 1 },
       data: { amount: 130 },
     });
+  });
+
+  it('throws a client error when create references a missing product', async () => {
+    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue(null);
+
+    const service = new SalesService(prisma as PrismaService);
+
+    await expect(
+      service.create({
+        date: '2026-05-05',
+        idProduct: 999,
+        quantity: 2,
+        amount: 120,
+        source: 'ecommerce',
+      }),
+    ).rejects.toThrow('Product 999 was not found');
+    expect(prisma.sale.create).not.toHaveBeenCalled();
+  });
+
+  it('throws a client error when update references a missing product', async () => {
+    jest.spyOn(prisma.sale, 'findUnique').mockResolvedValue({
+      idSale: 1,
+      date: new Date('2026-05-05T00:00:00.000Z'),
+      idProduct: 7,
+      quantity: 2,
+      amount: '120.00',
+      source: 'ecommerce',
+      fee: '1.50',
+    });
+    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue(null);
+
+    const service = new SalesService(prisma as PrismaService);
+
+    await expect(service.update(1, { idProduct: 999 })).rejects.toThrow(
+      'Product 999 was not found',
+    );
+    expect(prisma.sale.update).not.toHaveBeenCalled();
   });
 });

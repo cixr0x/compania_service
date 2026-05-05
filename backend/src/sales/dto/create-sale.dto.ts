@@ -1,6 +1,5 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
-  IsDateString,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -9,9 +8,10 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { IsSaleDateString } from './sale-date-string.validator';
 
 export class CreateSaleDto {
-  @IsDateString()
+  @IsSaleDateString()
   date!: string;
 
   @Type(() => Number)
@@ -29,6 +29,7 @@ export class CreateSaleDto {
   @Min(0)
   amount!: number;
 
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
