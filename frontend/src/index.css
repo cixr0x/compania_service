@@ -490,6 +490,20 @@ button {
   min-width: 0;
 }
 
+.checkbox-control {
+  align-items: center;
+  display: flex;
+  min-height: 36px;
+}
+
+.form-field .checkbox-control input[type='checkbox'] {
+  accent-color: var(--accent);
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  width: 18px;
+}
+
 .field-control-adorned {
   align-items: center;
   background: #ffffff;

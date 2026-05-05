@@ -8,7 +8,7 @@ import type {
 type EntityFormProps = {
   config: EntityConfig
   values: EntityRow
-  onChange: (name: string, value: string) => void
+  onChange: (name: string, value: boolean | string) => void
   onSubmit: () => void
   isCreate?: boolean
   isSaving?: boolean
@@ -39,6 +39,10 @@ function getInputValue(field: EntityField, value: unknown): string {
   }
 
   return String(value)
+}
+
+function getCheckboxValue(value: unknown): boolean {
+  return value === true || value === 'true' || value === 1 || value === '1'
 }
 
 function groupFields(fields: EntityField[]) {
@@ -119,7 +123,9 @@ export function EntityForm({
       field.required || (field.requiredOnCreate && isCreate),
     )
     const controlClassName =
-      field.prefix || field.suffix
+      field.type === 'checkbox'
+        ? 'field-control checkbox-control'
+        : field.prefix || field.suffix
         ? 'field-control field-control-adorned'
         : 'field-control'
 
@@ -162,6 +168,14 @@ export function EntityForm({
               required={isRequired}
               rows={4}
               value={inputValue}
+            />
+          ) : field.type === 'checkbox' ? (
+            <input
+              aria-describedby={helperId}
+              checked={getCheckboxValue(value)}
+              id={fieldId}
+              onChange={(event) => onChange(field.name, event.target.checked)}
+              type="checkbox"
             />
           ) : field.type === 'select' ? (
             <select

@@ -37,6 +37,7 @@ export type Stakeholder = {
 export type Project = {
   idProject: number
   idProduct: number
+  isActive: boolean
   units: number
   unitCost: DecimalValue
   productionCost: DecimalValue

@@ -36,7 +36,11 @@ function normalizeDateValue(value: unknown): string {
 function serializeFieldValue(
   value: unknown,
   field: EntityField,
-): string | number | undefined {
+): boolean | string | number | undefined {
+  if (field.type === 'checkbox') {
+    return value === true || value === 'true'
+  }
+
   if (field.type === 'number' || field.valueType === 'number') {
     const trimmedValue = typeof value === 'string' ? value.trim() : value
     if (
@@ -233,7 +237,7 @@ export function EntityEditPage() {
     )
   }
 
-  function handleChange(name: string, value: string) {
+  function handleChange(name: string, value: boolean | string) {
     setIsDirty(true)
     setDraftValues((currentValues) => ({
       ...(isDirty ? currentValues : (detailQuery.data ?? {})),

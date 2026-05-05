@@ -5,7 +5,14 @@ export type EntityRow = Record<string, unknown>
 export type EntityField = {
   name: string
   label: string
-  type: 'date' | 'imagePreview' | 'number' | 'select' | 'text' | 'textarea'
+  type:
+    | 'checkbox'
+    | 'date'
+    | 'imagePreview'
+    | 'number'
+    | 'select'
+    | 'text'
+    | 'textarea'
   helperText?: string
   required?: boolean
   requiredOnCreate?: boolean
@@ -59,6 +66,14 @@ function number(
   options: Omit<EntityField, 'label' | 'name' | 'type'> = {},
 ): EntityField {
   return { name, label, type: 'number', ...options }
+}
+
+function checkbox(
+  name: string,
+  label: string,
+  options: Omit<EntityField, 'label' | 'name' | 'type'> = {},
+): EntityField {
+  return { name, label, type: 'checkbox', ...options }
 }
 
 function select(
@@ -203,6 +218,7 @@ export const entityConfigs = {
     columns: [
       column('idProject', 'ID'),
       column('idProduct', 'Product ID'),
+      column('isActive', 'Active'),
       column('units', 'Units'),
       column('unitCost', 'Unit Cost'),
       column('productionCost', 'Production Cost'),
@@ -218,6 +234,10 @@ export const entityConfigs = {
         },
         requiredOnCreate: true,
         valueType: 'number',
+      }),
+      checkbox('isActive', 'Active', {
+        helperText:
+          'Marks this as the current project for the product. Only one active project is allowed per product.',
       }),
       number('units', 'Units', {
         helperText: 'Whole number of units planned for the project.',

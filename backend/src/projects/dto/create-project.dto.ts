@@ -1,11 +1,15 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsNumber, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsNumber, IsOptional, Min } from 'class-validator';
 
 export class CreateProjectDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
   idProduct!: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 
   @Type(() => Number)
   @IsInt()

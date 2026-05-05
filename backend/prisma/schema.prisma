@@ -36,14 +36,16 @@ model Product {
 }
 
 model Project {
-  idProject      Int                  @id @default(autoincrement()) @map("id_project")
-  idProduct      Int                  @map("id_product")
-  units          Int
-  unitCost       Decimal              @map("unit_cost") @db.Decimal(12, 2)
-  productionCost Decimal              @default(0) @map("production_cost") @db.Decimal(12, 2)
-  adminCost      Decimal              @map("admin_cost") @db.Decimal(12, 2)
-  product        Product              @relation(fields: [idProduct], references: [id], onDelete: Restrict)
-  stakeholders   ProjectStakeholder[]
+  idProject       Int                  @id @default(autoincrement()) @map("id_project")
+  idProduct       Int                  @map("id_product")
+  isActive        Boolean              @default(false) @map("is_active")
+  activeProductId Int?                 @unique(map: "project_one_active_per_product") @map("active_product_id")
+  units           Int
+  unitCost        Decimal              @map("unit_cost") @db.Decimal(12, 2)
+  productionCost  Decimal              @default(0) @map("production_cost") @db.Decimal(12, 2)
+  adminCost       Decimal              @map("admin_cost") @db.Decimal(12, 2)
+  product         Product              @relation(fields: [idProduct], references: [id], onDelete: Restrict)
+  stakeholders    ProjectStakeholder[]
 
   @@map("project")
 }

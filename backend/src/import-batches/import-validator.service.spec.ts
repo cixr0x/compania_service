@@ -4,36 +4,67 @@ import {
 } from './import-validator.service';
 import { PrismaService } from '../prisma/prisma.service';
 
+type ProductFindManyMock = (args: unknown) => Promise<unknown[]>;
+
 describe('ImportValidatorService', () => {
+  const productFindMany = jest.fn<ProductFindManyMock>();
   const prisma = {
     product: {
-      findMany: jest.fn(),
+      findMany: productFindMany,
     },
-  } as any;
+  } as unknown as PrismaService;
 
   beforeEach(() => jest.resetAllMocks());
 
   it('matches ecommerce external IDs to product.idEcommerce', async () => {
-    jest
-      .spyOn(prisma.product, 'findMany')
-      .mockResolvedValue([{ id: 7, idEcommerce: 'EC-7' }]);
-    const service = new ImportValidatorService(prisma as PrismaService);
+    productFindMany.mockResolvedValue([
+      { id: 7, idEcommerce: 'EC-7', projects: [{ idProject: 70 }] },
+    ]);
+    const service = new ImportValidatorService(prisma);
 
     const result = await service.validateRows('ecommerce', [
       row({ externalProductId: 'EC-7' }),
     ]);
 
-    expect(prisma.product.findMany).toHaveBeenCalledWith({
+    expect(productFindMany).toHaveBeenCalledWith({
       where: { idEcommerce: { in: ['EC-7'] } },
-      select: { id: true, idEcommerce: true },
+      select: {
+        id: true,
+        idEcommerce: true,
+        projects: {
+          where: { isActive: true },
+          select: { idProject: true },
+          take: 1,
+        },
+      },
     });
     expect(result.stageRows).toMatchObject([{ idProduct: 7 }]);
     expect(result.errors).toEqual([]);
   });
 
+  it('creates an error when a matched product has no active project', async () => {
+    productFindMany.mockResolvedValue([
+      { id: 7, idStore: 'S-7', projects: [] },
+    ]);
+    const service = new ImportValidatorService(prisma);
+
+    const result = await service.validateRows('store', [
+      row({ rowNumber: 3, externalProductId: 'S-7' }),
+    ]);
+
+    expect(result.stageRows).toMatchObject([{ rowNumber: 3, idProduct: 7 }]);
+    expect(result.errors).toEqual([
+      {
+        rowNumber: 3,
+        field: 'idProduct',
+        message: 'Matched product S-7 does not have an active project',
+      },
+    ]);
+  });
+
   it('creates an error for unmatched external IDs', async () => {
-    jest.spyOn(prisma.product, 'findMany').mockResolvedValue([]);
-    const service = new ImportValidatorService(prisma as PrismaService);
+    productFindMany.mockResolvedValue([]);
+    const service = new ImportValidatorService(prisma);
 
     const result = await service.validateRows('store', [
       row({ rowNumber: 3, externalProductId: 'S-999' }),
@@ -50,8 +81,8 @@ describe('ImportValidatorService', () => {
   });
 
   it('catches missing required row values and invalid quantity or amount', async () => {
-    jest.spyOn(prisma.product, 'findMany').mockResolvedValue([]);
-    const service = new ImportValidatorService(prisma as PrismaService);
+    productFindMany.mockResolvedValue([]);
+    const service = new ImportValidatorService(prisma);
 
     const result = await service.validateRows('surface', [
       row({

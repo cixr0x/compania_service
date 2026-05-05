@@ -41,7 +41,7 @@ A product is the item being purchased and sold. Products have multiple external 
 
 A model is a pricing model assigned to products.
 
-A project is a batch purchase of one product. It stores the purchased units and costs, including unit, production, and administrative costs. Several stakeholders can participate in a project.
+A project is a batch purchase of one product. It stores the purchased units and costs, including unit, production, and administrative costs. Several stakeholders can participate in a project. A project can be active or inactive; at most one project can be active for the same product at any time.
 
 A stakeholder is a person or organization participating in one or more projects.
 
@@ -81,6 +81,8 @@ A sale is a committed sales record for a product. Sales records are created manu
 - `unit_cost`: numeric cost per unit.
 - `production_cost`: numeric production cost for the project.
 - `admin_cost`: numeric administrative cost.
+- `is_active`: boolean flag indicating whether this is the current active project for the product.
+- `active_product_id`: internal nullable unique key maintained by the backend to enforce that only one active project can exist for a product.
 
 ### stakeholder
 
@@ -166,13 +168,14 @@ Validation errors for an import batch and optionally a specific staged row.
    - `event` uses `product.id_event`.
    - `surface` uses `product.id_surface`.
 6. Backend validates all staged rows and stores `import_error` rows for invalid data.
-7. Frontend shows staged rows with imported product description and matched product name side by side.
-8. User selects or edits the import date before commit.
-9. User reviews validation errors and product matches.
-10. User clicks commit.
-11. Backend revalidates the entire batch inside a transaction.
-12. If any error remains, no sales rows are inserted and errors remain visible.
-13. If the batch is valid, backend inserts all staged rows into `sales`, stamps `source`, stamps the selected import date into `sales.date`, sets `fee` to `0`, and marks the batch as `committed`.
+7. Backend requires each matched product to have an active project.
+8. Frontend shows staged rows with imported product description and matched product name side by side.
+9. User selects or edits the import date before commit.
+10. User reviews validation errors and product matches.
+11. User clicks commit.
+12. Backend revalidates the entire batch inside a transaction.
+13. If any error remains, no sales rows are inserted and errors remain visible.
+14. If the batch is valid, backend inserts all staged rows into `sales`, stamps `source`, stamps the selected import date into `sales.date`, sets `fee` to `0`, and marks the batch as `committed`.
 
 The final `sales` table should only contain committed, validated data.
 
@@ -226,7 +229,7 @@ Entity pages:
 - Product create/edit forms load pricing models and show model names in the model selector while submitting the selected model ID to the API.
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
 - Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
-- Project create/edit forms include unit cost, production cost, and administrative cost fields.
+- Project create/edit forms include an active flag plus unit cost, production cost, and administrative cost fields.
 
 Sales import page:
 
@@ -246,11 +249,13 @@ Expected validation rules:
 
 - Required names for products, models, and stakeholders.
 - Valid numeric values for units, costs, percentages, quantity, amount, and ownership.
+- At most one project can be active for a given product at any time.
 - Project stakeholder totals must equal exactly `100` per project.
 - Import source is required.
 - Import date is required before commit.
 - Import rows require external product ID, quantity, amount, and imported product description.
 - Import rows must match an existing product through the selected source's external ID field.
+- Import rows must match a product with an active project.
 - Import commit revalidates staged rows inside the commit transaction before inserting `sales`; if revalidation fails, refreshed validation errors and `has_errors` status remain visible and no sales rows are inserted.
 
 Errors should be returned in a structured JSON shape containing field, message, and optional row number for import errors.

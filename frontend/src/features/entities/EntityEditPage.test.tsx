@@ -266,7 +266,7 @@ describe('EntityEditPage', () => {
     const productSelect = await screen.findByLabelText('Product')
     expect(productSelect.tagName).toBe('SELECT')
     expect(
-      await screen.findByRole('option', { name: 'Maple Shelf' }),
+    await screen.findByRole('option', { name: 'Maple Shelf' }),
     ).toHaveValue('42')
     expect(screen.getByRole('option', { name: 'Walnut Desk' })).toHaveValue(
       '43',
@@ -274,6 +274,7 @@ describe('EntityEditPage', () => {
     expect(screen.queryByRole('option', { name: '42' })).not.toBeInTheDocument()
 
     await user.selectOptions(productSelect, '42')
+    await user.click(screen.getByLabelText('Active'))
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '4.50')
     await user.type(screen.getByLabelText('Production Cost'), '7.75')
@@ -284,6 +285,7 @@ describe('EntityEditPage', () => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
         adminCost: 2.25,
         idProduct: 42,
+        isActive: true,
         productionCost: 7.75,
         unitCost: 4.5,
         units: 10,

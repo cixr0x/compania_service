@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import {
   getProductExternalIdField,
   ImportSource,
@@ -27,7 +26,8 @@ export type ImportStageRowData = ParsedImportRow & {
 
 type ProductLookup = {
   id: number;
-  [field: string]: number | string | null;
+  projects: { idProject: number }[];
+  [field: string]: number | string | null | { idProject: number }[];
 };
 type ProductLookupClient = {
   product: Pick<PrismaService['product'], 'findMany'>;
@@ -122,6 +122,18 @@ export class ImportValidatorService {
         });
       }
 
+      if (
+        externalProductId &&
+        product &&
+        (!Array.isArray(product.projects) || product.projects.length === 0)
+      ) {
+        errors.push({
+          rowNumber: row.rowNumber,
+          field: 'idProduct',
+          message: `Matched product ${externalProductId} does not have an active project`,
+        });
+      }
+
       return {
         rowNumber: row.rowNumber,
         externalProductId,
@@ -147,8 +159,16 @@ export class ImportValidatorService {
 
     return client.product.findMany({
       where: { [externalIdField]: { in: externalIds } },
-      select: { id: true, [externalIdField]: true },
-    } as Prisma.ProductFindManyArgs) as unknown as Promise<ProductLookup[]>;
+      select: {
+        id: true,
+        [externalIdField]: true,
+        projects: {
+          where: { isActive: true },
+          select: { idProject: true },
+          take: 1,
+        },
+      },
+    }) as unknown as Promise<ProductLookup[]>;
   }
 }
 
