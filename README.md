@@ -11,7 +11,7 @@ Project design is documented in [docs/superpowers/specs/2026-05-05-compania-ente
 
 ## Local Setup
 
-1. Copy `backend/.env.example` to `backend/.env` and set MySQL credentials.
+1. Fill `backend/.env` with MySQL credentials. If it does not exist, copy `backend/.env.example` to `backend/.env`.
 2. Copy `frontend/.env.example` to `frontend/.env`.
 3. Install backend dependencies with `npm.cmd install` inside `backend/`.
 4. Install frontend dependencies with `npm.cmd install` inside `frontend/`.
@@ -51,3 +51,22 @@ npx.cmd prisma migrate deploy
 ```
 
 Run migration commands after `backend\.env` contains the real MySQL `DATABASE_URL`.
+
+## Database Connection
+
+`backend/.env` is gitignored and is the local place to enter the real MySQL connection details. The required runtime value is:
+
+```powershell
+DATABASE_URL="mysql://<mysql_user>:<mysql_password>@<mysql_host>:3306/<database_name>"
+```
+
+After filling it in, run:
+
+```powershell
+Set-Location backend
+npx.cmd prisma generate
+npx.cmd prisma migrate dev --name init
+npm.cmd run start:dev
+```
+
+The API should then be available at `http://localhost:3000/api`.
