@@ -2236,8 +2236,8 @@ export class ImportParserService {
   async parseFile(file: Express.Multer.File): Promise<ParsedImportRow[]> {
     const extension = file.originalname.toLowerCase().split('.').pop();
     if (extension === 'csv') return this.parseCsv(file.buffer);
-    if (extension === 'xlsx' || extension === 'xls') return this.parseWorkbook(file.buffer);
-    throw new BadRequestException('Only CSV, XLSX, and XLS files are supported');
+    if (extension === 'xlsx') return this.parseWorkbook(file.buffer);
+    throw new BadRequestException('Only CSV and XLSX files are supported');
   }
 
   private parseCsv(buffer: Buffer): ParsedImportRow[] {
@@ -3756,7 +3756,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
         </label>
         <label className="field">
           File
-          <input type="file" accept=".csv,.xlsx,.xls" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+          <input type="file" accept=".csv,.xlsx" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
         </label>
         <button className="button" type="submit">
           Upload
