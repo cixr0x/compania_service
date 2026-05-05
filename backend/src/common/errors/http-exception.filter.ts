@@ -14,10 +14,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const body = exception.getResponse();
 
     if (typeof body === 'object' && body !== null && 'message' in body) {
-      const message = (body as { message: string | string[] }).message;
+      const exceptionBody = body as {
+        message: string | string[];
+        errors?: unknown[];
+      };
+      const message = exceptionBody.message;
       response.status(status).json({
         message: Array.isArray(message) ? 'Validation failed' : message,
-        errors: Array.isArray(message)
+        errors: Array.isArray(exceptionBody.errors)
+          ? exceptionBody.errors
+          : Array.isArray(message)
           ? message.map((item) => ({ message: item }))
           : [],
       });
