@@ -145,6 +145,12 @@ export function DataTable<Row extends Record<string, unknown>>({
               visibleRows.map((row) => (
                 <tr
                   key={getRowId(row)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onRowDoubleClick(row)
+                    }
+                  }}
                   onDoubleClick={() => onRowDoubleClick(row)}
                   tabIndex={0}
                 >

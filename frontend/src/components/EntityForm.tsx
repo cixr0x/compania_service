@@ -1,5 +1,9 @@
 import type { FormEvent } from 'react'
-import type { EntityConfig, EntityRow } from '../features/entities/entityConfigs'
+import type {
+  EntityConfig,
+  EntityField,
+  EntityRow,
+} from '../features/entities/entityConfigs'
 
 type EntityFormProps = {
   config: EntityConfig
@@ -8,6 +12,32 @@ type EntityFormProps = {
   onSubmit: () => void
   isSaving?: boolean
   errorMessage?: string | null
+}
+
+function normalizeDateValue(value: unknown): string {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? '' : value.toISOString().slice(0, 10)
+  }
+
+  if (typeof value !== 'string') {
+    return ''
+  }
+
+  const trimmedValue = value.trim()
+  const dateMatch = trimmedValue.match(/^(\d{4}-\d{2}-\d{2})/)
+  return dateMatch?.[1] ?? ''
+}
+
+function getInputValue(field: EntityField, value: unknown): string {
+  if (value === null || value === undefined) {
+    return ''
+  }
+
+  if (field.type === 'date') {
+    return normalizeDateValue(value)
+  }
+
+  return String(value)
 }
 
 export function EntityForm({
@@ -34,8 +64,7 @@ export function EntityForm({
       <div className="form-grid">
         {config.fields.map((field) => {
           const value = values[field.name]
-          const inputValue =
-            value === null || value === undefined ? '' : String(value)
+          const inputValue = getInputValue(field, value)
 
           return (
             <label className="form-field" key={field.name}>
@@ -53,7 +82,11 @@ export function EntityForm({
                   onChange={(event) =>
                     onChange(field.name, event.target.value)
                   }
-                  step={field.type === 'number' ? 'any' : undefined}
+                  max={field.max}
+                  min={field.min}
+                  step={
+                    field.type === 'number' ? field.step ?? 'any' : undefined
+                  }
                   type={field.type}
                   value={inputValue}
                 />

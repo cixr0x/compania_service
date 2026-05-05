@@ -5,6 +5,8 @@ import { getJson } from '../../api/client'
 import { DataTable } from '../../components/DataTable'
 import { getEntityConfig, type EntityRow } from './entityConfigs'
 
+const ENTITY_LIST_PAGE_SIZE = 100
+
 function UnknownEntityPage() {
   return (
     <section className="page-panel" aria-labelledby="unknown-entity-heading">
@@ -25,8 +27,9 @@ export function EntityListPage() {
 
   const query = useQuery({
     enabled: Boolean(config),
-    queryKey: ['entities', config?.path],
-    queryFn: () => getJson<EntityRow[]>(`/${config!.path}`),
+    queryKey: ['entities', config?.path, ENTITY_LIST_PAGE_SIZE],
+    queryFn: () =>
+      getJson<EntityRow[]>(`/${config!.path}?pageSize=${ENTITY_LIST_PAGE_SIZE}`),
   })
 
   if (!config) {

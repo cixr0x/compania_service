@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DataTable, type DataTableColumn } from './DataTable'
 
 type ProductRow = {
@@ -40,6 +40,10 @@ function DataTableHarness({
 }
 
 describe('DataTable', () => {
+  afterEach(() => {
+    cleanup()
+  })
+
   it('filters rows by search text across row values', async () => {
     const user = userEvent.setup()
 
@@ -60,5 +64,19 @@ describe('DataTable', () => {
     await user.dblClick(screen.getByText('Canvas Chair').closest('tr')!)
 
     expect(onRowDoubleClick).toHaveBeenCalledWith(rows[1])
+  })
+
+  it('calls onRowDoubleClick when Enter or Space activates a focused row', async () => {
+    const user = userEvent.setup()
+    const onRowDoubleClick = vi.fn()
+
+    render(<DataTableHarness onRowDoubleClick={onRowDoubleClick} />)
+
+    screen.getByText('Walnut Desk').closest('tr')!.focus()
+    await user.keyboard('{Enter}')
+    await user.keyboard(' ')
+
+    expect(onRowDoubleClick).toHaveBeenNthCalledWith(1, rows[0])
+    expect(onRowDoubleClick).toHaveBeenNthCalledWith(2, rows[0])
   })
 })

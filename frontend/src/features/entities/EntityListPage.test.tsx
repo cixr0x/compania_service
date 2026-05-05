@@ -54,6 +54,16 @@ describe('EntityListPage', () => {
     )
   })
 
+  it('requests an explicit MVP page size for Products', async () => {
+    vi.mocked(getJson).mockResolvedValue([])
+
+    renderProductsList()
+
+    await waitFor(() => {
+      expect(getJson).toHaveBeenCalledWith('/products?pageSize=100')
+    })
+  })
+
   it('shows product external ID columns', async () => {
     vi.mocked(getJson).mockResolvedValue([
       {

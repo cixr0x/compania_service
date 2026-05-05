@@ -6,6 +6,9 @@ export type EntityField = {
   name: string
   label: string
   type: 'date' | 'number' | 'text' | 'textarea'
+  min?: number
+  max?: number
+  step?: number
 }
 
 export type EntityConfig = {
@@ -28,8 +31,12 @@ function text(name: string, label: string): EntityField {
   return { name, label, type: 'text' }
 }
 
-function number(name: string, label: string): EntityField {
-  return { name, label, type: 'number' }
+function number(
+  name: string,
+  label: string,
+  options: Pick<EntityField, 'max' | 'min' | 'step'> = {},
+): EntityField {
+  return { name, label, type: 'number', ...options }
 }
 
 function textarea(name: string, label: string): EntityField {
@@ -65,7 +72,7 @@ export const entityConfigs = {
       text('idEvent', 'Event ID'),
       text('idSurface', 'Surface ID'),
       number('idModel', 'Model ID'),
-      text('ownership', 'Ownership'),
+      number('ownership', 'Ownership', { max: 100, min: 0, step: 0.01 }),
       text('tag', 'Tag'),
     ],
   },

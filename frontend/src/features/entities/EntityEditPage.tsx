@@ -3,7 +3,12 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { deleteJson, getJson, patchJson, postJson } from '../../api/client'
 import { EntityForm } from '../../components/EntityForm'
-import { getEntityConfig, type EntityRow } from './entityConfigs'
+import {
+  getEntityConfig,
+  type EntityConfig,
+  type EntityField,
+  type EntityRow,
+} from './entityConfigs'
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
@@ -13,20 +18,54 @@ function getErrorMessage(error: unknown): string {
   return 'The request could not be completed.'
 }
 
-function coerceFormValue(
+function normalizeDateValue(value: unknown): string {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? '' : value.toISOString().slice(0, 10)
+  }
+
+  if (typeof value !== 'string') {
+    return ''
+  }
+
+  const trimmedValue = value.trim()
+  const dateMatch = trimmedValue.match(/^(\d{4}-\d{2}-\d{2})/)
+  return dateMatch?.[1] ?? ''
+}
+
+function serializeFieldValue(
   value: unknown,
-  fieldType?: string,
-): string | number | null {
-  if (value === '') {
-    return null
+  field: EntityField,
+): string | number | undefined {
+  if (field.type === 'number') {
+    const trimmedValue = typeof value === 'string' ? value.trim() : value
+    if (trimmedValue === '' || trimmedValue === null || trimmedValue === undefined) {
+      return undefined
+    }
+
+    const numericValue = Number(trimmedValue)
+    return Number.isFinite(numericValue) ? numericValue : undefined
   }
 
-  if (fieldType === 'number') {
-    const numericValue = Number(value)
-    return Number.isFinite(numericValue) ? numericValue : null
+  if (field.type === 'date') {
+    const dateValue = normalizeDateValue(value)
+    return dateValue || undefined
   }
 
-  return value as string | number | null
+  if (typeof value !== 'string') {
+    return value === null || value === undefined ? undefined : String(value).trim()
+  }
+
+  const trimmedValue = value.trim()
+  return trimmedValue || undefined
+}
+
+function buildEntityPayload(config: EntityConfig, values: EntityRow): EntityRow {
+  return Object.fromEntries(
+    config.fields.flatMap((field) => {
+      const value = serializeFieldValue(values[field.name], field)
+      return value === undefined ? [] : [[field.name, value]]
+    }),
+  )
 }
 
 export function EntityEditPage() {
@@ -95,18 +134,7 @@ export function EntityEditPage() {
 
   function handleSave() {
     setMutationError(null)
-    const fieldTypes = new Map(
-      config?.fields.map((field) => [field.name, field.type]) ?? [],
-    )
-
-    saveMutation.mutate(
-      Object.fromEntries(
-        Object.entries(formValues).map(([key, value]) => [
-          key,
-          coerceFormValue(value, fieldTypes.get(key)),
-        ]),
-      ),
-    )
+    saveMutation.mutate(buildEntityPayload(config!, formValues))
   }
 
   return (
