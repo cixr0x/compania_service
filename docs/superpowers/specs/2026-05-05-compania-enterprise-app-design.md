@@ -316,7 +316,6 @@ Sales report page:
 
 Known intentional custom UI areas and UI debt:
 
-- `EntityForm` keeps a visually hidden native `select` alongside each Ant Design `Select` as a compatibility bridge for existing accessible-label behavior and tests. The visible user control is Ant Design; the hidden native control should be removed once all dependent test and accessibility paths can target the Ant Design combobox directly.
 - `SalesImportPage` wraps a native `input type="date"` in Ant Design `Form.Item` instead of using an Ant Design date picker. This preserves the current string date flow and browser date semantics, but remains UI debt if the project later standardizes all date entry on Ant Design date components.
 
 ## Validation And Error Handling
