@@ -76,7 +76,7 @@ export class SalesService {
     return {
       ...this.normalizeSaleWriteData(dto),
       fee: dto.fee ?? 0,
-      tax: await this.calculateTax(dto.amount),
+      ...(await this.calculateTaxDetails(dto.amount)),
     } as Prisma.SaleUncheckedCreateInput;
   }
 
@@ -91,7 +91,10 @@ export class SalesService {
       dto.fee !== undefined ||
       dto.tax !== undefined
     ) {
-      data.tax = await this.calculateTax(data.amount ?? current.amount);
+      Object.assign(
+        data,
+        await this.calculateTaxDetails(data.amount ?? current.amount),
+      );
     }
 
     return data;
@@ -136,11 +139,14 @@ export class SalesService {
     return taxRate;
   }
 
-  private async calculateTax(amount: unknown) {
+  private async calculateTaxDetails(amount: unknown) {
     const numericAmount = toFiniteNumber(amount);
     const taxRate = await this.getSalesTaxRate();
 
-    return roundCurrency((numericAmount ?? 0) * taxRate);
+    return {
+      tax: roundCurrency((numericAmount ?? 0) * taxRate),
+      taxPct: taxRate,
+    };
   }
 
   private async ensureProductExists(idProduct: number) {

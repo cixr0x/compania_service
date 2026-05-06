@@ -54,6 +54,7 @@ describe('SalesService', () => {
       source: 'ecommerce',
       fee: '0.00',
       tax: '4.08',
+      taxPct: '0.034000',
     });
     jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
     jest
@@ -80,6 +81,7 @@ describe('SalesService', () => {
         source: 'ecommerce',
         fee: 0,
         tax: 4.08,
+        taxPct: 0.034,
       },
     });
     expect(prisma.setting.findUnique).toHaveBeenCalledWith({
@@ -177,7 +179,7 @@ describe('SalesService', () => {
 
     expect(prisma.sale.update).toHaveBeenCalledWith({
       where: { idSale: 1 },
-      data: { amount: 130, tax: 4.42 },
+      data: { amount: 130, tax: 4.42, taxPct: 0.034 },
     });
   });
 
@@ -209,7 +211,7 @@ describe('SalesService', () => {
 
     expect(prisma.sale.update).toHaveBeenCalledWith({
       where: { idSale: 1 },
-      data: { fee: 2, tax: 4.08 },
+      data: { fee: 2, tax: 4.08, taxPct: 0.034 },
     });
   });
 

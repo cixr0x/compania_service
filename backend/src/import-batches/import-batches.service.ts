@@ -294,6 +294,7 @@ export class ImportBatchesService {
           amount: row.amount as Prisma.Decimal | number,
           fee: 0,
           tax: 0,
+          taxPct: 0,
         })),
       });
 

@@ -74,6 +74,7 @@ export type Sale = {
   source: string
   fee: DecimalValue
   tax: DecimalValue
+  taxPct: DecimalValue
   product?: Product
   project?: Project
 }

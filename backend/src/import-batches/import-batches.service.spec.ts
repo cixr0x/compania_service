@@ -77,7 +77,7 @@ describe('ImportBatchesService', () => {
     expect(prisma.sale.createMany).not.toHaveBeenCalled();
   });
 
-  it('creates sales with selected import date, batch source, fee zero, and tax zero on commit', async () => {
+  it('creates sales with selected import date, batch source, fee zero, tax zero, and tax pct zero on commit', async () => {
     const importDate = new Date('2026-05-05T00:00:00.000Z');
     jest.spyOn(prisma.importBatch, 'findUnique').mockResolvedValue({
       idImportBatch: 1,
@@ -197,6 +197,7 @@ describe('ImportBatchesService', () => {
           amount: 30.5,
           fee: 0,
           tax: 0,
+          taxPct: 0,
         },
         {
           date: importDate,
@@ -207,6 +208,7 @@ describe('ImportBatchesService', () => {
           amount: 12,
           fee: 0,
           tax: 0,
+          taxPct: 0,
         },
       ],
     });
