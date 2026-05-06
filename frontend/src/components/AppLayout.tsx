@@ -21,20 +21,41 @@ type NavigationItem = {
   icon: ReactNode
 }
 
-const navigationItems: NavigationItem[] = [
-  { label: 'Products', path: '/products', icon: <AppstoreOutlined /> },
-  { label: 'Models', path: '/models', icon: <TagsOutlined /> },
-  { label: 'Projects', path: '/projects', icon: <ProjectOutlined /> },
-  { label: 'Stakeholders', path: '/stakeholders', icon: <TeamOutlined /> },
-  { label: 'Sales', path: '/sales', icon: <DollarOutlined /> },
-  { label: 'Settings', path: '/settings', icon: <SettingOutlined /> },
-  { label: 'Sales Imports', path: '/imports', icon: <ImportOutlined /> },
+type NavigationSection = {
+  label: string
+  items: NavigationItem[]
+}
+
+const navigationSections: NavigationSection[] = [
   {
-    label: 'Sales Report',
-    path: '/reports/sales',
-    icon: <BarChartOutlined />,
+    label: 'Admin',
+    items: [
+      { label: 'Models', path: '/models', icon: <TagsOutlined /> },
+      { label: 'Settings', path: '/settings', icon: <SettingOutlined /> },
+    ],
+  },
+  {
+    label: 'Catalog',
+    items: [
+      { label: 'Products', path: '/products', icon: <AppstoreOutlined /> },
+      { label: 'Projects', path: '/projects', icon: <ProjectOutlined /> },
+      { label: 'Stakeholders', path: '/stakeholders', icon: <TeamOutlined /> },
+      { label: 'Sales', path: '/sales', icon: <DollarOutlined /> },
+      { label: 'Sales Imports', path: '/imports', icon: <ImportOutlined /> },
+    ],
+  },
+  {
+    label: 'Reports',
+    items: [
+      {
+        label: 'Sales Report',
+        path: '/reports/sales',
+        icon: <BarChartOutlined />,
+      },
+    ],
   },
 ]
+const navigationItems = navigationSections.flatMap((section) => section.items)
 
 export function AppLayout() {
   const location = useLocation()
@@ -45,14 +66,19 @@ export function AppLayout() {
         location.pathname === item.path ||
         location.pathname.startsWith(`${item.path}/`),
     )?.path ?? '/products'
-  const menuItems: MenuProps['items'] = navigationItems.map((item) => ({
-    icon: item.icon,
-    key: item.path,
-    label: (
-      <NavLink onClick={() => setIsMobileMenuOpen(false)} to={item.path}>
-        {item.label}
-      </NavLink>
-    ),
+  const menuItems: MenuProps['items'] = navigationSections.map((section) => ({
+    children: section.items.map((item) => ({
+      icon: item.icon,
+      key: item.path,
+      label: (
+        <NavLink onClick={() => setIsMobileMenuOpen(false)} to={item.path}>
+          {item.label}
+        </NavLink>
+      ),
+    })),
+    key: section.label,
+    label: section.label,
+    type: 'group',
   }))
   const renderNavigationMenu = () => (
     <Menu

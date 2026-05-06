@@ -25,6 +25,35 @@ describe('AppLayout', () => {
     ).toBeVisible()
   })
 
+  it('groups primary navigation into admin, catalog, and reports sections', () => {
+    render(
+      <MemoryRouter initialEntries={['/projects']}>
+        <Routes>
+          <Route path="/" element={<AppLayout />}>
+            <Route path="projects" element={<div>Projects page</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    const menu = screen.getByRole('menu', { name: 'Primary navigation' })
+    expect(within(menu).getByText('Admin')).toBeVisible()
+    expect(within(menu).getByText('Catalog')).toBeVisible()
+    expect(within(menu).getByText('Reports')).toBeVisible()
+    expect(
+      within(menu).getAllByRole('link').map((link) => link.textContent),
+    ).toEqual([
+      'Models',
+      'Settings',
+      'Products',
+      'Projects',
+      'Stakeholders',
+      'Sales',
+      'Sales Imports',
+      'Sales Report',
+    ])
+  })
+
   it('keeps project stakeholder splits out of the primary navigation', () => {
     render(
       <MemoryRouter initialEntries={['/projects']}>

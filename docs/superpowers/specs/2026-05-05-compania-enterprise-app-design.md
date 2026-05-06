@@ -282,16 +282,11 @@ Ant Design application rules for this project:
 - Shared entity tables should keep compact enterprise readability: right-align numeric and money values, format date-like values, display booleans as tags, provide horizontal scrolling for wide data, and include a visible edit action while preserving double-click navigation.
 - Wide reports, including the sales report, should use Ant Design table horizontal scrolling with stable column widths instead of allowing tables to spill outside the page panel.
 
-Main navigation:
+Main navigation is grouped into sections:
 
-- Products
-- Models
-- Projects
-- Stakeholders
-- Sales
-- Settings
-- Sales Imports
-- Sales Report
+- Admin: Models, Settings.
+- Catalog: Products, Projects, Stakeholders, Sales, Sales Imports.
+- Reports: Sales Report.
 
 Entity pages:
 
