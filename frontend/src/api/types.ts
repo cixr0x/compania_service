@@ -130,6 +130,7 @@ export type SalesReportRow = Record<SalesReportSource, SalesReportSourceTotals> 
   fee: number
   model: string
   ownerProfit: number
+  productImage: string | null
   productName: string
   profit: number
   projectId: number

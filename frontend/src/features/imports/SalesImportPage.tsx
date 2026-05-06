@@ -18,6 +18,7 @@ import type { TableProps, UploadFile, UploadProps } from 'antd'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, getJson, patchJson, postJson } from '../../api/client'
+import { ProductNameCell } from '../../components/ProductNameCell'
 import type {
   ImportBatch,
   ImportError,
@@ -392,7 +393,11 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     {
       dataIndex: 'product',
       render: (product: ImportStageRow['product']) =>
-        product ? product.name : <Tag color="warning">Unmatched product</Tag>,
+        product ? (
+          <ProductNameCell imageUrl={product.image} name={product.name} />
+        ) : (
+          <Tag color="warning">Unmatched product</Tag>
+        ),
       title: 'Matched Product',
     },
     {

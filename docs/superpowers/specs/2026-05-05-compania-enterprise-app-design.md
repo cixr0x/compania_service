@@ -296,6 +296,7 @@ Entity pages:
 - Create button in the table toolbar beside search, using Ant Design primary button styling.
 - Double-click table row navigates to edit form; table rows also expose a visible Edit action for discoverability.
 - Entity table columns backed by foreign keys display the related entity name/label rather than the raw foreign key ID. Primary key ID columns may still display IDs.
+- Table cells that display a product name show a small product image thumbnail to the left of the name when the product has an image URL.
 - Forms use backend validation responses for field-level error display. Form pages do not use the old Workspace eyebrow row; navigation back to the list is provided by a Cancel button beside Save.
 - Product create/edit forms load pricing models and show model names in the model selector while submitting the selected model ID to the API.
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.

@@ -145,11 +145,33 @@ function getRelatedEntityName(row: EntityRow, relationName: string) {
   return getEntityName(row[relationName])
 }
 
+function getEntityImage(value: unknown): string | null {
+  const row = asEntityRow(value)
+  const image = row?.image
+
+  return typeof image === 'string' && image.trim() !== ''
+    ? image.trim()
+    : null
+}
+
+function getRelatedEntityImage(row: EntityRow, relationName: string) {
+  return getEntityImage(row[relationName])
+}
+
 function getProjectProductName(row: EntityRow) {
   const project = asEntityRow(row.project)
   return (
     (project ? getRelatedEntityName(project, 'product') : null) ??
     getRelatedEntityName(row, 'product')
+  )
+}
+
+function getProjectProductImage(row: EntityRow) {
+  const project = asEntityRow(row.project)
+
+  return (
+    (project ? getRelatedEntityImage(project, 'product') : null) ??
+    getRelatedEntityImage(row, 'product')
   )
 }
 
@@ -220,7 +242,10 @@ export const entityConfigs = {
     idField: 'id',
     columns: [
       column('id', 'ID'),
-      column('name', 'Name'),
+      column('name', 'Name', {
+        thumbnailGetter: (row) => row.image,
+        width: 240,
+      }),
       column('idEcommerce', 'Ecommerce ID'),
       column('idStore', 'Store ID'),
       column('idEvent', 'Event ID'),
@@ -313,8 +338,10 @@ export const entityConfigs = {
     columns: [
       column('idProject', 'ID'),
       column('idProduct', 'Product', {
+        thumbnailGetter: (row) => getRelatedEntityImage(row, 'product'),
         valueGetter: (row) => getRelatedEntityName(row, 'product'),
         valueType: 'string',
+        width: 240,
       }),
       column('isActive', 'Active'),
       column('units', 'Units'),
@@ -414,8 +441,10 @@ export const entityConfigs = {
     columns: [
       column('idProjectStakeholder', 'ID'),
       column('idProject', 'Project', {
+        thumbnailGetter: getProjectProductImage,
         valueGetter: getProjectProductName,
         valueType: 'string',
+        width: 260,
       }),
       column('idStakeholder', 'Stakeholder', {
         valueGetter: (row) => getRelatedEntityName(row, 'stakeholder'),
@@ -458,12 +487,16 @@ export const entityConfigs = {
       column('idSale', 'ID'),
       column('date', 'Date'),
       column('idProduct', 'Product', {
+        thumbnailGetter: (row) => getRelatedEntityImage(row, 'product'),
         valueGetter: (row) => getRelatedEntityName(row, 'product'),
         valueType: 'string',
+        width: 240,
       }),
       column('idProject', 'Project', {
+        thumbnailGetter: getProjectProductImage,
         valueGetter: getProjectProductName,
         valueType: 'string',
+        width: 260,
       }),
       column('quantity', 'Quantity'),
       column('amount', 'Amount', { valueFormat: 'money' }),

@@ -33,7 +33,7 @@ const stagedRows: ImportStageRow[] = [
       id: 101,
       name: 'Starter Kit',
       description: null,
-      image: null,
+      image: 'https://example.test/starter-kit.jpg',
       idEcommerce: 'SKU-STARTER',
       idStore: null,
       idEvent: null,
@@ -170,6 +170,9 @@ describe('SalesImportPage', () => {
       await within(stagedRowsRegion).findByText('Starter kit black bundle'),
     ).toBeVisible()
     expect(within(table).getByText('Starter Kit')).toBeVisible()
+    expect(
+      within(table).getByRole('img', { name: 'Starter Kit thumbnail' }),
+    ).toHaveAttribute('src', 'https://example.test/starter-kit.jpg')
     expect(within(table).getByText('Valid').closest('.ant-tag')).toBeInTheDocument()
   })
 

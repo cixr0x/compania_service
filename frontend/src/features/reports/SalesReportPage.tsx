@@ -9,6 +9,7 @@ import type {
   SalesReportSource,
   SalesReportSummary,
 } from '../../api/types'
+import { ProductNameCell } from '../../components/ProductNameCell'
 import { formatCurrency } from '../../utils/money'
 
 const sourceLabels: Record<SalesReportSource, string> = {
@@ -78,8 +79,11 @@ export function SalesReportPage() {
       {
         dataIndex: 'productName',
         key: 'productName',
+        render: (_value: SalesReportRow['productName'], row: SalesReportRow) => (
+          <ProductNameCell imageUrl={row.productImage} name={row.productName} />
+        ),
         title: 'Product',
-        width: 220,
+        width: 240,
       },
       ...sources.map((source) => ({
         children: [

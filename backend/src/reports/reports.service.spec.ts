@@ -39,6 +39,7 @@ describe('ReportsService', () => {
         idProject: 501,
         product: {
           id: 42,
+          image: 'https://example.test/maple-shelf.jpg',
           model: { name: 'Furniture' },
           name: 'Maple Shelf',
           ownership: '25.00',
@@ -58,6 +59,7 @@ describe('ReportsService', () => {
         idProject: 501,
         product: {
           id: 42,
+          image: 'https://example.test/maple-shelf.jpg',
           model: { name: 'Furniture' },
           name: 'Maple Shelf',
           ownership: '25.00',
@@ -77,6 +79,7 @@ describe('ReportsService', () => {
         idProject: 502,
         product: {
           id: 42,
+          image: 'https://example.test/maple-shelf.jpg',
           model: { name: 'Furniture' },
           name: 'Maple Shelf',
           ownership: '25.00',
@@ -115,6 +118,7 @@ describe('ReportsService', () => {
         fee: 7,
         model: 'Furniture',
         ownerProfit: 82.78,
+        productImage: 'https://example.test/maple-shelf.jpg',
         productName: 'Maple Shelf',
         profit: 331.1,
         projectId: 501,
@@ -129,6 +133,7 @@ describe('ReportsService', () => {
         fee: 10,
         model: 'Furniture',
         ownerProfit: 69.95,
+        productImage: 'https://example.test/maple-shelf.jpg',
         productName: 'Maple Shelf',
         profit: 279.8,
         projectId: 502,

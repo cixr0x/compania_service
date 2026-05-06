@@ -453,6 +453,32 @@ button {
   text-align: center;
 }
 
+.product-name-cell {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  max-width: 100%;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.product-thumbnail {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  flex: 0 0 auto;
+  height: 32px;
+  object-fit: cover;
+  width: 32px;
+}
+
+.product-name-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .primary-action:disabled {
   cursor: not-allowed;
   opacity: 0.68;

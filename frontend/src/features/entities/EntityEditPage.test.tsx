@@ -1000,7 +1000,11 @@ describe('EntityEditPage', () => {
               idProject: 77,
               project: {
                 idProject: 77,
-                product: { id: 42, name: 'Maple Shelf' },
+                product: {
+                  id: 42,
+                  image: 'https://example.test/maple-shelf.jpg',
+                  name: 'Maple Shelf',
+                },
               },
               stakePercentage: 60,
             },
@@ -1027,6 +1031,11 @@ describe('EntityEditPage', () => {
       }),
     ).toBeVisible()
     expect(within(participationTable).getByText('Maple Shelf')).toBeVisible()
+    expect(
+      within(participationTable).getByRole('img', {
+        name: 'Maple Shelf thumbnail',
+      }),
+    ).toHaveAttribute('src', 'https://example.test/maple-shelf.jpg')
     expect(
       within(participationTable).queryByText('Project #77 - Maple Shelf'),
     ).not.toBeInTheDocument()

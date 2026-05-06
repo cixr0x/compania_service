@@ -82,6 +82,7 @@ describe('EntityListPage', () => {
         idEvent: 'EV-101',
         idStore: 'ST-101',
         idSurface: 'SF-101',
+        image: 'https://example.test/walnut-desk.jpg',
         name: 'Walnut Desk',
       },
     ])
@@ -93,6 +94,9 @@ describe('EntityListPage', () => {
     expect(screen.getAllByText('Event ID')).not.toHaveLength(0)
     expect(screen.getAllByText('Surface ID')).not.toHaveLength(0)
     expect(await screen.findByText('EC-101')).toBeVisible()
+    expect(
+      screen.getByRole('img', { name: 'Walnut Desk thumbnail' }),
+    ).toHaveAttribute('src', 'https://example.test/walnut-desk.jpg')
     expect(screen.getByText('ST-101')).toBeVisible()
     expect(screen.getByText('EV-101')).toBeVisible()
     expect(screen.getByText('SF-101')).toBeVisible()
@@ -159,7 +163,12 @@ describe('EntityListPage', () => {
         adminCost: 0,
         idProduct: 42,
         idProject: 501,
-        product: { id: 42, name: 'Walnut Desk', ownership: 25 },
+        product: {
+          id: 42,
+          image: 'https://example.test/walnut-desk.jpg',
+          name: 'Walnut Desk',
+          ownership: 25,
+        },
         productionCost: 0,
       },
     ])
@@ -167,6 +176,9 @@ describe('EntityListPage', () => {
     renderEntityList('/projects')
 
     expect(await screen.findByText('Walnut Desk')).toBeVisible()
+    expect(
+      screen.getByRole('img', { name: 'Walnut Desk thumbnail' }),
+    ).toHaveAttribute('src', 'https://example.test/walnut-desk.jpg')
     expect(screen.queryByRole('columnheader', { name: 'Product ID' })).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Product' })).toBeVisible()
     expect(screen.queryByText('42')).not.toBeInTheDocument()
@@ -181,10 +193,19 @@ describe('EntityListPage', () => {
         idProduct: 42,
         idProject: 501,
         idSale: 900,
-        product: { id: 42, name: 'Walnut Desk', ownership: 25 },
+        product: {
+          id: 42,
+          image: 'https://example.test/walnut-desk.jpg',
+          name: 'Walnut Desk',
+          ownership: 25,
+        },
         project: {
           idProject: 501,
-          product: { id: 42, name: 'Walnut Desk Project' },
+          product: {
+            id: 42,
+            image: 'https://example.test/walnut-project.jpg',
+            name: 'Walnut Desk Project',
+          },
         },
         quantity: 1,
         source: 'store',
@@ -196,6 +217,12 @@ describe('EntityListPage', () => {
 
     expect(await screen.findByText('Walnut Desk')).toBeVisible()
     expect(screen.getByText('Walnut Desk Project')).toBeVisible()
+    expect(
+      screen.getByRole('img', { name: 'Walnut Desk thumbnail' }),
+    ).toHaveAttribute('src', 'https://example.test/walnut-desk.jpg')
+    expect(
+      screen.getByRole('img', { name: 'Walnut Desk Project thumbnail' }),
+    ).toHaveAttribute('src', 'https://example.test/walnut-project.jpg')
     expect(screen.queryByRole('columnheader', { name: 'Product ID' })).not.toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Product' })).toBeVisible()
@@ -239,7 +266,11 @@ describe('EntityListPage', () => {
         idStakeholder: 10,
         project: {
           idProject: 501,
-          product: { id: 42, name: 'Walnut Desk Project' },
+          product: {
+            id: 42,
+            image: 'https://example.test/walnut-project.jpg',
+            name: 'Walnut Desk Project',
+          },
         },
         stakePercentage: 60,
         stakeholder: { idStakeholder: 10, name: 'Alicia' },
@@ -249,6 +280,9 @@ describe('EntityListPage', () => {
     renderEntityList('/project-stakeholders')
 
     expect(await screen.findByText('Walnut Desk Project')).toBeVisible()
+    expect(
+      screen.getByRole('img', { name: 'Walnut Desk Project thumbnail' }),
+    ).toHaveAttribute('src', 'https://example.test/walnut-project.jpg')
     expect(screen.getByText('Alicia')).toBeVisible()
     expect(screen.queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Stakeholder ID' })).not.toBeInTheDocument()

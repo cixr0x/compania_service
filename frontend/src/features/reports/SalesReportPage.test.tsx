@@ -18,6 +18,7 @@ const yearlyReport = {
       fee: 7,
       model: 'Furniture',
       ownerProfit: 85.75,
+      productImage: 'https://example.test/maple-shelf.jpg',
       productName: 'Maple Shelf',
       profit: 343,
       projectId: 501,
@@ -156,6 +157,9 @@ describe('SalesReportPage', () => {
     const reportRow = screen.getByText('Maple Shelf').closest('tr')!
     expect(within(reportRow).getByText('501')).toBeVisible()
     expect(within(reportRow).getByText('Maple Shelf')).toBeVisible()
+    expect(
+      within(reportRow).getByRole('img', { name: 'Maple Shelf thumbnail' }),
+    ).toHaveAttribute('src', 'https://example.test/maple-shelf.jpg')
     expect(within(reportRow).queryByText('1,000,000.00')).not.toBeInTheDocument()
     expect(within(reportRow).getAllByText('$0.00')).toHaveLength(1)
     expect(within(reportRow).getByText('$150.00')).toBeVisible()

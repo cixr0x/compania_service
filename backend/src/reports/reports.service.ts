@@ -17,6 +17,7 @@ type SalesSummaryRow = Record<ReportSource, SourceTotals> & {
   fee: number;
   model: string;
   ownerProfit: number;
+  productImage: string | null;
   productName: string;
   profit: number;
   projectId: number;
@@ -96,6 +97,7 @@ export class ReportsService {
         createEmptyRow({
           model: sale.product.model?.name ?? '',
           ownerPercentage: toNumber(sale.product.ownership),
+          productImage: normalizeImageUrl(sale.product.image),
           productName: sale.product.name,
           projectId: sale.idProject,
         });
@@ -140,11 +142,13 @@ function createEmptySourceTotals(): SourceTotals {
 function createEmptyRow({
   model,
   ownerPercentage,
+  productImage,
   productName,
   projectId,
 }: {
   model: string;
   ownerPercentage: number;
+  productImage: string | null;
   productName: string;
   projectId: number;
 }): SalesSummaryAccumulator {
@@ -155,6 +159,7 @@ function createEmptyRow({
     model,
     ownerPercentage,
     ownerProfit: 0,
+    productImage,
     productName,
     profit: 0,
     projectId,
@@ -203,6 +208,12 @@ function toNumber(value: unknown): number {
   }
 
   return 0;
+}
+
+function normalizeImageUrl(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() !== ''
+    ? value.trim()
+    : null;
 }
 
 function roundCurrency(value: number): number {

@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from 'react'
 import { Button, Input, Table, Tag } from 'antd'
 import type { ColumnType, ColumnsType } from 'antd/es/table'
 import { formatCurrency } from '../utils/money'
+import { ProductNameCell } from './ProductNameCell'
 
 export type DataTableColumn<Row extends Record<string, unknown>> = {
   key: keyof Row & string
@@ -10,6 +11,7 @@ export type DataTableColumn<Row extends Record<string, unknown>> = {
   valueGetter?: (row: Row) => unknown
   valueFormat?: 'money'
   valueType?: 'boolean' | 'date' | 'number' | 'string'
+  thumbnailGetter?: (row: Row) => unknown
   width?: number
 }
 
@@ -136,9 +138,22 @@ function renderCellValue<Row extends Record<string, unknown>>(
   value: unknown,
   column: DataTableColumn<Row>,
   kind: ColumnKind,
+  row: Row,
 ): ReactNode {
   if (isEmptyValue(value)) {
     return '-'
+  }
+
+  if (column.thumbnailGetter) {
+    const label = formatCellValue(value, column, kind)
+
+    return (
+      <ProductNameCell
+        imageUrl={column.thumbnailGetter(row)}
+        name={label}
+        thumbnailAlt={`${label} thumbnail`}
+      />
+    )
   }
 
   if (kind === 'boolean') {
@@ -287,7 +302,7 @@ export function DataTable<Row extends Record<string, unknown>>({
         ),
       title: column.header,
       render: (_value: unknown, row: Row) =>
-        renderCellValue(getColumnValue(row, column), column, kind),
+        renderCellValue(getColumnValue(row, column), column, kind, row),
       width: getColumnWidth(kind, column.width),
     }
   })

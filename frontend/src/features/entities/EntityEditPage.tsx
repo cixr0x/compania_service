@@ -15,6 +15,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { useNavigate, useParams } from 'react-router-dom'
 import { deleteJson, getJson, patchJson, postJson, putJson } from '../../api/client'
 import { EntityForm } from '../../components/EntityForm'
+import { ProductNameCell } from '../../components/ProductNameCell'
 import { parseMoneyNumber } from '../../utils/money'
 import {
   getEntityConfig,
@@ -257,12 +258,23 @@ function getNestedEntityName(value: unknown): string | null {
   return typeof name === 'string' && name.trim() !== '' ? name.trim() : null
 }
 
-function formatProjectParticipation(row: EntityRow): string {
+function getProjectParticipationProduct(row: EntityRow): EntityRow | null {
   const project =
     row.project && typeof row.project === 'object' && !Array.isArray(row.project)
       ? (row.project as EntityRow)
       : null
-  const productName = getNestedEntityName(project?.product)
+  const product =
+    project?.product &&
+    typeof project.product === 'object' &&
+    !Array.isArray(project.product)
+      ? (project.product as EntityRow)
+      : null
+
+  return product
+}
+
+function formatProjectParticipation(row: EntityRow): string {
+  const productName = getNestedEntityName(getProjectParticipationProduct(row))
 
   return productName ?? '-'
 }
@@ -324,7 +336,16 @@ function StakeholderProjectsSection({ stakeholder }: { stakeholder: EntityRow })
     {
       dataIndex: 'project',
       key: 'project',
-      render: (_value, projectRow) => formatProjectParticipation(projectRow),
+      render: (_value, projectRow) => {
+        const name = formatProjectParticipation(projectRow)
+        const product = getProjectParticipationProduct(projectRow)
+
+        return name === '-' ? (
+          '-'
+        ) : (
+          <ProductNameCell imageUrl={product?.image} name={name} />
+        )
+      },
       title: 'Project',
     },
     {
