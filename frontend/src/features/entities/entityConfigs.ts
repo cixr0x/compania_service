@@ -194,7 +194,11 @@ function getSaleTax(row: EntityRow) {
 
 function getSaleProfit(row: EntityRow) {
   return roundCurrency(
-    sumMoneyValues(row.amount, -(parseMoneyNumber(row.fee) ?? 0)),
+    sumMoneyValues(
+      row.amount,
+      -(parseMoneyNumber(row.fee) ?? 0),
+      -(parseMoneyNumber(row.tax) ?? 0),
+    ),
   )
 }
 

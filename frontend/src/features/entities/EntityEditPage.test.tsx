@@ -354,9 +354,9 @@ describe('EntityEditPage', () => {
     expect(screen.getByLabelText('Fee')).toHaveValue('3.50')
     expect(screen.getByLabelText('Tax')).toHaveValue('4.27')
     expect(screen.getByLabelText('Tax')).toHaveAttribute('readonly')
-    expect(screen.getByLabelText('Profit')).toHaveValue('122.00')
+    expect(screen.getByLabelText('Profit')).toHaveValue('117.73')
     expect(screen.getByLabelText('Profit')).toHaveAttribute('readonly')
-    expect(screen.getByLabelText('Owner Profit')).toHaveValue('30.50')
+    expect(screen.getByLabelText('Owner Profit')).toHaveValue('29.43')
     expect(screen.getByLabelText('Owner Profit')).toHaveAttribute('readonly')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -441,8 +441,8 @@ describe('EntityEditPage', () => {
     await user.type(screen.getByLabelText('Fee'), '1,250.50')
     expect(screen.getByLabelText('Tax')).toHaveValue('34,000.00')
     expect(screen.getByLabelText('Tax')).toHaveAttribute('readonly')
-    expect(screen.getByLabelText('Profit')).toHaveValue('998,749.50')
-    expect(screen.getByLabelText('Owner Profit')).toHaveValue('249,687.38')
+    expect(screen.getByLabelText('Profit')).toHaveValue('964,749.50')
+    expect(screen.getByLabelText('Owner Profit')).toHaveValue('241,187.38')
     await selectAntOption(
       user,
       screen.getByRole('combobox', { name: 'Source' }),

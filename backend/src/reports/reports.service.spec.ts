@@ -50,6 +50,7 @@ describe('ReportsService', () => {
         },
         quantity: 2,
         source: 'store',
+        tax: '6.80',
       },
       {
         amount: '150.00',
@@ -68,6 +69,7 @@ describe('ReportsService', () => {
         },
         quantity: 1,
         source: 'ecommerce',
+        tax: '5.10',
       },
       {
         amount: '300.00',
@@ -86,6 +88,7 @@ describe('ReportsService', () => {
         },
         quantity: 3,
         source: 'event',
+        tax: '10.20',
       },
     ]);
 
@@ -111,9 +114,9 @@ describe('ReportsService', () => {
         event: { amount: 0, quantity: 0 },
         fee: 7,
         model: 'Furniture',
-        ownerProfit: 85.75,
+        ownerProfit: 82.78,
         productName: 'Maple Shelf',
-        profit: 343,
+        profit: 331.1,
         projectId: 501,
         store: { amount: 200, quantity: 2 },
         surface: { amount: 0, quantity: 0 },
@@ -125,9 +128,9 @@ describe('ReportsService', () => {
         event: { amount: 300, quantity: 3 },
         fee: 10,
         model: 'Furniture',
-        ownerProfit: 72.5,
+        ownerProfit: 69.95,
         productName: 'Maple Shelf',
-        profit: 290,
+        profit: 279.8,
         projectId: 502,
         store: { amount: 0, quantity: 0 },
         surface: { amount: 0, quantity: 0 },

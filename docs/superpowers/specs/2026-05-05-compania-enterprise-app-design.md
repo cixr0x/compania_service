@@ -225,7 +225,7 @@ Calculations:
 - Source quantity and amount are summed from `sales.quantity` and `sales.amount` for each source.
 - `Total Quantity` and `Total Amount` are summed across all sources for the row.
 - `Fee` is summed from `sales.fee`.
-- `Profit` is `Total Amount - Fee`.
+- `Profit` is `Total Amount - Fee - Tax`.
 - `Owner Profit` is `Profit * product.ownership / 100`.
 
 ## REST API Design
@@ -307,7 +307,7 @@ Entity pages:
 - Sale create/edit forms load products and projects, show readable option labels, and submit the selected product and project IDs to the API. The backend rejects a manual sale if the selected project does not belong to the selected product.
 - Foreign key fields in create/edit forms should be selectors backed by the related entity list, not open numeric inputs.
 - Money fields in tables and import review screens should display with a dollar prefix, comma grouping, and two decimals, for example `$1,000,000.00`. Editable money fields may accept comma separators and submit numeric values to the API.
-- The sales CRUD table displays tax, profit, and owner profit as money columns. Sales create/edit forms calculate tax from `amount * settings.sales_tax`, recalculate it as amount or fee changes, and persist the tax on save. The same form displays read-only profit as `amount - fee` and owner profit as `profit * product.ownership / 100`; profit and owner profit are computed display values and are not persisted.
+- The sales CRUD table displays tax, profit, and owner profit as money columns. Sales create/edit forms calculate tax from `amount * settings.sales_tax`, recalculate it as amount or fee changes, and persist the tax on save. The same form displays read-only profit as `amount - fee - tax` and owner profit as `profit * product.ownership / 100`; profit and owner profit are computed display values and are not persisted.
 
 Sales import page:
 
@@ -325,7 +325,7 @@ Sales report page:
 - Month selector populated with months that have sales data for the selected year, plus a full-year option.
 - Report table with grouped source headers, using `Quantity` and `Amount` under each source group.
 - `Surface` source group hidden unless the selected period has surface sales.
-- Profit is calculated as total amount minus fee; total cost and income are not displayed in the sales report.
+- Profit is calculated as total amount minus fee and tax; total cost and income are not displayed in the sales report.
 - Money cells displayed with a dollar prefix, comma grouping, and two decimals.
 
 Known intentional custom UI areas and UI debt:

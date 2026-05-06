@@ -26,6 +26,7 @@ type SalesSummaryRow = Record<ReportSource, SourceTotals> & {
 
 type SalesSummaryAccumulator = SalesSummaryRow & {
   ownerPercentage: number;
+  tax: number;
 };
 
 type SalesSummaryResponse = {
@@ -107,6 +108,7 @@ export class ReportsService {
       row.totalQuantity += sale.quantity;
       row.totalAmount += toNumber(sale.amount);
       row.fee += toNumber(sale.fee);
+      row.tax += toNumber(sale.tax);
       recomputeFinancials(row);
       rowsByProductProject.set(key, row);
     }
@@ -158,6 +160,7 @@ function createEmptyRow({
     projectId,
     store: createEmptySourceTotals(),
     surface: createEmptySourceTotals(),
+    tax: 0,
     totalAmount: 0,
     totalQuantity: 0,
   };
@@ -166,7 +169,8 @@ function createEmptyRow({
 function recomputeFinancials(row: SalesSummaryAccumulator) {
   row.totalAmount = roundCurrency(row.totalAmount);
   row.fee = roundCurrency(row.fee);
-  row.profit = roundCurrency(row.totalAmount - row.fee);
+  row.tax = roundCurrency(row.tax);
+  row.profit = roundCurrency(row.totalAmount - row.fee - row.tax);
   row.ownerProfit = roundCurrency(row.profit * (row.ownerPercentage / 100));
 
   for (const source of ALL_REPORT_SOURCES) {
@@ -175,7 +179,7 @@ function recomputeFinancials(row: SalesSummaryAccumulator) {
 }
 
 function stripAccumulator(row: SalesSummaryAccumulator): SalesSummaryRow {
-  const { ownerPercentage: _ownerPercentage, ...publicRow } = row;
+  const { ownerPercentage: _ownerPercentage, tax: _tax, ...publicRow } = row;
   return publicRow;
 }
 

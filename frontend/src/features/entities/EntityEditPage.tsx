@@ -276,7 +276,7 @@ function withSalesCalculatedValues(
     salesTaxRate === null
       ? (parseMoneyNumber(values.tax) ?? 0)
       : roundCurrency(amount * salesTaxRate)
-  const profit = roundCurrency(amount - fee)
+  const profit = roundCurrency(amount - fee - tax)
 
   return {
     ...values,
