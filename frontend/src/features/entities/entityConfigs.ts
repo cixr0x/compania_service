@@ -126,6 +126,31 @@ function column(
   return { key, header, ...options }
 }
 
+function asEntityRow(value: unknown): EntityRow | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as EntityRow)
+    : null
+}
+
+function getEntityName(value: unknown): string | null {
+  const row = asEntityRow(value)
+  const name = row?.name
+
+  return typeof name === 'string' && name.trim() !== '' ? name.trim() : null
+}
+
+function getRelatedEntityName(row: EntityRow, relationName: string) {
+  return getEntityName(row[relationName])
+}
+
+function getProjectProductName(row: EntityRow) {
+  const project = asEntityRow(row.project)
+  return (
+    (project ? getRelatedEntityName(project, 'product') : null) ??
+    getRelatedEntityName(row, 'product')
+  )
+}
+
 function formatProjectOption(row: EntityRow) {
   const product = row.product
   const productName =
@@ -167,7 +192,10 @@ export const entityConfigs = {
       column('idSurface', 'Surface ID'),
       column('ownership', 'Ownership'),
       column('tag', 'Tag'),
-      column('idModel', 'Model ID'),
+      column('idModel', 'Model', {
+        valueGetter: (row) => getRelatedEntityName(row, 'model'),
+        valueType: 'string',
+      }),
     ],
     fields: [
       text('name', 'Name', {
@@ -247,7 +275,10 @@ export const entityConfigs = {
     idField: 'idProject',
     columns: [
       column('idProject', 'ID'),
-      column('idProduct', 'Product ID'),
+      column('idProduct', 'Product', {
+        valueGetter: (row) => getRelatedEntityName(row, 'product'),
+        valueType: 'string',
+      }),
       column('isActive', 'Active'),
       column('units', 'Units'),
       column('unitCost', 'Unit Cost', { valueFormat: 'money' }),
@@ -317,8 +348,14 @@ export const entityConfigs = {
     idField: 'idProjectStakeholder',
     columns: [
       column('idProjectStakeholder', 'ID'),
-      column('idProject', 'Project ID'),
-      column('idStakeholder', 'Stakeholder ID'),
+      column('idProject', 'Project', {
+        valueGetter: getProjectProductName,
+        valueType: 'string',
+      }),
+      column('idStakeholder', 'Stakeholder', {
+        valueGetter: (row) => getRelatedEntityName(row, 'stakeholder'),
+        valueType: 'string',
+      }),
       column('stakePercentage', 'Stake Percentage'),
     ],
     fields: [
@@ -355,8 +392,14 @@ export const entityConfigs = {
     columns: [
       column('idSale', 'ID'),
       column('date', 'Date'),
-      column('idProduct', 'Product ID'),
-      column('idProject', 'Project ID'),
+      column('idProduct', 'Product', {
+        valueGetter: (row) => getRelatedEntityName(row, 'product'),
+        valueType: 'string',
+      }),
+      column('idProject', 'Project', {
+        valueGetter: getProjectProductName,
+        valueType: 'string',
+      }),
       column('quantity', 'Quantity'),
       column('amount', 'Amount', { valueFormat: 'money' }),
       column('source', 'Source'),

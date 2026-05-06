@@ -5,6 +5,7 @@ describe('SalesService', () => {
   const prisma = {
     sale: {
       create: jest.fn(),
+      findMany: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
     },
@@ -17,6 +18,23 @@ describe('SalesService', () => {
   } as any;
 
   beforeEach(() => jest.resetAllMocks());
+
+  it('loads product names for sale project references in list responses', async () => {
+    jest.spyOn(prisma.sale, 'findMany').mockResolvedValue([]);
+
+    const service = new SalesService(prisma as PrismaService);
+    await service.findAll({ page: 1, pageSize: 25 });
+
+    expect(prisma.sale.findMany).toHaveBeenCalledWith({
+      include: {
+        product: true,
+        project: { include: { product: true } },
+      },
+      orderBy: { idSale: 'desc' },
+      skip: 0,
+      take: 25,
+    });
+  });
 
   it('creates a sale with a default fee of zero when fee is omitted', async () => {
     jest.spyOn(prisma.sale, 'create').mockResolvedValue({

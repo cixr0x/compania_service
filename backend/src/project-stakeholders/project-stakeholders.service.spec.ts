@@ -137,6 +137,23 @@ describe('ProjectStakeholdersService', () => {
     });
   });
 
+  it('loads project product and stakeholder names for list table display', async () => {
+    jest.spyOn(prisma.projectStakeholder, 'findMany').mockResolvedValue([]);
+
+    const service = new ProjectStakeholdersService(prisma);
+    await service.findAll({ page: 1, pageSize: 25 });
+
+    expect(prisma.projectStakeholder.findMany).toHaveBeenCalledWith({
+      include: {
+        project: { include: { product: true } },
+        stakeholder: true,
+      },
+      orderBy: { idProjectStakeholder: 'desc' },
+      skip: 0,
+      take: 25,
+    });
+  });
+
   it('checks the destination project total when moving a stakeholder row to another project', async () => {
     jest
       .spyOn(transactionPrisma.projectStakeholder, 'findUnique')

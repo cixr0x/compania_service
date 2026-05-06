@@ -12,7 +12,7 @@ import { UpdateSaleDto } from './dto/update-sale.dto';
 
 const saleInclude = {
   product: true,
-  project: true,
+  project: { include: { product: true } },
 };
 
 @Injectable()

@@ -286,6 +286,7 @@ Entity pages:
 - Table view with sortable visible columns and a text filter for searchable fields.
 - Create button on the table view, using Ant Design primary button styling.
 - Double-click table row navigates to edit form; table rows also expose a visible Edit action for discoverability.
+- Entity table columns backed by foreign keys display the related entity name/label rather than the raw foreign key ID. Primary key ID columns may still display IDs.
 - Forms use backend validation responses for field-level error display.
 - Product create/edit forms load pricing models and show model names in the model selector while submitting the selected model ID to the API.
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.

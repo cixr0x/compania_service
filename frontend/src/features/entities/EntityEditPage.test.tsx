@@ -879,9 +879,10 @@ describe('EntityEditPage', () => {
         name: 'Stake %',
       }),
     ).toBeVisible()
+    expect(within(participationTable).getByText('Maple Shelf')).toBeVisible()
     expect(
-      within(participationTable).getByText('Project #77 - Maple Shelf'),
-    ).toBeVisible()
+      within(participationTable).queryByText('Project #77 - Maple Shelf'),
+    ).not.toBeInTheDocument()
     expect(within(participationTable).getByText('60%')).toBeVisible()
   })
 })

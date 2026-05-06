@@ -11,7 +11,7 @@ import { ReplaceProjectStakeholderDto } from './dto/replace-project-stakeholder.
 import { UpdateProjectStakeholderDto } from './dto/update-project-stakeholder.dto';
 
 const projectStakeholderInclude = {
-  project: true,
+  project: { include: { product: true } },
   stakeholder: true,
 };
 

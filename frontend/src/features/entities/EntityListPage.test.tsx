@@ -128,4 +128,99 @@ describe('EntityListPage', () => {
     expect(screen.getAllByText('Total Cost')).not.toHaveLength(0)
     expect(await screen.findByText('9,750.75')).toBeVisible()
   })
+
+  it('shows related entity names instead of foreign key IDs in entity tables', async () => {
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        id: 101,
+        idModel: 7,
+        model: { idModel: 7, name: 'Furniture' },
+        name: 'Walnut Desk',
+      },
+    ])
+
+    renderProductsList()
+
+    expect(await screen.findByText('Furniture')).toBeVisible()
+    expect(screen.queryByRole('columnheader', { name: 'Model ID' })).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Model' })).toBeVisible()
+    expect(screen.queryByText('7')).not.toBeInTheDocument()
+  })
+
+  it('shows product names instead of product IDs in the projects table', async () => {
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        adminCost: 0,
+        idProduct: 42,
+        idProject: 501,
+        product: { id: 42, name: 'Walnut Desk' },
+        productionCost: 0,
+      },
+    ])
+
+    renderEntityList('/projects')
+
+    expect(await screen.findByText('Walnut Desk')).toBeVisible()
+    expect(screen.queryByRole('columnheader', { name: 'Product ID' })).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Product' })).toBeVisible()
+    expect(screen.queryByText('42')).not.toBeInTheDocument()
+  })
+
+  it('shows related names instead of foreign key IDs in the sales table', async () => {
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        amount: 100,
+        date: '2026-05-05',
+        fee: 0,
+        idProduct: 42,
+        idProject: 501,
+        idSale: 900,
+        product: { id: 42, name: 'Walnut Desk' },
+        project: {
+          idProject: 501,
+          product: { id: 42, name: 'Walnut Desk Project' },
+        },
+        quantity: 1,
+        source: 'store',
+      },
+    ])
+
+    renderEntityList('/sales')
+
+    expect(await screen.findByText('Walnut Desk')).toBeVisible()
+    expect(screen.getByText('Walnut Desk Project')).toBeVisible()
+    expect(screen.queryByRole('columnheader', { name: 'Product ID' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Product' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Project' })).toBeVisible()
+    expect(screen.queryByText('42')).not.toBeInTheDocument()
+    expect(screen.queryByText('501')).not.toBeInTheDocument()
+  })
+
+  it('shows project product and stakeholder names in the project stakeholder table', async () => {
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        idProject: 501,
+        idProjectStakeholder: 900,
+        idStakeholder: 10,
+        project: {
+          idProject: 501,
+          product: { id: 42, name: 'Walnut Desk Project' },
+        },
+        stakePercentage: 60,
+        stakeholder: { idStakeholder: 10, name: 'Alicia' },
+      },
+    ])
+
+    renderEntityList('/project-stakeholders')
+
+    expect(await screen.findByText('Walnut Desk Project')).toBeVisible()
+    expect(screen.getByText('Alicia')).toBeVisible()
+    expect(screen.queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Stakeholder ID' })).not.toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Project' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Stakeholder' })).toBeVisible()
+    expect(screen.queryByText('501')).not.toBeInTheDocument()
+    expect(screen.queryByText('10')).not.toBeInTheDocument()
+  })
 })

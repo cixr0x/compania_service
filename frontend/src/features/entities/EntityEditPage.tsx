@@ -227,12 +227,9 @@ function formatProjectParticipation(row: EntityRow): string {
     row.project && typeof row.project === 'object' && !Array.isArray(row.project)
       ? (row.project as EntityRow)
       : null
-  const projectId = getNumericId(project?.idProject) ?? getNumericId(row.idProject)
   const productName = getNestedEntityName(project?.product)
 
-  return productName && projectId !== null
-    ? `Project #${projectId} - ${productName}`
-    : `Project #${projectId ?? ''}`.trim()
+  return productName ?? '-'
 }
 
 function StakeholderProjectsSection({ stakeholder }: { stakeholder: EntityRow }) {
