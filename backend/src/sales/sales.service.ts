@@ -14,6 +14,7 @@ const saleInclude = {
   product: true,
   project: { include: { product: true } },
 };
+const SALES_TAX_SETTING_CODE = 'sales_tax';
 
 @Injectable()
 export class SalesService {
@@ -23,7 +24,7 @@ export class SalesService {
     await this.ensureProductExists(dto.idProduct);
     await this.ensureProjectBelongsToProduct(dto.idProject, dto.idProduct);
     return this.prisma.sale.create({
-      data: this.normalizeSaleCreateData(dto),
+      data: await this.normalizeSaleCreateData(dto),
     });
   }
 
@@ -60,7 +61,7 @@ export class SalesService {
     }
     return this.prisma.sale.update({
       where: { idSale: id },
-      data: this.normalizeSaleUpdateData(dto),
+      data: await this.normalizeSaleUpdateData(dto, current),
     });
   }
 
@@ -69,20 +70,31 @@ export class SalesService {
     return this.prisma.sale.delete({ where: { idSale: id } });
   }
 
-  private normalizeSaleCreateData(
+  private async normalizeSaleCreateData(
     dto: CreateSaleDto,
-  ): Prisma.SaleUncheckedCreateInput {
+  ): Promise<Prisma.SaleUncheckedCreateInput> {
     return {
       ...this.normalizeSaleWriteData(dto),
       fee: dto.fee ?? 0,
-      tax: 0,
+      tax: await this.calculateTax(dto.amount),
     } as Prisma.SaleUncheckedCreateInput;
   }
 
-  private normalizeSaleUpdateData(
+  private async normalizeSaleUpdateData(
     dto: UpdateSaleDto,
-  ): Prisma.SaleUncheckedUpdateInput {
-    return this.normalizeSaleWriteData(dto);
+    current: { amount: unknown },
+  ): Promise<Prisma.SaleUncheckedUpdateInput> {
+    const data = this.normalizeSaleWriteData(dto);
+
+    if (
+      dto.amount !== undefined ||
+      dto.fee !== undefined ||
+      dto.tax !== undefined
+    ) {
+      data.tax = await this.calculateTax(data.amount ?? current.amount);
+    }
+
+    return data;
   }
 
   private normalizeSaleWriteData(dto: CreateSaleDto | UpdateSaleDto) {
@@ -106,6 +118,29 @@ export class SalesService {
     }
 
     return data;
+  }
+
+  private async getSalesTaxRate() {
+    const setting = await this.prisma.setting.findUnique({
+      where: { code: SALES_TAX_SETTING_CODE },
+      select: { value: true },
+    });
+    const taxRate = toFiniteNumber(setting?.value);
+
+    if (taxRate === null || taxRate < 0) {
+      throw new BadRequestException(
+        'Setting sales_tax must be configured as a decimal tax rate',
+      );
+    }
+
+    return taxRate;
+  }
+
+  private async calculateTax(amount: unknown) {
+    const numericAmount = toFiniteNumber(amount);
+    const taxRate = await this.getSalesTaxRate();
+
+    return roundCurrency((numericAmount ?? 0) * taxRate);
   }
 
   private async ensureProductExists(idProduct: number) {
@@ -137,4 +172,26 @@ export class SalesService {
       );
     }
   }
+}
+
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === 'string') {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  }
+
+  if (value && typeof value === 'object' && 'toString' in value) {
+    const numericValue = Number(String(value));
+    return Number.isFinite(numericValue) ? numericValue : null;
+  }
+
+  return null;
+}
+
+function roundCurrency(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }

@@ -310,7 +310,7 @@ describe('EntityEditPage', () => {
   it('normalizes existing sale ISO date values for display and update payloads', async () => {
     vi.mocked(getJson).mockImplementation(async (path) => {
       if (path === '/products') {
-        return [{ id: 101, name: 'Walnut Desk' }]
+        return [{ id: 101, name: 'Walnut Desk', ownership: 25 }]
       }
 
       if (path === '/projects') {
@@ -339,6 +339,10 @@ describe('EntityEditPage', () => {
         }
       }
 
+      if (path === '/settings?search=sales_tax&pageSize=100') {
+        return [{ code: 'sales_tax', value: '0.034' }]
+      }
+
       throw new Error(`Unexpected path: ${path}`)
     })
     vi.mocked(patchJson).mockResolvedValue({ idSale: 20 })
@@ -348,8 +352,12 @@ describe('EntityEditPage', () => {
     expect(await screen.findByLabelText('Date')).toHaveValue('2026-05-04')
     expect(screen.getByLabelText('Amount')).toHaveValue('125.50')
     expect(screen.getByLabelText('Fee')).toHaveValue('3.50')
-    expect(screen.getByLabelText('Tax')).toHaveValue('9.75')
+    expect(screen.getByLabelText('Tax')).toHaveValue('4.27')
     expect(screen.getByLabelText('Tax')).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Profit')).toHaveValue('122.00')
+    expect(screen.getByLabelText('Profit')).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Owner Profit')).toHaveValue('30.50')
+    expect(screen.getByLabelText('Owner Profit')).toHaveAttribute('readonly')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
@@ -361,9 +369,13 @@ describe('EntityEditPage', () => {
         idProject: 501,
         quantity: 2,
         source: 'store',
+        tax: 4.27,
       })
     })
-    expect(vi.mocked(patchJson).mock.calls[0]?.[1]).not.toHaveProperty('tax')
+    expect(vi.mocked(patchJson).mock.calls[0]?.[1]).not.toHaveProperty('profit')
+    expect(vi.mocked(patchJson).mock.calls[0]?.[1]).not.toHaveProperty(
+      'ownerProfit',
+    )
   })
 
   it('requires product and project selectors when creating a sale and saves their ids', async () => {
@@ -371,8 +383,8 @@ describe('EntityEditPage', () => {
     vi.mocked(getJson).mockImplementation(async (path) => {
       if (path === '/products') {
         return [
-          { id: 101, name: 'Walnut Desk' },
-          { id: 102, name: 'Maple Shelf' },
+          { id: 101, name: 'Walnut Desk', ownership: 25 },
+          { id: 102, name: 'Maple Shelf', ownership: 50 },
         ]
       }
 
@@ -389,6 +401,10 @@ describe('EntityEditPage', () => {
             product: { id: 102, name: 'Maple Shelf' },
           },
         ]
+      }
+
+      if (path === '/settings?search=sales_tax&pageSize=100') {
+        return [{ code: 'sales_tax', value: '0.034' }]
       }
 
       throw new Error(`Unexpected path: ${path}`)
@@ -423,8 +439,10 @@ describe('EntityEditPage', () => {
     await user.type(screen.getByLabelText('Quantity'), '2')
     await user.type(screen.getByLabelText('Amount'), '1,000,000.00')
     await user.type(screen.getByLabelText('Fee'), '1,250.50')
-    expect(screen.getByLabelText('Tax')).toHaveValue('0.00')
+    expect(screen.getByLabelText('Tax')).toHaveValue('34,000.00')
     expect(screen.getByLabelText('Tax')).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Profit')).toHaveValue('998,749.50')
+    expect(screen.getByLabelText('Owner Profit')).toHaveValue('249,687.38')
     await selectAntOption(
       user,
       screen.getByRole('combobox', { name: 'Source' }),
@@ -441,11 +459,16 @@ describe('EntityEditPage', () => {
         idProject: 501,
         quantity: 2,
         source: 'store',
+        tax: 34000,
       })
     })
-    expect(vi.mocked(postJson).mock.calls[0]?.[1]).not.toHaveProperty('tax')
+    expect(vi.mocked(postJson).mock.calls[0]?.[1]).not.toHaveProperty('profit')
+    expect(vi.mocked(postJson).mock.calls[0]?.[1]).not.toHaveProperty(
+      'ownerProfit',
+    )
     expect(getJson).toHaveBeenCalledWith('/products')
     expect(getJson).toHaveBeenCalledWith('/projects')
+    expect(getJson).toHaveBeenCalledWith('/settings?search=sales_tax&pageSize=100')
   })
 
   it('renders project product choices by product name and saves the selected product id', async () => {
@@ -581,6 +604,8 @@ describe('EntityEditPage', () => {
       ['sales', 'amount'],
       ['sales', 'fee'],
       ['sales', 'tax'],
+      ['sales', 'profit'],
+      ['sales', 'ownerProfit'],
     ]
 
     for (const [entityName, fieldName] of moneyFields) {
@@ -618,7 +643,7 @@ describe('EntityEditPage', () => {
     expect(screen.getByLabelText('Quantity')).toHaveAttribute('step', '1')
     expect(screen.getByLabelText('Quantity')).toHaveAttribute('min', '1')
     expect(screen.getByLabelText('Amount')).not.toHaveAccessibleDescription()
-    expect(screen.getAllByText('$')).toHaveLength(3)
+    expect(screen.getAllByText('$')).toHaveLength(5)
   })
 
   it('does not configure field helper descriptions for entity forms', () => {

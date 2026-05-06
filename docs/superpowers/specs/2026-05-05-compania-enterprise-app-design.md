@@ -122,7 +122,7 @@ Rules:
 - `amount`: numeric sale amount.
 - `source`: text value selected by the user during import.
 - `fee`: numeric fee. Imported sales default to `0` until fee calculation logic is added later.
-- `tax`: numeric tax. Sales default to `0`; the sales form displays tax as read-only until tax calculation logic is added later.
+- `tax`: numeric tax. Manual sales calculate and persist tax as `amount * settings.sales_tax`; the setting value is a decimal multiplier, for example `0.034` for `3.4%`. Imported sales still default tax to `0` until import tax calculation is explicitly added.
 
 ### settings
 
@@ -131,6 +131,10 @@ Rules:
 - `name`: display name.
 - `description`: optional text description.
 - `value`: text value.
+
+Known settings:
+
+- `sales_tax`: decimal tax multiplier used by manual sales tax calculation, for example `0.034` for `3.4%`.
 
 ### import_batch
 
@@ -213,8 +217,6 @@ Columns:
 - `Total Amount`
 - `Model`
 - `Fee`
-- `Total Cost`
-- `Income`
 - `Profit`
 - `Owner Profit`
 
@@ -223,9 +225,7 @@ Calculations:
 - Source quantity and amount are summed from `sales.quantity` and `sales.amount` for each source.
 - `Total Quantity` and `Total Amount` are summed across all sources for the row.
 - `Fee` is summed from `sales.fee`.
-- `Total Cost` is the linked project's `production_cost + admin_cost` and is counted once for that project row.
-- `Income` is `Total Amount - Total Cost`.
-- `Profit` is `Income - Fee`.
+- `Profit` is `Total Amount - Fee`.
 - `Owner Profit` is `Profit * product.ownership / 100`.
 
 ## REST API Design
@@ -307,7 +307,7 @@ Entity pages:
 - Sale create/edit forms load products and projects, show readable option labels, and submit the selected product and project IDs to the API. The backend rejects a manual sale if the selected project does not belong to the selected product.
 - Foreign key fields in create/edit forms should be selectors backed by the related entity list, not open numeric inputs.
 - Money fields in tables and import review screens should display with a dollar prefix, comma grouping, and two decimals, for example `$1,000,000.00`. Editable money fields may accept comma separators and submit numeric values to the API.
-- The sales CRUD table displays tax as a money column. The sales create/edit form displays tax as a read-only money field and does not submit it in manual save payloads.
+- The sales CRUD table displays tax, profit, and owner profit as money columns. Sales create/edit forms calculate tax from `amount * settings.sales_tax`, recalculate it as amount or fee changes, and persist the tax on save. The same form displays read-only profit as `amount - fee` and owner profit as `profit * product.ownership / 100`; profit and owner profit are computed display values and are not persisted.
 
 Sales import page:
 

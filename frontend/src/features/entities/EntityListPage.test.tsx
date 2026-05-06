@@ -159,7 +159,7 @@ describe('EntityListPage', () => {
         adminCost: 0,
         idProduct: 42,
         idProject: 501,
-        product: { id: 42, name: 'Walnut Desk' },
+        product: { id: 42, name: 'Walnut Desk', ownership: 25 },
         productionCost: 0,
       },
     ])
@@ -181,7 +181,7 @@ describe('EntityListPage', () => {
         idProduct: 42,
         idProject: 501,
         idSale: 900,
-        product: { id: 42, name: 'Walnut Desk' },
+        product: { id: 42, name: 'Walnut Desk', ownership: 25 },
         project: {
           idProject: 501,
           product: { id: 42, name: 'Walnut Desk Project' },
@@ -201,9 +201,12 @@ describe('EntityListPage', () => {
     expect(screen.getByRole('columnheader', { name: 'Product' })).toBeVisible()
     expect(screen.getByRole('columnheader', { name: 'Project' })).toBeVisible()
     expect(screen.getByRole('columnheader', { name: 'Tax' })).toBeVisible()
-    expect(screen.getByText('$100.00')).toBeVisible()
-    expect(screen.getByText('$0.00')).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Profit' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Owner Profit' })).toBeVisible()
+    expect(screen.getAllByText('$100.00')).toHaveLength(2)
+    expect(screen.getAllByText('$0.00')).not.toHaveLength(0)
     expect(screen.getByText('$12.34')).toBeVisible()
+    expect(screen.getByText('$25.00')).toBeVisible()
     expect(screen.queryByText('42')).not.toBeInTheDocument()
     expect(screen.queryByText('501')).not.toBeInTheDocument()
   })

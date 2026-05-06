@@ -52,4 +52,10 @@ export class UpdateSaleDto {
   @IsNumber()
   @Min(0)
   fee?: number;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @Transform(({ value }) => transformSaleNumber(value))
+  @IsNumber()
+  @Min(0)
+  tax?: number;
 }

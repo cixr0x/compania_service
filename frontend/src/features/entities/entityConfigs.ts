@@ -23,6 +23,7 @@ export type EntityField = {
   suffix?: string
   options?: { label: string; value: string }[]
   computeValue?: (values: EntityRow) => unknown
+  persistComputed?: boolean
   optionSource?: {
     labelField: string
     labelFormatter?: (row: EntityRow) => string | null | undefined
@@ -174,12 +175,37 @@ function sumMoneyValues(...values: unknown[]): number {
   )
 }
 
+function roundCurrency(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
 function getProjectTotalCost(row: EntityRow) {
   return sumMoneyValues(row.productionCost, row.adminCost)
 }
 
 function getSaleTax(row: EntityRow) {
-  return parseMoneyNumber(row.tax) ?? 0
+  const taxRate = parseMoneyNumber(row.salesTaxRate)
+  const amount = parseMoneyNumber(row.amount) ?? 0
+
+  return taxRate === null
+    ? (parseMoneyNumber(row.tax) ?? 0)
+    : roundCurrency(amount * taxRate)
+}
+
+function getSaleProfit(row: EntityRow) {
+  return roundCurrency(
+    sumMoneyValues(row.amount, -(parseMoneyNumber(row.fee) ?? 0)),
+  )
+}
+
+function getSaleOwnerProfit(row: EntityRow) {
+  const product = asEntityRow(row.product)
+  const ownerPercentage =
+    parseMoneyNumber(row.ownerPercentage) ??
+    parseMoneyNumber(product?.ownership) ??
+    0
+
+  return roundCurrency(getSaleProfit(row) * (ownerPercentage / 100))
 }
 
 export const entityConfigs = {
@@ -440,6 +466,14 @@ export const entityConfigs = {
       column('source', 'Source'),
       column('fee', 'Fee', { valueFormat: 'money' }),
       column('tax', 'Tax', { valueFormat: 'money' }),
+      column('profit', 'Profit', {
+        valueFormat: 'money',
+        valueGetter: getSaleProfit,
+      }),
+      column('ownerProfit', 'Owner Profit', {
+        valueFormat: 'money',
+        valueGetter: getSaleOwnerProfit,
+      }),
     ],
     fields: [
       {
@@ -494,6 +528,15 @@ export const entityConfigs = {
         valueFormat: 'money',
       }),
       computed('tax', 'Tax', getSaleTax, {
+        persistComputed: true,
+        prefix: '$',
+        valueFormat: 'money',
+      }),
+      computed('profit', 'Profit', getSaleProfit, {
+        prefix: '$',
+        valueFormat: 'money',
+      }),
+      computed('ownerProfit', 'Owner Profit', getSaleOwnerProfit, {
         prefix: '$',
         valueFormat: 'money',
       }),
