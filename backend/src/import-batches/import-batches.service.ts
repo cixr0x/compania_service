@@ -293,6 +293,7 @@ export class ImportBatchesService {
           quantity: row.quantity as number,
           amount: row.amount as Prisma.Decimal | number,
           fee: 0,
+          tax: 0,
         })),
       });
 

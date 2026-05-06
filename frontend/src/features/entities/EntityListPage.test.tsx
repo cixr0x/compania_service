@@ -182,6 +182,7 @@ describe('EntityListPage', () => {
         },
         quantity: 1,
         source: 'store',
+        tax: 12.34,
       },
     ])
 
@@ -193,8 +194,10 @@ describe('EntityListPage', () => {
     expect(screen.queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Product' })).toBeVisible()
     expect(screen.getByRole('columnheader', { name: 'Project' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Tax' })).toBeVisible()
     expect(screen.getByText('$100.00')).toBeVisible()
     expect(screen.getByText('$0.00')).toBeVisible()
+    expect(screen.getByText('$12.34')).toBeVisible()
     expect(screen.queryByText('42')).not.toBeInTheDocument()
     expect(screen.queryByText('501')).not.toBeInTheDocument()
   })

@@ -75,6 +75,7 @@ export class SalesService {
     return {
       ...this.normalizeSaleWriteData(dto),
       fee: dto.fee ?? 0,
+      tax: 0,
     } as Prisma.SaleUncheckedCreateInput;
   }
 

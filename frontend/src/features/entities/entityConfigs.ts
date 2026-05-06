@@ -177,6 +177,10 @@ function getProjectTotalCost(row: EntityRow) {
   return sumMoneyValues(row.productionCost, row.adminCost)
 }
 
+function getSaleTax(row: EntityRow) {
+  return parseMoneyNumber(row.tax) ?? 0
+}
+
 export const entityConfigs = {
   products: {
     title: 'Products',
@@ -404,6 +408,7 @@ export const entityConfigs = {
       column('amount', 'Amount', { valueFormat: 'money' }),
       column('source', 'Source'),
       column('fee', 'Fee', { valueFormat: 'money' }),
+      column('tax', 'Tax', { valueFormat: 'money' }),
     ],
     fields: [
       {
@@ -455,6 +460,10 @@ export const entityConfigs = {
         min: 0,
         prefix: '$',
         step: 0.01,
+        valueFormat: 'money',
+      }),
+      computed('tax', 'Tax', getSaleTax, {
+        prefix: '$',
         valueFormat: 'money',
       }),
     ],

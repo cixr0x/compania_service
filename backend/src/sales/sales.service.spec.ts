@@ -36,7 +36,7 @@ describe('SalesService', () => {
     });
   });
 
-  it('creates a sale with a default fee of zero when fee is omitted', async () => {
+  it('creates a sale with default fee and tax of zero when fee is omitted', async () => {
     jest.spyOn(prisma.sale, 'create').mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
@@ -45,6 +45,7 @@ describe('SalesService', () => {
       amount: '120.00',
       source: 'ecommerce',
       fee: '0.00',
+      tax: '0.00',
     });
     jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
     jest
@@ -70,6 +71,7 @@ describe('SalesService', () => {
         amount: 120,
         source: 'ecommerce',
         fee: 0,
+        tax: 0,
       },
     });
   });

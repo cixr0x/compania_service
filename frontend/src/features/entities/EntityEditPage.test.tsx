@@ -320,6 +320,7 @@ describe('EntityEditPage', () => {
           project: { idProject: 501 },
           quantity: 2,
           source: 'store',
+          tax: 9.75,
         }
       }
 
@@ -332,6 +333,8 @@ describe('EntityEditPage', () => {
     expect(await screen.findByLabelText('Date')).toHaveValue('2026-05-04')
     expect(screen.getByLabelText('Amount')).toHaveValue('125.50')
     expect(screen.getByLabelText('Fee')).toHaveValue('3.50')
+    expect(screen.getByLabelText('Tax')).toHaveValue('9.75')
+    expect(screen.getByLabelText('Tax')).toHaveAttribute('readonly')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
@@ -345,6 +348,7 @@ describe('EntityEditPage', () => {
         source: 'store',
       })
     })
+    expect(vi.mocked(patchJson).mock.calls[0]?.[1]).not.toHaveProperty('tax')
   })
 
   it('requires product and project selectors when creating a sale and saves their ids', async () => {
@@ -404,6 +408,8 @@ describe('EntityEditPage', () => {
     await user.type(screen.getByLabelText('Quantity'), '2')
     await user.type(screen.getByLabelText('Amount'), '1,000,000.00')
     await user.type(screen.getByLabelText('Fee'), '1,250.50')
+    expect(screen.getByLabelText('Tax')).toHaveValue('0.00')
+    expect(screen.getByLabelText('Tax')).toHaveAttribute('readonly')
     await selectAntOption(
       user,
       screen.getByRole('combobox', { name: 'Source' }),
@@ -422,6 +428,7 @@ describe('EntityEditPage', () => {
         source: 'store',
       })
     })
+    expect(vi.mocked(postJson).mock.calls[0]?.[1]).not.toHaveProperty('tax')
     expect(getJson).toHaveBeenCalledWith('/products')
     expect(getJson).toHaveBeenCalledWith('/projects')
   })
@@ -558,6 +565,7 @@ describe('EntityEditPage', () => {
       ['projects', 'totalCost'],
       ['sales', 'amount'],
       ['sales', 'fee'],
+      ['sales', 'tax'],
     ]
 
     for (const [entityName, fieldName] of moneyFields) {
@@ -595,7 +603,7 @@ describe('EntityEditPage', () => {
     expect(screen.getByLabelText('Quantity')).toHaveAttribute('step', '1')
     expect(screen.getByLabelText('Quantity')).toHaveAttribute('min', '1')
     expect(screen.getByLabelText('Amount')).not.toHaveAccessibleDescription()
-    expect(screen.getAllByText('$')).toHaveLength(2)
+    expect(screen.getAllByText('$')).toHaveLength(3)
   })
 
   it('does not configure field helper descriptions for entity forms', () => {

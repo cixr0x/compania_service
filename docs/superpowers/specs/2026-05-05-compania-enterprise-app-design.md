@@ -119,6 +119,7 @@ Rules:
 - `amount`: numeric sale amount.
 - `source`: text value selected by the user during import.
 - `fee`: numeric fee. Imported sales default to `0` until fee calculation logic is added later.
+- `tax`: numeric tax. Sales default to `0`; the sales form displays tax as read-only until tax calculation logic is added later.
 
 ### import_batch
 
@@ -181,7 +182,7 @@ Validation errors for an import batch and optionally a specific staged row.
 11. User clicks commit.
 12. Backend revalidates the entire batch inside a transaction.
 13. If any error remains, no sales rows are inserted and errors remain visible.
-14. If the batch is valid, backend inserts all staged rows into `sales`, stamps `source`, stamps the selected import date into `sales.date`, links `sales.id_project` to the matched product's active project, sets `fee` to `0`, and marks the batch as `committed`.
+14. If the batch is valid, backend inserts all staged rows into `sales`, stamps `source`, stamps the selected import date into `sales.date`, links `sales.id_project` to the matched product's active project, sets `fee` and `tax` to `0`, and marks the batch as `committed`.
 
 The final `sales` table should only contain committed, validated data.
 
@@ -299,6 +300,7 @@ Entity pages:
 - Sale create/edit forms load products and projects, show readable option labels, and submit the selected product and project IDs to the API. The backend rejects a manual sale if the selected project does not belong to the selected product.
 - Foreign key fields in create/edit forms should be selectors backed by the related entity list, not open numeric inputs.
 - Money fields in tables and import review screens should display with a dollar prefix, comma grouping, and two decimals, for example `$1,000,000.00`. Editable money fields may accept comma separators and submit numeric values to the API.
+- The sales CRUD table displays tax as a money column. The sales create/edit form displays tax as a read-only money field and does not submit it in manual save payloads.
 
 Sales import page:
 
