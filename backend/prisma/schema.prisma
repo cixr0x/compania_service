@@ -59,6 +59,16 @@ model Stakeholder {
   @@map("stakeholder")
 }
 
+model Setting {
+  id          Int     @id @default(autoincrement())
+  code        String  @unique @db.VarChar(100)
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  value       String  @db.Text
+
+  @@map("settings")
+}
+
 model ProjectStakeholder {
   idProjectStakeholder Int         @id @default(autoincrement()) @map("id_project_stakeholder")
   idProject            Int         @map("id_project")

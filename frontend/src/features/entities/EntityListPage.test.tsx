@@ -228,4 +228,27 @@ describe('EntityListPage', () => {
     expect(screen.queryByText('501')).not.toBeInTheDocument()
     expect(screen.queryByText('10')).not.toBeInTheDocument()
   })
+
+  it('renders settings as a normal CRUD table with code, name, description, and value', async () => {
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        id: 1,
+        code: 'sales_tax_rate',
+        name: 'Sales Tax Rate',
+        description: 'Tax percentage used by future sale calculations',
+        value: '16',
+      },
+    ])
+
+    renderEntityList('/settings')
+
+    expect(await screen.findByRole('heading', { name: 'Settings' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Code' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Description' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Value' })).toBeVisible()
+    expect(await screen.findByText('sales_tax_rate')).toBeVisible()
+    expect(screen.getByText('Sales Tax Rate')).toBeVisible()
+    expect(screen.getByText('16')).toBeVisible()
+  })
 })

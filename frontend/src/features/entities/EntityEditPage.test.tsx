@@ -617,6 +617,32 @@ describe('EntityEditPage', () => {
     }
   })
 
+  it('creates settings with code, name, description, and value fields', async () => {
+    const user = userEvent.setup()
+    vi.mocked(postJson).mockResolvedValue({ id: 1 })
+
+    renderEntityEditPage('/settings/new', '/:entityName/:id')
+
+    expect(screen.getByRole('heading', { name: 'Create Setting' })).toBeVisible()
+    await user.type(screen.getByLabelText('Code'), 'sales_tax_rate')
+    await user.type(screen.getByLabelText('Name'), 'Sales Tax Rate')
+    await user.type(
+      screen.getByLabelText('Description'),
+      'Tax percentage used by future sale calculations',
+    )
+    await user.type(screen.getByLabelText('Value'), '16')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith('/settings', {
+        code: 'sales_tax_rate',
+        name: 'Sales Tax Rate',
+        description: 'Tax percentage used by future sale calculations',
+        value: '16',
+      })
+    })
+  })
+
   it('configures every foreign key form field as a select', () => {
     const foreignKeyFields: Array<[EntityName, string]> = [
       ['products', 'idModel'],

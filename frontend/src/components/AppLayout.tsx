@@ -5,6 +5,7 @@ import {
   ImportOutlined,
   MenuOutlined,
   ProjectOutlined,
+  SettingOutlined,
   TagsOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
@@ -26,6 +27,7 @@ const navigationItems: NavigationItem[] = [
   { label: 'Projects', path: '/projects', icon: <ProjectOutlined /> },
   { label: 'Stakeholders', path: '/stakeholders', icon: <TeamOutlined /> },
   { label: 'Sales', path: '/sales', icon: <DollarOutlined /> },
+  { label: 'Settings', path: '/settings', icon: <SettingOutlined /> },
   { label: 'Sales Imports', path: '/imports', icon: <ImportOutlined /> },
   {
     label: 'Sales Report',

@@ -8,6 +8,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { ProductsModule } from './products/products.module';
 import { ReportsModule } from './reports/reports.module';
 import { SalesModule } from './sales/sales.module';
+import { SettingsModule } from './settings/settings.module';
 import { StakeholdersModule } from './stakeholders/stakeholders.module';
 
 @Module({
@@ -20,6 +21,7 @@ import { StakeholdersModule } from './stakeholders/stakeholders.module';
     ProjectsModule,
     ProjectStakeholdersModule,
     SalesModule,
+    SettingsModule,
     ImportBatchesModule,
     ReportsModule,
   ],

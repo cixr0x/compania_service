@@ -50,6 +50,8 @@ A project stakeholder split relates a stakeholder to a project and defines that 
 
 A sale is a committed sales record for a product and the project that generated the sale. Sales records are created manually through CRUD or by committing a staged import batch.
 
+Application settings store configurable values by unique code. Settings are exposed as a normal CRUD entity so future business logic can look up configurable parameters without new schema changes.
+
 `product.ownership` is the product owner's retained profit percentage for that product. It is independent from project stakeholder participation and is stored now for future profit calculations.
 
 ## Data Model
@@ -120,6 +122,14 @@ Rules:
 - `source`: text value selected by the user during import.
 - `fee`: numeric fee. Imported sales default to `0` until fee calculation logic is added later.
 - `tax`: numeric tax. Sales default to `0`; the sales form displays tax as read-only until tax calculation logic is added later.
+
+### settings
+
+- `id`: primary key.
+- `code`: unique text code for stable lookup.
+- `name`: display name.
+- `description`: optional text description.
+- `value`: text value.
 
 ### import_batch
 
@@ -228,7 +238,7 @@ CRUD resources:
 - `GET /api/products/:id`
 - `PATCH /api/products/:id`
 - `DELETE /api/products/:id`
-- Equivalent CRUD endpoints for `models`, `projects`, `stakeholders`, `project-stakeholders`, and `sales`.
+- Equivalent CRUD endpoints for `models`, `projects`, `stakeholders`, `project-stakeholders`, `sales`, and `settings`.
 - `GET /api/stakeholders/:id` includes the stakeholder's project participation with project and product details for the stakeholder edit form.
 - `GET /api/project-stakeholders/projects/:id`: list the complete stakeholder split for one project.
 - `PUT /api/project-stakeholders/projects/:id`: atomically replace a project's full stakeholder split with an array of `{ idStakeholder, stakePercentage }` rows totaling exactly `100`.
@@ -279,6 +289,7 @@ Main navigation:
 - Projects
 - Stakeholders
 - Sales
+- Settings
 - Sales Imports
 - Sales Report
 

@@ -55,6 +55,7 @@ export type EntityName =
   | 'stakeholders'
   | 'project-stakeholders'
   | 'sales'
+  | 'settings'
 
 function text(
   name: string,
@@ -342,6 +343,34 @@ export const entityConfigs = {
     fields: [
       text('name', 'Name', {
         required: true,
+      }),
+    ],
+  },
+  settings: {
+    title: 'Settings',
+    singularTitle: 'Setting',
+    path: 'settings',
+    idField: 'id',
+    columns: [
+      column('id', 'ID'),
+      column('code', 'Code'),
+      column('name', 'Name'),
+      column('description', 'Description'),
+      column('value', 'Value'),
+    ],
+    fields: [
+      text('code', 'Code', {
+        required: true,
+      }),
+      text('name', 'Name', {
+        required: true,
+      }),
+      textarea('description', 'Description', {
+        span: 'full',
+      }),
+      textarea('value', 'Value', {
+        required: true,
+        span: 'full',
       }),
     ],
   },

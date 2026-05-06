@@ -40,6 +40,10 @@ describe('AppLayout', () => {
       'href',
       '/projects',
     )
+    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute(
+      'href',
+      '/settings',
+    )
     expect(
       screen.queryByRole('link', { name: 'Project Stakeholders' }),
     ).not.toBeInTheDocument()

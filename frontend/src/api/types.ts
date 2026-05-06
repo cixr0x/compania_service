@@ -34,6 +34,14 @@ export type Stakeholder = {
   name: string
 }
 
+export type Setting = {
+  id: number
+  code: string
+  name: string
+  description: string | null
+  value: string
+}
+
 export type Project = {
   idProject: number
   idProduct: number
