@@ -87,6 +87,8 @@ describe('EntityEditPage', () => {
     expect(
       screen.getByRole('heading', { name: 'Create Product' }),
     ).toBeVisible()
+    expect(screen.queryByText('Workspace')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Back' })).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: /delete/i }),
     ).not.toBeInTheDocument()
@@ -108,6 +110,19 @@ describe('EntityEditPage', () => {
     expect(patchJson).not.toHaveBeenCalled()
     expect(deleteJson).not.toHaveBeenCalled()
     expect(getJson).toHaveBeenCalledWith('/models')
+  })
+
+  it('uses form Cancel to return to the list without saving', async () => {
+    const user = userEvent.setup()
+
+    renderEntityEditPage('/products/new', '/:entityName/:id')
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(await screen.findByText('List page')).toBeVisible()
+    expect(postJson).not.toHaveBeenCalled()
+    expect(patchJson).not.toHaveBeenCalled()
+    expect(deleteJson).not.toHaveBeenCalled()
   })
 
   it('renders create product form metadata in grouped sections', () => {

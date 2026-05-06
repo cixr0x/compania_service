@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DataTable, type DataTableColumn } from './DataTable'
@@ -85,6 +85,26 @@ describe('DataTable', () => {
 
     expect(onRowDoubleClick).toHaveBeenNthCalledWith(1, rows[0])
     expect(onRowDoubleClick).toHaveBeenNthCalledWith(2, rows[0])
+  })
+
+  it('renders toolbar actions beside the search field', () => {
+    render(
+      <DataTable
+        columns={columns}
+        getRowId={(row) => row.id}
+        onRowDoubleClick={vi.fn()}
+        onSearchChange={vi.fn()}
+        rows={rows}
+        searchValue=""
+        toolbarAction={<button type="button">Create</button>}
+      />,
+    )
+
+    const searchbox = screen.getByRole('searchbox', { name: /search/i })
+    const toolbar = searchbox.closest('.table-toolbar')
+
+    expect(toolbar).toBeInTheDocument()
+    expect(within(toolbar as HTMLElement).getByRole('button', { name: 'Create' })).toBeVisible()
   })
 
   it('formats money columns with a dollar prefix, commas, and two decimal places', () => {

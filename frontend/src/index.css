@@ -232,6 +232,24 @@ button {
   min-width: 0;
 }
 
+.table-toolbar {
+  align-items: end;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.table-toolbar .search-field {
+  flex: 1 1 280px;
+}
+
+.table-toolbar-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
 .entity-data-table {
   max-width: 100%;
   min-width: 0;
@@ -544,6 +562,11 @@ button {
 
   .primary-action {
     width: fit-content;
+  }
+
+  .table-toolbar {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .page-content {

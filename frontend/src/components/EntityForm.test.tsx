@@ -127,6 +127,19 @@ describe('EntityForm', () => {
     expect(screen.getByText('Status is required.')).toBeVisible()
   })
 
+  it('renders a cancel action beside save without submitting', async () => {
+    const user = userEvent.setup()
+    const onCancel = vi.fn()
+    const onSubmit = vi.fn()
+
+    renderEntityForm({ onCancel, onSubmit })
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(onCancel).toHaveBeenCalledTimes(1)
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
   it('renders non-money number fields with Ant Design InputNumber', async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()

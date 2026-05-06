@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Space, Typography } from 'antd'
+import { Button, Typography } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getJson } from '../../api/client'
@@ -12,7 +12,6 @@ const ENTITY_LIST_PAGE_SIZE = 100
 function UnknownEntityPage() {
   return (
     <section className="page-panel" aria-labelledby="unknown-entity-heading">
-      <p className="eyebrow">Workspace</p>
       <h2 id="unknown-entity-heading">Unknown Entity</h2>
       <p className="page-description">
         The requested admin entity is not configured.
@@ -41,19 +40,9 @@ export function EntityListPage() {
   return (
     <section className="page-panel" aria-labelledby={`${config.path}-heading`}>
       <div className="page-heading-row">
-        <div>
-          <Typography.Text className="eyebrow">Workspace</Typography.Text>
-          <Typography.Title id={`${config.path}-heading`} level={2}>
-            {config.title}
-          </Typography.Title>
-        </div>
-        <Space>
-          <Link to={`/${config.path}/new`}>
-            <Button icon={<PlusOutlined />} type="primary">
-              Create
-            </Button>
-          </Link>
-        </Space>
+        <Typography.Title id={`${config.path}-heading`} level={2}>
+          {config.title}
+        </Typography.Title>
       </div>
 
       {query.isError ? (
@@ -73,6 +62,13 @@ export function EntityListPage() {
         onSearchChange={setSearchValue}
         rows={query.data ?? []}
         searchValue={searchValue}
+        toolbarAction={
+          <Link to={`/${config.path}/new`}>
+            <Button icon={<PlusOutlined />} type="primary">
+              Create
+            </Button>
+          </Link>
+        }
       />
     </section>
   )

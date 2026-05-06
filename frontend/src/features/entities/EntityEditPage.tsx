@@ -12,7 +12,7 @@ import {
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { deleteJson, getJson, patchJson, postJson, putJson } from '../../api/client'
 import { EntityForm } from '../../components/EntityForm'
 import { parseMoneyNumber } from '../../utils/money'
@@ -409,24 +409,22 @@ export function EntityEditPage() {
     saveMutation.mutate(buildEntityPayload(formConfig!, formValues))
   }
 
+  function handleCancel() {
+    navigate(`/${config!.path}`)
+  }
+
   return (
     <section
       className="page-panel"
       aria-labelledby={`${config.path}-form-heading`}
     >
-      <Space className="page-heading-row" align="center">
-        <div>
-          <Typography.Text className="eyebrow">Workspace</Typography.Text>
-          <Typography.Title id={`${config.path}-form-heading`} level={2}>
-            {isCreate
-              ? `Create ${config.singularTitle}`
-              : `Edit ${config.title}`}
-          </Typography.Title>
-        </div>
-        <Link to={`/${config.path}`}>
-          <Button>Back</Button>
-        </Link>
-      </Space>
+      <div className="page-heading-row">
+        <Typography.Title id={`${config.path}-form-heading`} level={2}>
+          {isCreate
+            ? `Create ${config.singularTitle}`
+            : `Edit ${config.title}`}
+        </Typography.Title>
+      </div>
 
       {detailQuery.isLoading ? (
         <Spin description="Loading record..." />
@@ -447,6 +445,7 @@ export function EntityEditPage() {
             isCreate={isCreate}
             isSaving={saveMutation.isPending}
             onChange={handleChange}
+            onCancel={handleCancel}
             onSubmit={handleSave}
             values={formValues}
           >

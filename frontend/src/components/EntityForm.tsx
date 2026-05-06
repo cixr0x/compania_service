@@ -26,6 +26,7 @@ type EntityFormProps = {
   config: EntityConfig
   values: EntityRow
   onChange: (name: string, value: boolean | string) => void
+  onCancel?: () => void
   onSubmit: () => void
   children?: ReactNode
   isCreate?: boolean
@@ -128,6 +129,7 @@ export function EntityForm({
   config,
   values,
   onChange,
+  onCancel,
   onSubmit,
   children,
   isCreate = false,
@@ -356,6 +358,11 @@ export function EntityForm({
       {children}
 
       <div className="form-actions">
+        {onCancel ? (
+          <Button disabled={isSaving} htmlType="button" onClick={onCancel}>
+            Cancel
+          </Button>
+        ) : null}
         <Button
           className="primary-action"
           disabled={isSaving}

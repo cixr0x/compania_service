@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -52,10 +52,16 @@ describe('EntityListPage', () => {
     renderProductsList()
 
     expect(await screen.findByRole('heading', { name: 'Products' })).toBeVisible()
-    expect(screen.getByRole('link', { name: /create/i })).toHaveAttribute(
-      'href',
-      '/products/new',
-    )
+    expect(screen.queryByText('Workspace')).not.toBeInTheDocument()
+
+    const createLink = screen.getByRole('link', { name: /create/i })
+    const toolbar = createLink.closest('.table-toolbar')
+
+    expect(createLink).toHaveAttribute('href', '/products/new')
+    expect(toolbar).toBeInTheDocument()
+    expect(
+      within(toolbar as HTMLElement).getByRole('searchbox', { name: /search/i }),
+    ).toBeVisible()
   })
 
   it('requests an explicit MVP page size for Products', async () => {

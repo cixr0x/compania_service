@@ -421,7 +421,6 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
       <Space orientation="vertical" size="large" style={{ width: '100%' }}>
         <div className="page-heading-row">
           <div>
-            <Typography.Text className="eyebrow">Workspace</Typography.Text>
             <Typography.Title id="imports-heading" level={2}>
               Sales Imports
             </Typography.Title>

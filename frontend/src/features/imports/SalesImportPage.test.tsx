@@ -145,6 +145,8 @@ describe('SalesImportPage', () => {
 
     renderSalesImportPage()
 
+    expect(screen.queryByText('Workspace')).not.toBeInTheDocument()
+
     const stagedRowsRegion = await screen.findByRole('region', {
       name: 'Staged Rows',
     })

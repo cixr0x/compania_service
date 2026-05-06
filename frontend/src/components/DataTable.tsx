@@ -22,6 +22,7 @@ type DataTableProps<Row extends Record<string, unknown>> = {
   onRowDoubleClick: (row: Row) => void
   isLoading?: boolean
   emptyMessage?: string
+  toolbarAction?: ReactNode
 }
 
 type ColumnKind = 'boolean' | 'date' | 'id' | 'money' | 'number' | 'string'
@@ -253,6 +254,7 @@ export function DataTable<Row extends Record<string, unknown>>({
   onRowDoubleClick,
   isLoading = false,
   emptyMessage = 'No records found.',
+  toolbarAction,
 }: DataTableProps<Row>) {
   const visibleRows = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase()
@@ -318,15 +320,20 @@ export function DataTable<Row extends Record<string, unknown>>({
 
   return (
     <div className="table-stack">
-      <label className="search-field ant-search-field">
-        <span>Search</span>
-        <Input.Search
-          allowClear
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search records"
-          value={searchValue}
-        />
-      </label>
+      <div className="table-toolbar">
+        <label className="search-field ant-search-field">
+          <span>Search</span>
+          <Input.Search
+            allowClear
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search records"
+            value={searchValue}
+          />
+        </label>
+        {toolbarAction ? (
+          <div className="table-toolbar-actions">{toolbarAction}</div>
+        ) : null}
+      </div>
 
       <Table<Row>
         className="entity-data-table"
