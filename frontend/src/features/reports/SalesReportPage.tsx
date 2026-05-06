@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Alert, Empty, Row, Select, Space, Spin, Table, Typography } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import { getJson } from '../../api/client'
 import type {
   SalesReportPeriod,
+  SalesReportRow,
   SalesReportSource,
   SalesReportSummary,
 } from '../../api/types'
@@ -39,10 +42,6 @@ function buildReportPath(year: string, month: string) {
   return `/reports/sales-summary?${query.toString()}`
 }
 
-function getColumnSpan(sourceCount: number) {
-  return 10 + sourceCount * 2
-}
-
 export function SalesReportPage() {
   const [selectedYear, setSelectedYear] = useState<string | null>(null)
   const [selectedMonth, setSelectedMonth] = useState('')
@@ -65,150 +64,171 @@ export function SalesReportPage() {
   const report = reportQuery.data
   const sources = report?.sources ?? DEFAULT_REPORT_SOURCES
   const rows = report?.rows ?? []
+  const isLoading = reportQuery.isLoading || periodsQuery.isLoading
+  const columns = useMemo<ColumnsType<SalesReportRow>>(
+    () => [
+      {
+        dataIndex: 'projectId',
+        key: 'projectId',
+        title: 'Project ID',
+      },
+      {
+        dataIndex: 'productName',
+        key: 'productName',
+        title: 'Product',
+      },
+      ...sources.map((source) => ({
+        children: [
+          {
+            key: `${source}-quantity`,
+            render: (_value: unknown, row: SalesReportRow) =>
+              row[source].quantity,
+            title: 'Quantity',
+          },
+          {
+            key: `${source}-amount`,
+            render: (_value: unknown, row: SalesReportRow) =>
+              formatMoney(row[source].amount),
+            title: 'Amount',
+          },
+        ],
+        key: source,
+        title: sourceLabels[source],
+      })),
+      {
+        dataIndex: 'totalQuantity',
+        key: 'totalQuantity',
+        title: 'Total Quantity',
+      },
+      {
+        dataIndex: 'totalAmount',
+        key: 'totalAmount',
+        render: (value: SalesReportRow['totalAmount']) => formatMoney(value),
+        title: 'Total Amount',
+      },
+      {
+        dataIndex: 'model',
+        key: 'model',
+        render: (value: SalesReportRow['model']) => value || '-',
+        title: 'Model',
+      },
+      {
+        dataIndex: 'fee',
+        key: 'fee',
+        render: (value: SalesReportRow['fee']) => formatMoney(value),
+        title: 'Fee',
+      },
+      {
+        dataIndex: 'totalCost',
+        key: 'totalCost',
+        render: (value: SalesReportRow['totalCost']) => formatMoney(value),
+        title: 'Total Cost',
+      },
+      {
+        dataIndex: 'income',
+        key: 'income',
+        render: (value: SalesReportRow['income']) => formatMoney(value),
+        title: 'Income',
+      },
+      {
+        dataIndex: 'profit',
+        key: 'profit',
+        render: (value: SalesReportRow['profit']) => formatMoney(value),
+        title: 'Profit',
+      },
+      {
+        dataIndex: 'ownerProfit',
+        key: 'ownerProfit',
+        render: (value: SalesReportRow['ownerProfit']) => formatMoney(value),
+        title: 'Owner Profit',
+      },
+    ],
+    [sources],
+  )
 
   return (
     <section className="page-panel report-page" aria-labelledby="sales-report-heading">
       <div className="page-heading-row">
         <div>
-          <p className="eyebrow">Reports</p>
-          <h2 id="sales-report-heading">Sales Report</h2>
+          <Typography.Text className="eyebrow">Reports</Typography.Text>
+          <Typography.Title id="sales-report-heading" level={2}>
+            Sales Report
+          </Typography.Title>
         </div>
       </div>
 
-      <div className="report-controls">
-        <label className="form-field">
-          Year
-          <select
-            disabled={periods.length === 0}
-            onChange={(event) => {
-              setSelectedYear(event.target.value)
-              setSelectedMonth('')
-            }}
-            value={activeYear}
-          >
-            {periods.length === 0 ? (
-              <option value="">No sales periods</option>
-            ) : null}
-            {periods.map((period) => (
-              <option key={period.year} value={period.year}>
-                {period.year}
-              </option>
-            ))}
-          </select>
-        </label>
+      <Row className="report-controls">
+        <Space wrap>
+          <label className="form-field">
+            Year
+            <Select
+              aria-label="Year"
+              disabled={periods.length === 0}
+              onChange={(value) => {
+                setSelectedYear(value)
+                setSelectedMonth('')
+              }}
+              options={
+                periods.length === 0
+                  ? [{ label: 'No sales periods', value: '' }]
+                  : periods.map((period) => ({
+                      label: String(period.year),
+                      value: String(period.year),
+                    }))
+              }
+              style={{ minWidth: 160 }}
+              value={activeYear}
+            />
+          </label>
 
-        <label className="form-field">
-          Month
-          <select
-            disabled={!selectedPeriod}
-            onChange={(event) => setSelectedMonth(event.target.value)}
-            value={selectedMonth}
-          >
-            <option value="">Full year</option>
-            {selectedPeriod?.months.map((month) => (
-              <option key={month} value={month}>
-                {formatMonth(month)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+          <label className="form-field">
+            Month
+            <Select
+              aria-label="Month"
+              disabled={!selectedPeriod}
+              onChange={(value) => setSelectedMonth(value)}
+              options={[
+                { label: 'Full year', value: '' },
+                ...(selectedPeriod?.months.map((month) => ({
+                  label: formatMonth(month),
+                  value: String(month),
+                })) ?? []),
+              ]}
+              style={{ minWidth: 180 }}
+              value={selectedMonth}
+            />
+          </label>
+        </Space>
+      </Row>
 
       {periodsQuery.isError || reportQuery.isError ? (
-        <div className="form-error" role="alert">
-          Unable to load the sales report.
-        </div>
+        <Alert
+          message="Unable to load the sales report."
+          showIcon
+          type="error"
+        />
       ) : null}
 
-      <div className="table-scroll">
-        <table className="data-table report-table">
-          <thead>
-            <tr>
-              <th rowSpan={2} scope="col">
-                Project ID
-              </th>
-              <th rowSpan={2} scope="col">
-                Product
-              </th>
-              {sources.map((source) => (
-                <th colSpan={2} key={source} scope="colgroup">
-                  {sourceLabels[source]}
-                </th>
-              ))}
-              <th rowSpan={2} scope="col">
-                Total Quantity
-              </th>
-              <th rowSpan={2} scope="col">
-                Total Amount
-              </th>
-              <th rowSpan={2} scope="col">
-                Model
-              </th>
-              <th rowSpan={2} scope="col">
-                Fee
-              </th>
-              <th rowSpan={2} scope="col">
-                Total Cost
-              </th>
-              <th rowSpan={2} scope="col">
-                Income
-              </th>
-              <th rowSpan={2} scope="col">
-                Profit
-              </th>
-              <th rowSpan={2} scope="col">
-                Owner Profit
-              </th>
-            </tr>
-            <tr>
-              {sources.flatMap((source) => [
-                <th key={`${source}-quantity`} scope="col">
-                  Quantity
-                </th>,
-                <th key={`${source}-amount`} scope="col">
-                  Amount
-                </th>,
-              ])}
-            </tr>
-          </thead>
-          <tbody>
-            {reportQuery.isLoading || periodsQuery.isLoading ? (
-              <tr>
-                <td className="table-state" colSpan={getColumnSpan(sources.length)}>
-                  Loading report...
-                </td>
-              </tr>
-            ) : rows.length > 0 ? (
-              rows.map((row) => (
-                <tr key={`${row.projectId}-${row.productName}`}>
-                  <td>{row.projectId}</td>
-                  <td>{row.productName}</td>
-                  {sources.flatMap((source) => [
-                    <td key={`${source}-quantity`}>{row[source].quantity}</td>,
-                    <td key={`${source}-amount`}>
-                      {formatMoney(row[source].amount)}
-                    </td>,
-                  ])}
-                  <td>{row.totalQuantity}</td>
-                  <td>{formatMoney(row.totalAmount)}</td>
-                  <td>{row.model || '-'}</td>
-                  <td>{formatMoney(row.fee)}</td>
-                  <td>{formatMoney(row.totalCost)}</td>
-                  <td>{formatMoney(row.income)}</td>
-                  <td>{formatMoney(row.profit)}</td>
-                  <td>{formatMoney(row.ownerProfit)}</td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td className="table-state" colSpan={getColumnSpan(sources.length)}>
-                  No sales data for the selected period.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Table<SalesReportRow>
+        className="report-table"
+        columns={columns}
+        dataSource={rows}
+        loading={{
+          indicator: <Spin />,
+          spinning: isLoading,
+        }}
+        locale={{
+          emptyText: isLoading ? (
+            'Loading report...'
+          ) : (
+            <Empty description="No sales data for the selected period." />
+          ),
+        }}
+        pagination={false}
+        rowKey={(row) => `${row.projectId}-${row.productName}`}
+        scroll={{ x: 'max-content' }}
+        size="middle"
+      />
     </section>
   )
 }

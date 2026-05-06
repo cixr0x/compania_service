@@ -256,6 +256,8 @@ The frontend is an internal admin-style application. It should prioritize dense,
 
 The UI design system is Ant Design. Frontend work should use Ant Design components, layout primitives, feedback components, and design tokens by default, with custom CSS limited to application-specific composition and small spacing/layout adjustments. Future UI development should follow Ant Design's enterprise design values of Natural, Certain, Meaningful, and Growing, and use its design patterns for feedback, data entry, data display, navigation, buttons, copywriting, and data formatting.
 
+The operational frontend has migrated to Ant Design for its primary controls, forms, tables, import workflow, and report screens. Entity CRUD screens use Ant Design form controls, buttons, alerts, images, tables, pop confirmations, loading states, and empty states. Project stakeholder split editing uses Ant Design table, select, numeric input, tags, alerts, and actions. Sales import screens use Ant Design select, upload, steps, buttons, alerts, lists, tags, spinner, and staged-row table. Sales report screens use Ant Design selectors, feedback, empty state, spinner, and grouped report table columns.
+
 Ant Design application rules for this project:
 
 - Keep interactions natural and low-friction by matching user tasks to clear controls and reducing extra operations.
@@ -311,6 +313,10 @@ Sales report page:
 - Report table with grouped source headers, using `Quantity` and `Amount` under each source group.
 - `Surface` source group hidden unless the selected period has surface sales.
 - Money fields displayed with comma grouping and two decimals.
+
+Known intentional custom UI areas and UI debt:
+
+- `SalesImportPage` wraps a native `input type="date"` in Ant Design `Form.Item` instead of using an Ant Design date picker. This preserves the current string date flow and browser date semantics, but remains UI debt if the project later standardizes all date entry on Ant Design date components.
 
 ## Validation And Error Handling
 

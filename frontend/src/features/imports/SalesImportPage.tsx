@@ -1,6 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { UploadOutlined } from '@ant-design/icons'
+import {
+  Alert,
+  Button,
+  Form,
+  List,
+  Select,
+  Space,
+  Spin,
+  Steps,
+  Table,
+  Tag,
+  Typography,
+  Upload,
+} from 'antd'
+import type { TableProps, UploadFile, UploadProps } from 'antd'
 import { useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { api, getJson, patchJson, postJson } from '../../api/client'
 import type {
@@ -84,6 +99,14 @@ function formatRowStatus(row: ImportStageRow) {
   }
 
   return 'Valid'
+}
+
+function getStatusTag(status: string) {
+  if (status === 'Valid') {
+    return <Tag color="success">{status}</Tag>
+  }
+
+  return <Tag color="warning">{status}</Tag>
 }
 
 function isCompleteStageRow(row: ImportStageRow) {
@@ -272,8 +295,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     },
   })
 
-  function handleUpload(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  function handleUpload() {
     if (hasActiveBatch) {
       return
     }
@@ -303,46 +325,134 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     rows.length > 0 &&
     areRowsComplete
   const isUploadDisabled = hasActiveBatch || uploadMutation.isPending
-  const fileHint = file?.name ?? 'Choose a CSV or XLSX file.'
+  const displayedFilename =
+    file?.name ?? (hasActiveBatch ? batchQuery.data?.originalFilename : null)
+  const fileHint = displayedFilename ?? 'Choose a CSV or XLSX file.'
+  const uploadFileList: UploadFile[] = displayedFilename
+    ? [
+        {
+          name: displayedFilename,
+          status: 'done',
+          uid: displayedFilename,
+        },
+      ]
+    : []
+  const uploadProps: UploadProps = {
+    accept: '.csv,.xlsx',
+    beforeUpload: (nextFile) => {
+      setFile(nextFile)
+      return false
+    },
+    disabled: hasActiveBatch,
+    fileList: uploadFileList,
+    maxCount: 1,
+    onRemove: () => {
+      setFile(null)
+      return true
+    },
+    showUploadList: false,
+  }
+  const stepItems = [
+    {
+      content: 'Choose and upload a sales file.',
+      title: 'Upload file',
+    },
+    {
+      content: 'Upload a batch before validation.',
+      title: 'Validate batch',
+    },
+    {
+      content: 'Validate the uploaded batch and clear errors before commit.',
+      title: 'Commit sales',
+    },
+  ]
+  const currentStep = hasActiveBatch
+    ? batchQuery.data?.status === 'validated' || batchQuery.data?.status === 'committed'
+      ? 2
+      : 1
+    : 0
+  const stagedRowColumns: TableProps<ImportStageRow>['columns'] = [
+    {
+      dataIndex: 'rowNumber',
+      title: 'Row',
+      width: 80,
+    },
+    {
+      dataIndex: 'externalProductId',
+      render: (value: ImportStageRow['externalProductId']) => value ?? '-',
+      title: 'External ID',
+    },
+    {
+      dataIndex: 'importedProductDescription',
+      render: (value: ImportStageRow['importedProductDescription']) =>
+        value ?? '-',
+      title: 'Imported Description',
+    },
+    {
+      dataIndex: 'product',
+      render: (product: ImportStageRow['product']) =>
+        product ? product.name : <Tag color="warning">Unmatched product</Tag>,
+      title: 'Matched Product',
+    },
+    {
+      dataIndex: 'quantity',
+      render: (value: ImportStageRow['quantity']) => value ?? '-',
+      title: 'Quantity',
+      width: 110,
+    },
+    {
+      dataIndex: 'amount',
+      render: (value: ImportStageRow['amount']) => formatDecimal(value),
+      title: 'Amount',
+      width: 130,
+    },
+    {
+      render: (_, row) => getStatusTag(formatRowStatus(row)),
+      title: 'Status',
+      width: 140,
+    },
+  ]
 
   return (
     <section className="page-panel import-workflow" aria-labelledby="imports-heading">
-      <div className="page-heading-row">
-        <div>
-          <p className="eyebrow">Workspace</p>
-          <h2 id="imports-heading">Sales Imports</h2>
-        </div>
-        {hasActiveBatch ? (
-          <div className="batch-pill">Active batch #{activeBatchId}</div>
-        ) : null}
-      </div>
-
-      <form className="import-controls" onSubmit={handleUpload}>
-        <div className="import-step import-step-upload">
-          <div className="import-step-heading">
-            <span>1</span>
-            <strong>Upload file</strong>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+        <div className="page-heading-row">
+          <div>
+            <Typography.Text className="eyebrow">Workspace</Typography.Text>
+            <Typography.Title id="imports-heading" level={2}>
+              Sales Imports
+            </Typography.Title>
           </div>
+          {hasActiveBatch ? <Tag color="processing">Active batch #{activeBatchId}</Tag> : null}
+        </div>
 
-          <div className="import-upload-fields">
-            <label className="form-field">
-              Source
-              <select
+        <Steps current={currentStep} items={stepItems} />
+
+        <Form
+          className="import-controls"
+          layout="vertical"
+          onFinish={handleUpload}
+        >
+          <Space align="end" size="middle" wrap>
+            <Form.Item label="Source">
+              <Select
+                aria-label="Source"
                 disabled={hasActiveBatch}
+                id="sales-import-source"
+                options={importSources.map((sourceOption) => ({
+                  label: sourceLabels[sourceOption],
+                  value: sourceOption,
+                }))}
+                style={{ minWidth: 180 }}
                 value={selectedSource}
-                onChange={(event) => setSource(event.target.value as ImportSource)}
-              >
-                {importSources.map((sourceOption) => (
-                  <option key={sourceOption} value={sourceOption}>
-                    {sourceLabels[sourceOption]}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onChange={(value) => setSource(value)}
+              />
+            </Form.Item>
 
-            <label className="form-field">
-              Import date
+            <Form.Item label="Import date">
               <input
+                aria-label="Import date"
+                id="sales-import-date"
                 type="date"
                 value={selectedImportDate}
                 onChange={(event) => {
@@ -350,190 +460,155 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
                   setImportDate(event.target.value)
                 }}
               />
-            </label>
+            </Form.Item>
 
-            <div className="form-field import-file-field">
-              <label htmlFor="sales-import-file">Sales file</label>
-              <span className="import-file-control">
-                <input
-                  accept=".csv,.xlsx"
-                  disabled={hasActiveBatch}
-                  id="sales-import-file"
-                  type="file"
-                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            <Form.Item label="Sales file">
+              <Space orientation="vertical" size={4}>
+                <Upload {...uploadProps}>
+                  <Button disabled={hasActiveBatch} icon={<UploadOutlined />}>
+                    Sales file
+                  </Button>
+                </Upload>
+                <Typography.Text type="secondary">{fileHint}</Typography.Text>
+              </Space>
+            </Form.Item>
+
+            <Form.Item>
+              <Button
+                disabled={isUploadDisabled}
+                htmlType="submit"
+                loading={uploadMutation.isPending}
+                type="primary"
+              >
+                Upload
+              </Button>
+            </Form.Item>
+
+            <Form.Item>
+              <Button
+                disabled={!hasActiveBatch || validateMutation.isPending}
+                loading={validateMutation.isPending}
+                onClick={() => validateMutation.mutate()}
+              >
+                Validate/Revalidate
+              </Button>
+            </Form.Item>
+
+            <Form.Item>
+              <Button
+                disabled={!canCommit || commitMutation.isPending}
+                loading={commitMutation.isPending}
+                type="primary"
+                onClick={() => commitMutation.mutate()}
+              >
+                Commit
+              </Button>
+            </Form.Item>
+
+            {hasActiveBatch ? (
+              <Form.Item>
+                <Button disabled={isAnyMutationPending} onClick={resetImport}>
+                  New import
+                </Button>
+              </Form.Item>
+            ) : null}
+          </Space>
+        </Form>
+
+        {hasActiveBatch ? (
+          <Typography.Text className="source-lock-note">
+            {`Source is locked for the active batch: ${sourceLabels[selectedSource]}.`}
+          </Typography.Text>
+        ) : null}
+
+        {operationErrors.length > 0 ? (
+          <Alert
+            showIcon
+            title="Import operation error"
+            type="error"
+            description={
+              <div aria-label="Operation error list" role="list">
+                <List
+                  dataSource={operationErrors}
+                  size="small"
+                  renderItem={(error) => (
+                    <List.Item key={error} role="listitem">
+                      {error}
+                    </List.Item>
+                  )}
                 />
-              </span>
-              <span className="field-helper">{fileHint}</span>
-            </div>
-          </div>
-
-          <button
-            className="primary-action"
-            disabled={isUploadDisabled}
-            type="submit"
-          >
-            {uploadMutation.isPending ? 'Uploading' : 'Upload'}
-          </button>
-        </div>
-
-        <div className="import-actions">
-          <div className="import-step import-action-step">
-            <div className="import-step-heading">
-              <span>2</span>
-              <strong>Validate batch</strong>
-            </div>
-            <p className="muted-copy">
-              Upload a batch before validation.
-            </p>
-          <button
-            className="secondary-action"
-            disabled={!hasActiveBatch || validateMutation.isPending}
-            type="button"
-            onClick={() => validateMutation.mutate()}
-          >
-            {validateMutation.isPending ? 'Validating' : 'Validate/Revalidate'}
-          </button>
-          </div>
-
-          <div className="import-step import-action-step">
-            <div className="import-step-heading">
-              <span>3</span>
-              <strong>Commit sales</strong>
-            </div>
-            <p className="muted-copy">
-              Validate the uploaded batch and clear errors before commit.
-            </p>
-          <button
-            className="primary-action"
-            disabled={!canCommit || commitMutation.isPending}
-            type="button"
-            onClick={() => commitMutation.mutate()}
-          >
-            {commitMutation.isPending ? 'Committing' : 'Commit'}
-          </button>
-          </div>
-
-          {hasActiveBatch ? (
-            <button
-              className="secondary-action"
-              disabled={isAnyMutationPending}
-              type="button"
-              onClick={resetImport}
-            >
-              New import
-            </button>
-          ) : null}
-        </div>
-      </form>
-
-      {hasActiveBatch ? (
-        <p className="source-lock-note">
-          Source is locked for the active batch
-          {hasActiveBatch ? `: ${sourceLabels[selectedSource]}.` : '.'}
-        </p>
-      ) : null}
-
-      {operationErrors.length > 0 ? (
-        <div className="form-error" role="alert">
-          {operationErrors.map((error) => (
-            <p key={error}>{error}</p>
-          ))}
-        </div>
-      ) : null}
-
-      <section className="import-section" aria-labelledby="import-errors-heading">
-        <div className="section-heading-row">
-          <h3 id="import-errors-heading">Import Errors</h3>
-          <span>{errors.length} open</span>
-        </div>
-        {errors.length > 0 ? (
-          <div className="error-list">
-            {errors.map((error) => (
-              <div className="error-row" key={error.idImportError}>
-                <span>Row {error.rowNumber ?? 'Batch'}</span>
-                <span>{error.field ?? 'General'}</span>
-                <strong>{error.message}</strong>
               </div>
-            ))}
+            }
+          />
+        ) : null}
+
+        <section className="import-section" aria-labelledby="import-errors-heading">
+          <div className="section-heading-row">
+            <Typography.Title id="import-errors-heading" level={3}>
+              Import Errors
+            </Typography.Title>
+            <Tag>{errors.length} open</Tag>
           </div>
-        ) : (
-          <p className="muted-copy">
-            {hasActiveBatch
-              ? 'No import errors for this batch.'
-              : 'Upload and validate a batch to see import errors.'}
-          </p>
-        )}
-      </section>
+          {errors.length > 0 ? (
+            <Alert
+              showIcon
+              title={`${errors.length} open import error${errors.length === 1 ? '' : 's'}`}
+              type="warning"
+              description={
+                <div aria-label="Import error list" role="list">
+                  <List
+                    dataSource={errors}
+                    size="small"
+                    renderItem={(error) => (
+                      <List.Item key={error.idImportError} role="listitem">
+                        <Space wrap>
+                          <Typography.Text>
+                            Row {error.rowNumber ?? 'Batch'}
+                          </Typography.Text>
+                          {' '}
+                          <Typography.Text>{error.field ?? 'General'}</Typography.Text>
+                          {' '}
+                          <Typography.Text strong>{error.message}</Typography.Text>
+                        </Space>
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              }
+            />
+          ) : (
+            <Typography.Text type="secondary">
+              {hasActiveBatch
+                ? 'No import errors for this batch.'
+                : 'Upload and validate a batch to see import errors.'}
+            </Typography.Text>
+          )}
+        </section>
 
-      <section className="import-section" aria-labelledby="staged-rows-heading">
-        <div className="section-heading-row">
-          <h3 id="staged-rows-heading">Staged Rows</h3>
-          <span>{rows.length} rows</span>
-        </div>
+        <section className="import-section" aria-labelledby="staged-rows-heading">
+          <div className="section-heading-row">
+            <Typography.Title id="staged-rows-heading" level={3}>
+              Staged Rows
+            </Typography.Title>
+            <Tag>{rows.length} rows</Tag>
+          </div>
 
-        <div className="table-scroll">
-          <table className="data-table import-table">
-            <thead>
-              <tr>
-                <th>Row</th>
-                <th>External ID</th>
-                <th>Imported Description</th>
-                <th>Matched Product</th>
-                <th>Quantity</th>
-                <th>Amount</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length > 0 ? (
-                rows.map((row) => {
-                  const status = formatRowStatus(row)
-
-                  return (
-                    <tr key={row.idImportStage}>
-                      <td>{row.rowNumber}</td>
-                      <td>{row.externalProductId ?? 'Missing'}</td>
-                      <td>{row.importedProductDescription ?? 'Missing'}</td>
-                      <td>
-                        {row.product ? (
-                          row.product.name
-                        ) : (
-                          <span className="status-badge status-badge-warning">
-                            Unmatched product
-                          </span>
-                        )}
-                      </td>
-                      <td>{row.quantity ?? 'Missing'}</td>
-                      <td>{formatDecimal(row.amount)}</td>
-                      <td>
-                        <span
-                          className={
-                            status === 'Valid'
-                              ? 'status-badge'
-                              : 'status-badge status-badge-warning'
-                          }
-                        >
-                          {status}
-                        </span>
-                      </td>
-                    </tr>
-                  )
-                })
-              ) : (
-                <tr>
-                  <td className="table-state" colSpan={7}>
-                    {stageQuery.isLoading
-                      ? 'Loading staged rows'
-                      : hasActiveBatch
-                        ? 'No staged rows'
-                        : 'Upload a file to stage rows before validation.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+          <Spin spinning={stageQuery.isLoading}>
+            <Table<ImportStageRow>
+              columns={stagedRowColumns}
+              dataSource={rows}
+              locale={{
+                emptyText: hasActiveBatch
+                  ? 'No staged rows'
+                  : 'Upload a file to stage rows before validation.',
+              }}
+              pagination={{ pageSize: 10, showSizeChanger: false }}
+              rowKey="idImportStage"
+              scroll={{ x: true }}
+            />
+          </Spin>
+        </section>
+      </Space>
     </section>
   )
 }

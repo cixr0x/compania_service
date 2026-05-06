@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import {
+  Alert,
+  Button,
+  Form,
+  InputNumber,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Typography,
+} from 'antd'
 import { getJson } from '../../api/client'
 import type { EntityRow } from './entityConfigs'
 
@@ -211,141 +222,152 @@ export function ProjectStakeholderLines({
   const isLoading = stakeholdersQuery.isLoading || projectRowsQuery.isLoading
   const isTotalComplete =
     activeRows.length === 0 || Math.abs(totalPercentage - 100) <= 0.000001
+  const totalStatusColor = isTotalComplete ? 'success' : 'error'
+  const tableColumns = [
+    {
+      dataIndex: 'idStakeholder',
+      key: 'idStakeholder',
+      render: (_value: string, row: SplitDraftRow) => {
+        const rowOptions =
+          stakeholderOptions.some((option) => option.value === row.idStakeholder) ||
+          !row.idStakeholder
+            ? stakeholderOptions
+            : [
+                {
+                  label: `Stakeholder #${row.idStakeholder}`,
+                  value: row.idStakeholder,
+                },
+                ...stakeholderOptions,
+              ]
+
+        return (
+          <Form.Item
+            htmlFor={`project-split-stakeholder-${row.rowKey}`}
+            label="Stakeholder"
+            required
+          >
+            <Select
+              aria-describedby={`project-split-stakeholder-${row.rowKey}-helper`}
+              aria-label="Stakeholder"
+              id={`project-split-stakeholder-${row.rowKey}`}
+              onChange={(value) =>
+                handleRowChange(row.rowKey, 'idStakeholder', value)
+              }
+              options={rowOptions}
+              placeholder="Select stakeholder..."
+              value={row.idStakeholder || undefined}
+            />
+            <Typography.Text
+              id={`project-split-stakeholder-${row.rowKey}-helper`}
+              type="secondary"
+            >
+              Stakeholder receiving this share.
+            </Typography.Text>
+          </Form.Item>
+        )
+      },
+      title: 'Stakeholder',
+    },
+    {
+      dataIndex: 'stakePercentage',
+      key: 'stakePercentage',
+      render: (_value: string, row: SplitDraftRow) => (
+        <Form.Item
+          htmlFor={`project-split-percentage-${row.rowKey}`}
+          label="Stake Percentage"
+          required
+        >
+          <InputNumber
+            aria-label="Stake Percentage"
+            id={`project-split-percentage-${row.rowKey}`}
+            max={100}
+            min={0}
+            onChange={(value) =>
+              handleRowChange(
+                row.rowKey,
+                'stakePercentage',
+                value === null ? '' : String(value),
+              )
+            }
+            precision={2}
+            step={0.01}
+            suffix="%"
+            value={
+              row.stakePercentage === ''
+                ? null
+                : Number(row.stakePercentage)
+            }
+          />
+        </Form.Item>
+      ),
+      title: 'Stake Percentage',
+    },
+    {
+      key: 'actions',
+      render: (_value: string, row: SplitDraftRow, index: number) =>
+        activeRows.length > 1 ? (
+          <Button
+            aria-label={`Remove row ${index + 1}`}
+            onClick={() => handleRemoveRow(row.rowKey)}
+            type="default"
+          >
+            Remove
+          </Button>
+        ) : null,
+      title: 'Actions',
+    },
+  ]
 
   return (
     <fieldset className="form-section split-editor">
       <legend>Stakeholder Split</legend>
 
       {stakeholdersQuery.isError || projectRowsQuery.isError ? (
-        <div className="form-error" role="alert">
-          Unable to load stakeholder split data.
-        </div>
+        <Alert
+          title="Unable to load stakeholder split data."
+          role="alert"
+          showIcon
+          type="error"
+        />
       ) : null}
 
       {isLoading ? (
-        <p className="page-description">Loading stakeholder split...</p>
+        <Typography.Paragraph className="page-description">
+          Loading stakeholder split...
+        </Typography.Paragraph>
       ) : (
-        <>
-          <div className="split-summary">
-            {activeRows.length === 0 ? (
-              <p className="muted-copy">
-                No stakeholders have been added to this project.
-              </p>
+        <Form component={false} layout="vertical">
+          <Space className="split-summary" orientation="vertical" size="small">
+            <Space aria-live="polite" size="small">
+              <Tag color={totalStatusColor}>
+                Total allocation: {formatTotal(totalPercentage)}%
+              </Tag>
+              <Typography.Text type={isTotalComplete ? 'secondary' : 'danger'}>
+                Total must equal 100% before saving.
+              </Typography.Text>
+            </Space>
+            {draftState.errorMessage ? (
+              <Alert title={draftState.errorMessage} showIcon type="error" />
             ) : null}
-            <div
-              aria-live="polite"
-              className={
-                isTotalComplete
-                  ? 'split-total split-total-complete'
-                  : 'split-total split-total-incomplete'
-              }
-            >
-              <span>Total allocation: {formatTotal(totalPercentage)}%</span>
-              <span>Total must equal 100% before saving.</span>
-            </div>
-          </div>
+          </Space>
 
-          <div className="split-rows">
-            {activeRows.map((row, index) => (
-              <div className="split-row" key={row.rowKey}>
-                <div className="form-field">
-                  <span className="field-label-row">
-                    <label htmlFor={`project-split-stakeholder-${row.rowKey}`}>
-                      Stakeholder
-                    </label>
-                    <span aria-hidden="true" className="field-required">
-                      Required
-                    </span>
-                  </span>
-                  <select
-                    aria-describedby={`project-split-stakeholder-${row.rowKey}-helper`}
-                    id={`project-split-stakeholder-${row.rowKey}`}
-                    onChange={(event) =>
-                      handleRowChange(
-                        row.rowKey,
-                        'idStakeholder',
-                        event.target.value,
-                      )
-                    }
-                    value={row.idStakeholder}
-                  >
-                    <option value="">Select stakeholder...</option>
-                    {stakeholderOptions.some(
-                      (option) => option.value === row.idStakeholder,
-                    ) || !row.idStakeholder ? null : (
-                      <option value={row.idStakeholder}>
-                        Stakeholder #{row.idStakeholder}
-                      </option>
-                    )}
-                    {stakeholderOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span
-                    className="field-helper"
-                    id={`project-split-stakeholder-${row.rowKey}-helper`}
-                  >
-                    Stakeholder receiving this share.
-                  </span>
-                </div>
+          <Table
+            columns={tableColumns}
+            dataSource={activeRows}
+            locale={{
+              emptyText: 'No stakeholders have been added to this project.',
+            }}
+            pagination={false}
+            rowKey="rowKey"
+            size="small"
+          />
 
-                <div className="form-field">
-                  <span className="field-label-row">
-                    <label htmlFor={`project-split-percentage-${row.rowKey}`}>
-                      Stake Percentage
-                    </label>
-                    <span aria-hidden="true" className="field-required">
-                      Required
-                    </span>
-                  </span>
-                  <span className="field-control field-control-adorned">
-                    <input
-                      id={`project-split-percentage-${row.rowKey}`}
-                      max={100}
-                      min={0}
-                      onChange={(event) =>
-                        handleRowChange(
-                          row.rowKey,
-                          'stakePercentage',
-                          event.target.value,
-                        )
-                      }
-                      step={0.01}
-                      type="number"
-                      value={row.stakePercentage}
-                    />
-                    <span aria-hidden="true" className="field-adornment">
-                      %
-                    </span>
-                  </span>
-                </div>
-
-                {activeRows.length > 1 ? (
-                  <button
-                    aria-label={`Remove row ${index + 1}`}
-                    className="secondary-action split-remove-action"
-                    onClick={() => handleRemoveRow(row.rowKey)}
-                    type="button"
-                  >
-                    Remove
-                  </button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-
-          <div className="form-actions">
-            <button
-              className="secondary-action"
-              onClick={handleAddRow}
-              type="button"
-            >
+          <Space className="form-actions">
+            <Button onClick={handleAddRow} type="default">
               Add stakeholder
-            </button>
-          </div>
-        </>
+            </Button>
+          </Space>
+        </Form>
       )}
     </fieldset>
   )

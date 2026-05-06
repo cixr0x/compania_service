@@ -185,7 +185,7 @@ describe('DataTable', () => {
     expect(screen.queryByText('Small project')).not.toBeInTheDocument()
 
     await user.clear(screen.getByRole('searchbox', { name: /search/i }))
-    await user.click(screen.getByRole('button', { name: /total cost/i }))
+    await user.click(screen.getByRole('columnheader', { name: /total cost/i }))
 
     const bodyRows = screen.getAllByRole('row').slice(1)
     expect(bodyRows[0]).toHaveTextContent('Small project')

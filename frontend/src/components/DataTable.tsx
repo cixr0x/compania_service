@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Input, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { formatMoney } from '../utils/money'
@@ -9,8 +9,6 @@ export type DataTableColumn<Row extends Record<string, unknown>> = {
   valueGetter?: (row: Row) => unknown
   valueFormat?: 'money'
 }
-
-type SortDirection = 'asc' | 'desc'
 
 type DataTableProps<Row extends Record<string, unknown>> = {
   rows: Row[]
@@ -71,14 +69,9 @@ export function DataTable<Row extends Record<string, unknown>>({
   isLoading = false,
   emptyMessage = 'No records found.',
 }: DataTableProps<Row>) {
-  const [sort, setSort] = useState<{
-    key: keyof Row & string
-    direction: SortDirection
-  } | null>(null)
-
   const visibleRows = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase()
-    const filteredRows = normalizedSearch
+    return normalizedSearch
       ? rows.filter((row) =>
           columns.some((column) =>
             formatCellValue(getColumnValue(row, column), column)
@@ -87,57 +80,14 @@ export function DataTable<Row extends Record<string, unknown>>({
           ),
         )
       : rows
-
-    if (!sort) {
-      return filteredRows
-    }
-
-    const sortColumn = columns.find((column) => column.key === sort.key)
-    if (!sortColumn) {
-      return filteredRows
-    }
-
-    return [...filteredRows].sort((left, right) => {
-      const result = compareValues(
-        getColumnValue(left, sortColumn),
-        getColumnValue(right, sortColumn),
-      )
-      return sort.direction === 'asc' ? result : -result
-    })
-  }, [columns, rows, searchValue, sort])
-
-  function updateSort(key: keyof Row & string) {
-    setSort((currentSort) => {
-      if (currentSort?.key !== key) {
-        return { key, direction: 'asc' }
-      }
-
-      return {
-        key,
-        direction: currentSort.direction === 'asc' ? 'desc' : 'asc',
-      }
-    })
-  }
+  }, [columns, rows, searchValue])
 
   const tableColumns: ColumnsType<Row> = columns.map((column) => ({
     dataIndex: column.key,
     key: column.key,
-    title: (
-      <button
-        className="table-sort-button"
-        onClick={() => updateSort(column.key)}
-        type="button"
-      >
-        <span>{column.header}</span>
-        <span aria-hidden="true">
-          {sort?.key === column.key
-            ? sort.direction === 'asc'
-              ? 'Asc'
-              : 'Desc'
-            : 'Sort'}
-        </span>
-      </button>
-    ),
+    sorter: (left, right) =>
+      compareValues(getColumnValue(left, column), getColumnValue(right, column)),
+    title: column.header,
     render: (_value: unknown, row: Row) =>
       formatCellValue(getColumnValue(row, column), column),
   }))
