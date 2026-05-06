@@ -100,12 +100,22 @@ describe('SalesReportPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'Sales Report' }),
     ).toBeVisible()
+    const reportRegion = screen.getByRole('region', { name: 'Sales Report' })
+    expect(within(reportRegion).queryByText('Reports')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Sales Report' })).toHaveAttribute(
       'href',
       '/reports/sales',
     )
     const yearSelect = screen.getByRole('combobox', { name: 'Year' })
     const monthSelect = screen.getByRole('combobox', { name: 'Month' })
+    const controlsRow = reportRegion.querySelector('.report-controls')
+
+    expect(controlsRow).toBeInTheDocument()
+    expect(controlsRow).toContainElement(yearSelect)
+    expect(controlsRow).toContainElement(monthSelect)
+    expect(yearSelect.closest('.ant-space-item')?.parentElement).toBe(
+      monthSelect.closest('.ant-space-item')?.parentElement,
+    )
 
     await waitFor(() => {
       expect(yearSelect.closest('.ant-select')).toHaveTextContent('2026')

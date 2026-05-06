@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Empty, Row, Select, Space, Spin, Table, Typography } from 'antd'
+import { Alert, Empty, Select, Space, Spin, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { getJson } from '../../api/client'
 import type {
@@ -157,15 +157,14 @@ export function SalesReportPage() {
     <section className="page-panel report-page" aria-labelledby="sales-report-heading">
       <div className="page-heading-row">
         <div>
-          <Typography.Text className="eyebrow">Reports</Typography.Text>
           <Typography.Title id="sales-report-heading" level={2}>
             Sales Report
           </Typography.Title>
         </div>
       </div>
 
-      <Row className="report-controls">
-        <Space wrap>
+      <div className="report-controls">
+        <Space className="report-filter-row" size={12}>
           <label className="form-field">
             Year
             <Select
@@ -206,7 +205,7 @@ export function SalesReportPage() {
             />
           </label>
         </Space>
-      </Row>
+      </div>
 
       {periodsQuery.isError || reportQuery.isError ? (
         <Alert

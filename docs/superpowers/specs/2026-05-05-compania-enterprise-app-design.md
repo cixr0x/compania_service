@@ -324,6 +324,7 @@ Sales report page:
 
 - Year selector populated from report periods that have sales data.
 - Month selector populated with months that have sales data for the selected year, plus a full-year option.
+- Year and month selectors are displayed together in the same filter row without an extra report category header above the page title.
 - Report table with grouped source headers, using `Quantity` and `Amount` under each source group.
 - `Surface` source group hidden unless the selected period has surface sales.
 - Profit is calculated as total amount minus fee and tax; total cost and income are not displayed in the sales report.

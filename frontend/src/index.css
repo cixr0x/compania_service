@@ -434,10 +434,14 @@ button {
 
 .report-controls {
   align-items: end;
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(140px, 180px));
-  max-width: 400px;
+  display: flex;
+  flex-wrap: nowrap;
+  max-width: 100%;
+}
+
+.report-filter-row {
+  align-items: end;
+  flex-wrap: nowrap;
 }
 
 .report-table {
