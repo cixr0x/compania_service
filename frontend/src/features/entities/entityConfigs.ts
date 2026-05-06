@@ -261,10 +261,12 @@ export const entityConfigs = {
     formLayout: 'compact',
     columns: [
       column('idModel', 'ID'),
+      column('code', 'Code'),
       column('name', 'Name'),
       column('description', 'Description'),
     ],
     fields: [
+      text('code', 'Code'),
       text('name', 'Name', {
         required: true,
       }),

@@ -658,6 +658,27 @@ describe('EntityEditPage', () => {
     })
   })
 
+  it('creates models with an editable code field', async () => {
+    const user = userEvent.setup()
+    vi.mocked(postJson).mockResolvedValue({ idModel: 7 })
+
+    renderEntityEditPage('/models/new', '/:entityName/:id')
+
+    expect(screen.getByRole('heading', { name: 'Create Model' })).toBeVisible()
+    await user.type(screen.getByLabelText('Code'), 'retail')
+    await user.type(screen.getByLabelText('Name'), 'Retail')
+    await user.type(screen.getByLabelText('Description'), 'Retail pricing')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith('/models', {
+        code: 'retail',
+        name: 'Retail',
+        description: 'Retail pricing',
+      })
+    })
+  })
+
   it('configures every foreign key form field as a select', () => {
     const foreignKeyFields: Array<[EntityName, string]> = [
       ['products', 'idModel'],

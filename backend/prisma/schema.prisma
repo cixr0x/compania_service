@@ -8,6 +8,7 @@ datasource db {
 
 model PricingModel {
   idModel     Int       @id @default(autoincrement()) @map("id_model")
+  code        String?   @unique @db.VarChar(100)
   name        String    @db.VarChar(255)
   description String?   @db.Text
   products    Product[]

@@ -208,6 +208,25 @@ describe('EntityListPage', () => {
     expect(screen.queryByText('501')).not.toBeInTheDocument()
   })
 
+  it('shows model code in the models table', async () => {
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        code: 'retail',
+        description: 'Retail pricing',
+        idModel: 7,
+        name: 'Retail',
+      },
+    ])
+
+    renderEntityList('/models')
+
+    expect(await screen.findByRole('heading', { name: 'Models' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Code' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Description' })).toBeVisible()
+    expect(await screen.findByText('retail')).toBeVisible()
+  })
+
   it('shows project product and stakeholder names in the project stakeholder table', async () => {
     vi.mocked(getJson).mockResolvedValue([
       {

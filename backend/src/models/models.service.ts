@@ -16,7 +16,14 @@ export class ModelsService {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
     return this.prisma.pricingModel.findMany({
-      where: query.search ? { name: { contains: query.search } } : undefined,
+      where: query.search
+        ? {
+            OR: [
+              { code: { contains: query.search } },
+              { name: { contains: query.search } },
+            ],
+          }
+        : undefined,
       orderBy: { idModel: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,

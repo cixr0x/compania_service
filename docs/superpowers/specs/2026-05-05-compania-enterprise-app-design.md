@@ -73,6 +73,7 @@ Application settings store configurable values by unique code. Settings are expo
 ### model
 
 - `id_model`: primary key.
+- `code`: optional unique code for stable pricing model identification.
 - `name`: required text.
 - `description`: text.
 

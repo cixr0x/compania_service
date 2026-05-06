@@ -10,6 +10,7 @@ export type ImportStatus =
 
 export type PricingModel = {
   idModel: number
+  code: string | null
   name: string
   description: string | null
 }
