@@ -15,14 +15,12 @@ type SourceTotals = {
 
 type SalesSummaryRow = Record<ReportSource, SourceTotals> & {
   fee: number;
-  income: number;
   model: string;
   ownerProfit: number;
   productName: string;
   profit: number;
   projectId: number;
   totalAmount: number;
-  totalCost: number;
   totalQuantity: number;
 };
 
@@ -42,7 +40,6 @@ type SalesSummaryPeriod = {
 
 const salesReportInclude = {
   product: { include: { model: true } },
-  project: true,
 };
 
 @Injectable()
@@ -92,17 +89,14 @@ export class ReportsService {
         hasSurfaceSales = true;
       }
 
-      const key = `${sale.product.id}:${sale.project.idProject}`;
+      const key = `${sale.product.id}:${sale.idProject}`;
       const row =
         rowsByProductProject.get(key) ??
         createEmptyRow({
           model: sale.product.model?.name ?? '',
           ownerPercentage: toNumber(sale.product.ownership),
           productName: sale.product.name,
-          projectId: sale.project.idProject,
-          totalCost:
-            toNumber(sale.project.productionCost) +
-            toNumber(sale.project.adminCost),
+          projectId: sale.idProject,
         });
 
       if (isReportSource(source)) {
@@ -146,19 +140,16 @@ function createEmptyRow({
   ownerPercentage,
   productName,
   projectId,
-  totalCost,
 }: {
   model: string;
   ownerPercentage: number;
   productName: string;
   projectId: number;
-  totalCost: number;
 }): SalesSummaryAccumulator {
   return {
     ecommerce: createEmptySourceTotals(),
     event: createEmptySourceTotals(),
     fee: 0,
-    income: 0,
     model,
     ownerPercentage,
     ownerProfit: 0,
@@ -168,7 +159,6 @@ function createEmptyRow({
     store: createEmptySourceTotals(),
     surface: createEmptySourceTotals(),
     totalAmount: 0,
-    totalCost: roundCurrency(totalCost),
     totalQuantity: 0,
   };
 }
@@ -176,8 +166,7 @@ function createEmptyRow({
 function recomputeFinancials(row: SalesSummaryAccumulator) {
   row.totalAmount = roundCurrency(row.totalAmount);
   row.fee = roundCurrency(row.fee);
-  row.income = roundCurrency(row.totalAmount - row.totalCost);
-  row.profit = roundCurrency(row.income - row.fee);
+  row.profit = roundCurrency(row.totalAmount - row.fee);
   row.ownerProfit = roundCurrency(row.profit * (row.ownerPercentage / 100));
 
   for (const source of ALL_REPORT_SOURCES) {

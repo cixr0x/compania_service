@@ -23,7 +23,7 @@ const DEFAULT_REPORT_SOURCES: SalesReportSource[] = [
   'event',
 ]
 const EMPTY_PERIODS: SalesReportPeriod[] = []
-const REPORT_TABLE_WIDTH = 1560
+const REPORT_TABLE_WIDTH = 1304
 
 const monthFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'long',
@@ -132,22 +132,6 @@ export function SalesReportPage() {
         render: (value: SalesReportRow['fee']) => formatCurrency(value),
         title: 'Fee',
         width: 116,
-      },
-      {
-        align: 'right',
-        dataIndex: 'totalCost',
-        key: 'totalCost',
-        render: (value: SalesReportRow['totalCost']) => formatCurrency(value),
-        title: 'Total Cost',
-        width: 128,
-      },
-      {
-        align: 'right',
-        dataIndex: 'income',
-        key: 'income',
-        render: (value: SalesReportRow['income']) => formatCurrency(value),
-        title: 'Income',
-        width: 128,
       },
       {
         align: 'right',

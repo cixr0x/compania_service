@@ -316,6 +316,7 @@ Sales report page:
 - Month selector populated with months that have sales data for the selected year, plus a full-year option.
 - Report table with grouped source headers, using `Quantity` and `Amount` under each source group.
 - `Surface` source group hidden unless the selected period has surface sales.
+- Profit is calculated as total amount minus fee; total cost and income are not displayed in the sales report.
 - Money cells displayed with a dollar prefix, comma grouping, and two decimals.
 
 Known intentional custom UI areas and UI debt:

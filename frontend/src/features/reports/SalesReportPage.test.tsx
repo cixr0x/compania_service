@@ -16,16 +16,14 @@ const yearlyReport = {
       ecommerce: { amount: 150, quantity: 1 },
       event: { amount: 0, quantity: 0 },
       fee: 7,
-      income: 230,
       model: 'Furniture',
-      ownerProfit: 55.75,
+      ownerProfit: 85.75,
       productName: 'Maple Shelf',
-      profit: 223,
+      profit: 343,
       projectId: 501,
       store: { amount: 200, quantity: 2 },
       surface: { amount: 0, quantity: 0 },
       totalAmount: 350,
-      totalCost: 120,
       totalQuantity: 3,
     },
   ],
@@ -38,16 +36,14 @@ const monthlyReport = {
       ecommerce: { amount: 0, quantity: 0 },
       event: { amount: 0, quantity: 0 },
       fee: 0,
-      income: 50,
       model: '',
-      ownerProfit: 25,
+      ownerProfit: 40,
       productName: 'Event Kit',
-      profit: 50,
+      profit: 80,
       projectId: 701,
       store: { amount: 0, quantity: 0 },
       surface: { amount: 80, quantity: 4 },
       totalAmount: 80,
-      totalCost: 30,
       totalQuantity: 4,
     },
   ],
@@ -121,7 +117,7 @@ describe('SalesReportPage', () => {
 
     expect(table.closest('.ant-table-wrapper')).toBeInTheDocument()
     expect(table.closest('.ant-table')).toHaveClass('ant-table-small')
-    expect(table).toHaveStyle({ width: '1560px' })
+    expect(table).toHaveStyle({ width: '1304px' })
     expect(columnHeaders[0]).toHaveTextContent('Project ID')
     expect(columnHeaders[1]).toHaveTextContent('Product')
     expect(within(table).getByRole('columnheader', { name: 'Store' })).toHaveAttribute(
@@ -138,6 +134,12 @@ describe('SalesReportPage', () => {
     expect(
       within(table).queryByRole('columnheader', { name: 'Surface' }),
     ).not.toBeInTheDocument()
+    expect(
+      within(table).queryByRole('columnheader', { name: 'Total Cost' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(table).queryByRole('columnheader', { name: 'Income' }),
+    ).not.toBeInTheDocument()
     expect(within(table).getAllByRole('columnheader', { name: 'Quantity' })).toHaveLength(3)
     expect(within(table).getAllByRole('columnheader', { name: 'Amount' })).toHaveLength(3)
 
@@ -150,10 +152,8 @@ describe('SalesReportPage', () => {
     expect(within(reportRow).getByText('$200.00')).toBeVisible()
     expect(within(reportRow).getByText('$350.00')).toBeVisible()
     expect(within(reportRow).getByText('$7.00')).toBeVisible()
-    expect(within(reportRow).getByText('$120.00')).toBeVisible()
-    expect(within(reportRow).getByText('$230.00')).toBeVisible()
-    expect(within(reportRow).getByText('$223.00')).toBeVisible()
-    expect(within(reportRow).getByText('$55.75')).toBeVisible()
+    expect(within(reportRow).getByText('$343.00')).toBeVisible()
+    expect(within(reportRow).getByText('$85.75')).toBeVisible()
   })
 
   it('uses Ant Select controls to load a selected month and adds surface only when returned', async () => {

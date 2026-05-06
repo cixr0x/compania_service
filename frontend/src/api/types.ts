@@ -117,14 +117,12 @@ export type SalesReportSourceTotals = {
 
 export type SalesReportRow = Record<SalesReportSource, SalesReportSourceTotals> & {
   fee: number
-  income: number
   model: string
   ownerProfit: number
   productName: string
   profit: number
   projectId: number
   totalAmount: number
-  totalCost: number
   totalQuantity: number
 }
 
