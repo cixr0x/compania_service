@@ -126,7 +126,7 @@ describe('EntityListPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Projects' })).toBeVisible()
     expect(screen.getAllByText('Total Cost')).not.toHaveLength(0)
-    expect(await screen.findByText('9,750.75')).toBeVisible()
+    expect(await screen.findByText('$9,750.75')).toBeVisible()
   })
 
   it('shows related entity names instead of foreign key IDs in entity tables', async () => {
@@ -193,6 +193,8 @@ describe('EntityListPage', () => {
     expect(screen.queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Product' })).toBeVisible()
     expect(screen.getByRole('columnheader', { name: 'Project' })).toBeVisible()
+    expect(screen.getByText('$100.00')).toBeVisible()
+    expect(screen.getByText('$0.00')).toBeVisible()
     expect(screen.queryByText('42')).not.toBeInTheDocument()
     expect(screen.queryByText('501')).not.toBeInTheDocument()
   })

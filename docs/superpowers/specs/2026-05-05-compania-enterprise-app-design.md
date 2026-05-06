@@ -298,7 +298,7 @@ Entity pages:
 - Stakeholder edit forms show the projects where the stakeholder participates, including the project label and stake percentage.
 - Sale create/edit forms load products and projects, show readable option labels, and submit the selected product and project IDs to the API. The backend rejects a manual sale if the selected project does not belong to the selected product.
 - Foreign key fields in create/edit forms should be selectors backed by the related entity list, not open numeric inputs.
-- Money fields in tables, forms, and import review screens should display with comma grouping and two decimals, for example `1,000,000.00`. Editable money fields may accept comma separators and submit numeric values to the API.
+- Money fields in tables and import review screens should display with a dollar prefix, comma grouping, and two decimals, for example `$1,000,000.00`. Editable money fields may accept comma separators and submit numeric values to the API.
 
 Sales import page:
 
@@ -316,7 +316,7 @@ Sales report page:
 - Month selector populated with months that have sales data for the selected year, plus a full-year option.
 - Report table with grouped source headers, using `Quantity` and `Amount` under each source group.
 - `Surface` source group hidden unless the selected period has surface sales.
-- Money fields displayed with comma grouping and two decimals.
+- Money cells displayed with a dollar prefix, comma grouping, and two decimals.
 
 Known intentional custom UI areas and UI debt:
 

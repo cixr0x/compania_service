@@ -2,7 +2,7 @@ import { EditOutlined } from '@ant-design/icons'
 import { useMemo, type ReactNode } from 'react'
 import { Button, Input, Table, Tag } from 'antd'
 import type { ColumnType, ColumnsType } from 'antd/es/table'
-import { formatMoney } from '../utils/money'
+import { formatCurrency } from '../utils/money'
 
 export type DataTableColumn<Row extends Record<string, unknown>> = {
   key: keyof Row & string
@@ -114,7 +114,7 @@ function formatCellValue<Row extends Record<string, unknown>>(
   }
 
   if (column?.valueFormat === 'money' || kind === 'money') {
-    return formatMoney(value)
+    return formatCurrency(value)
   }
 
   if (kind === 'boolean') {

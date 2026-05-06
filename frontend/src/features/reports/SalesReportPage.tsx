@@ -9,7 +9,7 @@ import type {
   SalesReportSource,
   SalesReportSummary,
 } from '../../api/types'
-import { formatMoney } from '../../utils/money'
+import { formatCurrency } from '../../utils/money'
 
 const sourceLabels: Record<SalesReportSource, string> = {
   ecommerce: 'Ecommerce',
@@ -95,7 +95,7 @@ export function SalesReportPage() {
             align: 'right' as const,
             key: `${source}-amount`,
             render: (_value: unknown, row: SalesReportRow) =>
-              formatMoney(row[source].amount),
+              formatCurrency(row[source].amount),
             title: 'Amount',
             width: 128,
           },
@@ -114,7 +114,7 @@ export function SalesReportPage() {
         align: 'right',
         dataIndex: 'totalAmount',
         key: 'totalAmount',
-        render: (value: SalesReportRow['totalAmount']) => formatMoney(value),
+        render: (value: SalesReportRow['totalAmount']) => formatCurrency(value),
         title: 'Total Amount',
         width: 136,
       },
@@ -129,7 +129,7 @@ export function SalesReportPage() {
         align: 'right',
         dataIndex: 'fee',
         key: 'fee',
-        render: (value: SalesReportRow['fee']) => formatMoney(value),
+        render: (value: SalesReportRow['fee']) => formatCurrency(value),
         title: 'Fee',
         width: 116,
       },
@@ -137,7 +137,7 @@ export function SalesReportPage() {
         align: 'right',
         dataIndex: 'totalCost',
         key: 'totalCost',
-        render: (value: SalesReportRow['totalCost']) => formatMoney(value),
+        render: (value: SalesReportRow['totalCost']) => formatCurrency(value),
         title: 'Total Cost',
         width: 128,
       },
@@ -145,7 +145,7 @@ export function SalesReportPage() {
         align: 'right',
         dataIndex: 'income',
         key: 'income',
-        render: (value: SalesReportRow['income']) => formatMoney(value),
+        render: (value: SalesReportRow['income']) => formatCurrency(value),
         title: 'Income',
         width: 128,
       },
@@ -153,7 +153,7 @@ export function SalesReportPage() {
         align: 'right',
         dataIndex: 'profit',
         key: 'profit',
-        render: (value: SalesReportRow['profit']) => formatMoney(value),
+        render: (value: SalesReportRow['profit']) => formatCurrency(value),
         title: 'Profit',
         width: 128,
       },
@@ -161,7 +161,7 @@ export function SalesReportPage() {
         align: 'right',
         dataIndex: 'ownerProfit',
         key: 'ownerProfit',
-        render: (value: SalesReportRow['ownerProfit']) => formatMoney(value),
+        render: (value: SalesReportRow['ownerProfit']) => formatCurrency(value),
         title: 'Owner Profit',
         width: 136,
       },

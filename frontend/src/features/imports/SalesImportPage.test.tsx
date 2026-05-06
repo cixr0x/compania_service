@@ -171,12 +171,12 @@ describe('SalesImportPage', () => {
     expect(within(table).getByText('Valid').closest('.ant-tag')).toBeInTheDocument()
   })
 
-  it('formats staged sale amounts with commas and two decimal places', async () => {
+  it('formats staged sale amounts with a dollar prefix, commas, and two decimal places', async () => {
     mockImportQueries([{ ...stagedRows[0], amount: '1000000' }], [])
 
     renderSalesImportPage()
 
-    expect(await screen.findByText('1,000,000.00')).toBeVisible()
+    expect(await screen.findByText('$1,000,000.00')).toBeVisible()
   })
 
   it('presents upload, validation, and commit as sequential steps with empty-state hints', () => {

@@ -87,7 +87,7 @@ describe('DataTable', () => {
     expect(onRowDoubleClick).toHaveBeenNthCalledWith(2, rows[0])
   })
 
-  it('formats money columns with commas and two decimal places', () => {
+  it('formats money columns with a dollar prefix, commas, and two decimal places', () => {
     render(
       <DataTable
         columns={[
@@ -105,8 +105,8 @@ describe('DataTable', () => {
       />,
     )
 
-    expect(screen.getByText('1,000,000.00')).toBeVisible()
-    expect(screen.getByText('1,250.50')).toBeVisible()
+    expect(screen.getByText('$1,000,000.00')).toBeVisible()
+    expect(screen.getByText('$1,250.50')).toBeVisible()
   })
 
   it('formats operational values with aligned numeric cells, date text, boolean tags, and edit actions', async () => {
@@ -148,7 +148,7 @@ describe('DataTable', () => {
     expect(screen.getByText(expectedDate)).toBeVisible()
     expect(screen.getByText('Yes').closest('.ant-tag')).toBeInTheDocument()
     expect(screen.getByText('3').closest('td')).toHaveClass('ant-table-cell-right')
-    expect(screen.getByText('1,250.00').closest('td')).toHaveClass(
+    expect(screen.getByText('$1,250.00').closest('td')).toHaveClass(
       'ant-table-cell-right',
     )
 
@@ -226,12 +226,12 @@ describe('DataTable', () => {
 
     render(<DerivedColumnHarness />)
 
-    expect(screen.getByText('10,000.50')).toBeVisible()
-    expect(screen.getByText('500.00')).toBeVisible()
+    expect(screen.getByText('$10,000.50')).toBeVisible()
+    expect(screen.getByText('$500.00')).toBeVisible()
 
     await user.type(
       screen.getByRole('searchbox', { name: /search/i }),
-      '10,000.50',
+      '$10,000.50',
     )
 
     expect(screen.getByText('Large project')).toBeVisible()

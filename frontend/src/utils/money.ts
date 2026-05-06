@@ -31,3 +31,8 @@ export function formatMoney(value: unknown): string {
     ? String(value)
     : moneyFormatter.format(numericValue)
 }
+
+export function formatCurrency(value: unknown): string {
+  const formattedValue = formatMoney(value)
+  return formattedValue === '' ? '' : `$${formattedValue}`
+}
