@@ -270,6 +270,58 @@ describe('EntityEditPage', () => {
     })
   })
 
+  it('saves cleared optional text fields as empty strings on update', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/models') {
+        return [{ idModel: 7, name: 'Furniture' }]
+      }
+
+      if (path === '/products/101') {
+        return {
+          id: 101,
+          description: 'Standing desk',
+          idEcommerce: null,
+          idEvent: null,
+          idModel: 7,
+          idStore: null,
+          idSurface: null,
+          image: 'desk.png',
+          model: { idModel: 7, name: 'Furniture' },
+          name: 'Walnut Desk',
+          ownership: 50,
+          tag: null,
+        }
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
+    vi.mocked(patchJson).mockResolvedValue({ id: 101 })
+
+    renderEntityEditPage('/products/101', '/:entityName/:id')
+
+    expect(await screen.findByDisplayValue('Standing desk')).toBeVisible()
+    await user.clear(screen.getByLabelText('Description'))
+    await user.clear(screen.getByLabelText('Image URL'))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(patchJson).toHaveBeenCalledWith(
+        '/products/101',
+        expect.objectContaining({
+          description: '',
+          image: '',
+        }),
+      )
+    })
+    const payload = vi.mocked(patchJson).mock.calls[0]?.[1]
+    expect(payload).not.toHaveProperty('idEcommerce')
+    expect(payload).not.toHaveProperty('idStore')
+    expect(payload).not.toHaveProperty('idEvent')
+    expect(payload).not.toHaveProperty('idSurface')
+    expect(payload).not.toHaveProperty('tag')
+  })
+
   it('requires confirmation before deleting an existing product', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockResolvedValue({

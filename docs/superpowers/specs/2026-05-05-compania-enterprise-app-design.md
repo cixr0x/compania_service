@@ -307,6 +307,7 @@ Entity pages:
 - Sale create/edit forms load products and projects, show readable option labels, and submit the selected product and project IDs to the API. The backend rejects a manual sale if the selected project does not belong to the selected product.
 - Foreign key fields in create/edit forms should be selectors backed by the related entity list, not open numeric inputs.
 - Money fields in tables and import review screens should display with a dollar prefix, comma grouping, and two decimals, for example `$1,000,000.00`. Editable money fields may accept comma separators and submit numeric values to the API.
+- Optional text fields preserve empty strings on update. A cleared optional text field must be submitted and saved as `""`; fields that are truly omitted from a PATCH payload remain unchanged.
 - The sales CRUD table displays tax, profit, and owner profit as money columns. Sales create/edit forms calculate tax from `amount * settings.sales_tax`, recalculate it as amount or fee changes, and persist the tax on save. The same form displays read-only profit as `amount - fee - tax` and owner profit as `profit * product.ownership / 100`; profit and owner profit are computed display values and are not persisted.
 
 Sales import page:

@@ -35,6 +35,12 @@ const EMPTY_PROJECT_SPLIT_STATE: ProjectStakeholderSplitState = {
   rows: [],
 }
 
+type BuildEntityPayloadOptions = {
+  isCreate: boolean
+  originalValues: EntityRow
+  touchedFieldNames: ReadonlySet<string>
+}
+
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     return error.message
@@ -60,6 +66,7 @@ function normalizeDateValue(value: unknown): string {
 function serializeFieldValue(
   value: unknown,
   field: EntityField,
+  options: BuildEntityPayloadOptions,
 ): boolean | string | number | undefined {
   if (field.type === 'checkbox') {
     return value === true || value === 'true'
@@ -95,12 +102,33 @@ function serializeFieldValue(
   }
 
   const trimmedValue = value.trim()
+  if (isOptionalTextField(field) && trimmedValue === '') {
+    if (
+      !options.isCreate &&
+      (options.touchedFieldNames.has(field.name) ||
+        typeof options.originalValues[field.name] === 'string')
+    ) {
+      return ''
+    }
+
+    return undefined
+  }
+
   return trimmedValue || undefined
+}
+
+function isOptionalTextField(field: EntityField) {
+  return (
+    (field.type === 'text' || field.type === 'textarea') &&
+    !field.required &&
+    !field.requiredOnCreate
+  )
 }
 
 function buildEntityPayload(
   config: EntityConfig,
   values: EntityRow,
+  options: BuildEntityPayloadOptions,
 ): EntityRow {
   return Object.fromEntries(
     config.fields.flatMap((field) => {
@@ -115,7 +143,7 @@ function buildEntityPayload(
         field.type === 'computed' && field.computeValue
           ? field.computeValue(values)
           : values[field.name]
-      const value = serializeFieldValue(rawValue, field)
+      const value = serializeFieldValue(rawValue, field, options)
       return value === undefined ? [] : [[field.name, value]]
     }),
   )
@@ -352,6 +380,9 @@ export function EntityEditPage() {
   const [draftValues, setDraftValues] = useState<EntityRow>({})
   const [isDirty, setIsDirty] = useState(false)
   const [mutationError, setMutationError] = useState<string | null>(null)
+  const [touchedFieldNames, setTouchedFieldNames] = useState<Set<string>>(
+    () => new Set(),
+  )
   const [projectSplitState, setProjectSplitState] =
     useState<ProjectStakeholderSplitState>(EMPTY_PROJECT_SPLIT_STATE)
   const optionSources = useMemo(() => getOptionSources(config), [config])
@@ -476,6 +507,11 @@ export function EntityEditPage() {
 
   function handleChange(name: string, value: boolean | string) {
     setIsDirty(true)
+    setTouchedFieldNames((currentFields) => {
+      const nextFields = new Set(currentFields)
+      nextFields.add(name)
+      return nextFields
+    })
     setDraftValues((currentValues) => ({
       ...(isDirty ? currentValues : (detailQuery.data ?? {})),
       [name]: value,
@@ -484,7 +520,13 @@ export function EntityEditPage() {
 
   function handleSave() {
     setMutationError(null)
-    saveMutation.mutate(buildEntityPayload(formConfig!, displayedFormValues))
+    saveMutation.mutate(
+      buildEntityPayload(formConfig!, displayedFormValues, {
+        isCreate,
+        originalValues: detailQuery.data ?? {},
+        touchedFieldNames,
+      }),
+    )
   }
 
   function handleCancel() {

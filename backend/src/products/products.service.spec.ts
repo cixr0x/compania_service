@@ -95,7 +95,39 @@ describe('ProductsService', () => {
     });
   });
 
-  it('normalizes blank external product IDs to undefined', async () => {
+  it('preserves blank optional strings as empty strings when updating a product', async () => {
+    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
+      id: 1,
+      name: 'Starter Kit',
+      ownership: '15.00',
+    });
+    jest.spyOn(prisma.product, 'update').mockResolvedValue({
+      id: 1,
+      name: 'Starter Kit',
+      description: '',
+      image: '',
+      idEcommerce: '',
+      ownership: '15.00',
+    });
+
+    const service = new ProductsService(prisma);
+    await service.update(1, {
+      description: '',
+      image: '   ',
+      idEcommerce: '',
+    });
+
+    expect(prisma.product.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: {
+        description: '',
+        image: '',
+        idEcommerce: '',
+      },
+    });
+  });
+
+  it('trims optional product strings while preserving empty strings', async () => {
     jest.spyOn(prisma.product, 'create').mockResolvedValue({
       id: 1,
       name: 'Starter Kit',
@@ -119,10 +151,10 @@ describe('ProductsService', () => {
     expect(prisma.product.create).toHaveBeenCalledWith({
       data: {
         name: 'Starter Kit',
-        idEcommerce: undefined,
-        idStore: undefined,
+        idEcommerce: '',
+        idStore: '',
         idEvent: 'EVT-1',
-        idSurface: undefined,
+        idSurface: '',
         idModel: 2,
         ownership: 0,
       },

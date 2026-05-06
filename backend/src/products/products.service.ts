@@ -94,7 +94,6 @@ export class ProductsService {
       return;
     }
 
-    const trimmed = data[field].trim();
-    data[field] = (trimmed === '' ? undefined : trimmed) as T[keyof T];
+    data[field] = data[field].trim() as T[keyof T];
   }
 }
