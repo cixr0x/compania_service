@@ -13,7 +13,6 @@ import {
   Input,
   InputNumber,
   Select,
-  Space,
   Typography,
 } from 'antd'
 import type {
@@ -160,12 +159,6 @@ export function EntityForm({
     const fieldClassName =
       field.span === 'full' ? 'form-field form-field-full' : 'form-field'
     const isRequired = isFieldRequired(field, isCreate)
-    const controlClassName =
-      field.type === 'checkbox'
-        ? 'field-control checkbox-control'
-        : field.prefix || field.suffix
-        ? 'field-control field-control-adorned'
-        : 'field-control'
     const isMoneyField = field.valueFormat === 'money'
     const fieldRules = isRequired
       ? [{ message: `${field.label} is required.`, required: true }]
@@ -193,23 +186,6 @@ export function EntityForm({
     return (
       <Form.Item
         className={fieldClassName}
-        extra={
-          isRequired ? (
-            <Space orientation="vertical" size={2}>
-              <span aria-hidden="true" className="field-required">
-                Required
-              </span>
-              {isRequiredSelectInvalid ? (
-                <Typography.Text type="danger">
-                  {field.label} is required.
-                </Typography.Text>
-              ) : null}
-            </Space>
-          ) : undefined
-        }
-        help={
-          isRequiredSelectInvalid ? `${field.label} is required.` : undefined
-        }
         htmlFor={selectControlId}
         key={field.name}
         label={field.label}
@@ -217,35 +193,34 @@ export function EntityForm({
         rules={fieldRules}
         validateStatus={isRequiredSelectInvalid ? 'error' : undefined}
       >
-        <Space.Compact className={controlClassName}>
-          {field.prefix ? (
-            <Typography.Text className="field-adornment">
-              {field.prefix}
-            </Typography.Text>
-          ) : null}
-          {field.type === 'computed' ? (
-            <Input
-              id={fieldId}
-              inputMode={isMoneyField ? 'decimal' : undefined}
-              readOnly
-              type="text"
-              value={inputValue}
-            />
-          ) : field.type === 'textarea' ? (
-            <Input.TextArea
-              id={fieldId}
-              onChange={(event) => onChange(field.name, event.target.value)}
-              required={isRequired}
-              rows={4}
-              value={inputValue}
-            />
-          ) : field.type === 'checkbox' ? (
+        {field.type === 'computed' ? (
+          <Input
+            id={fieldId}
+            inputMode={isMoneyField ? 'decimal' : undefined}
+            prefix={field.prefix}
+            readOnly
+            suffix={field.suffix}
+            type="text"
+            value={inputValue}
+          />
+        ) : field.type === 'textarea' ? (
+          <Input.TextArea
+            id={fieldId}
+            onChange={(event) => onChange(field.name, event.target.value)}
+            required={isRequired}
+            rows={4}
+            value={inputValue}
+          />
+        ) : field.type === 'checkbox' ? (
+          <div className="checkbox-control">
             <Checkbox
               checked={getCheckboxValue(value)}
               id={fieldId}
               onChange={(event) => onChange(field.name, event.target.checked)}
             />
-          ) : field.type === 'select' ? (
+          </div>
+        ) : field.type === 'select' ? (
+          <>
             <Select
               aria-label={field.label}
               aria-required={isRequired}
@@ -256,67 +231,74 @@ export function EntityForm({
               status={isRequiredSelectInvalid ? 'error' : undefined}
               value={inputValue || undefined}
             />
-          ) : isMoneyField ? (
-            <Input
-              id={fieldId}
-              inputMode="decimal"
-              max={field.max}
-              min={field.min}
-              onBlur={() => {
-                setFocusedFieldName((currentFieldName) =>
-                  currentFieldName === field.name ? null : currentFieldName,
-                )
-              }}
-              onChange={(event) => onChange(field.name, event.target.value)}
-              onFocus={() => setFocusedFieldName(field.name)}
-              required={isRequired}
-              ref={(input) => {
-                moneyInputRefs.current[field.name] = input?.input ?? null
-              }}
-              type="text"
-              value={inputValue}
-            />
-          ) : field.type === 'number' ? (
-            <InputNumber
-              id={fieldId}
-              max={field.max}
-              min={field.min}
-              onChange={(nextValue) =>
-                onChange(field.name, nextValue === null ? '' : String(nextValue))
+            {isRequiredSelectInvalid ? (
+              <Typography.Text className="field-validation-message" type="danger">
+                {field.label} is required.
+              </Typography.Text>
+            ) : null}
+          </>
+        ) : isMoneyField ? (
+          <Input
+            id={fieldId}
+            inputMode="decimal"
+            max={field.max}
+            min={field.min}
+            onBlur={() => {
+              setFocusedFieldName((currentFieldName) =>
+                currentFieldName === field.name ? null : currentFieldName,
+              )
+            }}
+            onChange={(event) => onChange(field.name, event.target.value)}
+            onFocus={() => setFocusedFieldName(field.name)}
+            required={isRequired}
+            ref={(input) => {
+              moneyInputRefs.current[field.name] = input?.input ?? null
+            }}
+            prefix={field.prefix}
+            suffix={field.suffix}
+            type="text"
+            value={inputValue}
+          />
+        ) : field.type === 'number' ? (
+          <InputNumber
+            id={fieldId}
+            max={field.max}
+            min={field.min}
+            onChange={(nextValue) =>
+              onChange(field.name, nextValue === null ? '' : String(nextValue))
+            }
+            ref={(inputNumber) => {
+              const inputElement =
+                inputNumber?.nativeElement?.querySelector('input')
+
+              if (field.min !== undefined) {
+                inputElement?.setAttribute('min', String(field.min))
               }
-              ref={(inputNumber) => {
-                const inputElement =
-                  inputNumber?.nativeElement?.querySelector('input')
 
-                if (field.min !== undefined) {
-                  inputElement?.setAttribute('min', String(field.min))
-                }
-
-                if (field.max !== undefined) {
-                  inputElement?.setAttribute('max', String(field.max))
-                }
-              }}
-              step={field.step ?? 'any'}
-              value={inputValue === '' ? null : Number(inputValue)}
-            />
-          ) : (
-            <Input
-              id={fieldId}
-              max={field.max}
-              min={field.min}
-              onChange={(event) => onChange(field.name, event.target.value)}
-              required={isRequired}
-              step={field.step ?? 'any'}
-              type={field.type}
-              value={inputValue}
-            />
-          )}
-          {field.suffix ? (
-            <Typography.Text className="field-adornment">
-              {field.suffix}
-            </Typography.Text>
-          ) : null}
-        </Space.Compact>
+              if (field.max !== undefined) {
+                inputElement?.setAttribute('max', String(field.max))
+              }
+            }}
+            prefix={field.prefix}
+            step={field.step ?? 'any'}
+            style={{ width: '100%' }}
+            suffix={field.suffix}
+            value={inputValue === '' ? null : Number(inputValue)}
+          />
+        ) : (
+          <Input
+            id={fieldId}
+            max={field.max}
+            min={field.min}
+            onChange={(event) => onChange(field.name, event.target.value)}
+            prefix={field.prefix}
+            required={isRequired}
+            step={field.step ?? 'any'}
+            suffix={field.suffix}
+            type={field.type}
+            value={inputValue}
+          />
+        )}
       </Form.Item>
     )
   }

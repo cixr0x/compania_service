@@ -1,4 +1,5 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
 import { AppLayout } from './AppLayout'
@@ -42,5 +43,28 @@ describe('AppLayout', () => {
     expect(
       screen.queryByRole('link', { name: 'Project Stakeholders' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('opens primary navigation in a controlled drawer from the mobile menu trigger', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/projects']}>
+        <Routes>
+          <Route path="/" element={<AppLayout />}>
+            <Route path="projects" element={<div>Projects page</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Open navigation' }))
+
+    const drawer = screen.getByRole('dialog', { name: 'Primary navigation' })
+    expect(drawer).toBeVisible()
+    expect(within(drawer).getByRole('link', { name: 'Sales Report' })).toHaveAttribute(
+      'href',
+      '/reports/sales',
+    )
   })
 })

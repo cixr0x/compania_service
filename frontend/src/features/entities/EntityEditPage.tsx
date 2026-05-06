@@ -247,6 +247,7 @@ function StakeholderProjectsSection({ stakeholder }: { stakeholder: EntityRow })
       title: 'Project',
     },
     {
+      align: 'right',
       dataIndex: 'stakePercentage',
       key: 'stakePercentage',
       render: (value) => formatPercentage(value) || '-',
@@ -282,6 +283,7 @@ function StakeholderProjectsSection({ stakeholder }: { stakeholder: EntityRow })
           rowKey={(projectRow, index) =>
             String(projectRow.idProject ?? index ?? '')
           }
+          scroll={{ x: 520 }}
           size="small"
         />
       )}

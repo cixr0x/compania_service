@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { Button, Space, Typography } from 'antd'
+import { PlusOutlined } from '@ant-design/icons'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getJson } from '../../api/client'
 import { DataTable } from '../../components/DataTable'
@@ -40,12 +42,18 @@ export function EntityListPage() {
     <section className="page-panel" aria-labelledby={`${config.path}-heading`}>
       <div className="page-heading-row">
         <div>
-          <p className="eyebrow">Workspace</p>
-          <h2 id={`${config.path}-heading`}>{config.title}</h2>
+          <Typography.Text className="eyebrow">Workspace</Typography.Text>
+          <Typography.Title id={`${config.path}-heading`} level={2}>
+            {config.title}
+          </Typography.Title>
         </div>
-        <Link className="primary-action" to={`/${config.path}/new`}>
-          Create
-        </Link>
+        <Space>
+          <Link to={`/${config.path}/new`}>
+            <Button icon={<PlusOutlined />} type="primary">
+              Create
+            </Button>
+          </Link>
+        </Space>
       </div>
 
       {query.isError ? (

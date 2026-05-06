@@ -120,6 +120,8 @@ describe('SalesReportPage', () => {
     const table = columnHeaders[0].closest('table')!
 
     expect(table.closest('.ant-table-wrapper')).toBeInTheDocument()
+    expect(table.closest('.ant-table')).toHaveClass('ant-table-small')
+    expect(table).toHaveStyle({ width: '1560px' })
     expect(columnHeaders[0]).toHaveTextContent('Project ID')
     expect(columnHeaders[1]).toHaveTextContent('Product')
     expect(within(table).getByRole('columnheader', { name: 'Store' })).toHaveAttribute(

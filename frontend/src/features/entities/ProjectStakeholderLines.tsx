@@ -262,6 +262,7 @@ export function ProjectStakeholderLines({
       title: 'Stakeholder',
     },
     {
+      align: 'right' as const,
       dataIndex: 'stakePercentage',
       key: 'stakePercentage',
       render: (_value: string, row: SplitDraftRow) => (
@@ -294,8 +295,10 @@ export function ProjectStakeholderLines({
         </Form.Item>
       ),
       title: 'Stake Percentage',
+      width: 180,
     },
     {
+      align: 'right' as const,
       key: 'actions',
       render: (_value: string, row: SplitDraftRow, index: number) =>
         activeRows.length > 1 ? (
@@ -308,6 +311,7 @@ export function ProjectStakeholderLines({
           </Button>
         ) : null,
       title: 'Actions',
+      width: 120,
     },
   ]
 
@@ -352,6 +356,7 @@ export function ProjectStakeholderLines({
             }}
             pagination={false}
             rowKey="rowKey"
+            scroll={{ x: 720 }}
             size="small"
           />
 

@@ -267,6 +267,9 @@ Ant Design application rules for this project:
 - Use Ant Design `Table` for structured operational data, with search/filtering, sorting, pagination, loading, and empty states where useful.
 - Use Ant Design data-entry components for forms and keep labels, validation, and formatting close to the relevant field. Do not render per-field helper descriptions unless a future requirement explicitly asks for them.
 - Use Ant Design feedback components such as `Alert`, `Message`, `Notification`, `Spin`, `Modal`, and `Popconfirm` according to feedback severity.
+- On mobile, use a controlled navigation drawer rather than the zero-width collapsed sider trigger so the app header does not overlap navigation controls.
+- Shared entity tables should keep compact enterprise readability: right-align numeric and money values, format date-like values, display booleans as tags, provide horizontal scrolling for wide data, and include a visible edit action while preserving double-click navigation.
+- Wide reports, including the sales report, should use Ant Design table horizontal scrolling with stable column widths instead of allowing tables to spill outside the page panel.
 
 Main navigation:
 
@@ -281,8 +284,8 @@ Main navigation:
 Entity pages:
 
 - Table view with sortable visible columns and a text filter for searchable fields.
-- Create button on the table view.
-- Double-click table row navigates to edit form.
+- Create button on the table view, using Ant Design primary button styling.
+- Double-click table row navigates to edit form; table rows also expose a visible Edit action for discoverability.
 - Forms use backend validation responses for field-level error display.
 - Product create/edit forms load pricing models and show model names in the model selector while submitting the selected model ID to the API.
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.

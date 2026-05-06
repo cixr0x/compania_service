@@ -176,8 +176,11 @@ describe('EntityEditPage', () => {
     expect(
       within(
         screen.getByRole('group', { name: 'Commercial attributes' }),
-      ).getByText('Required'),
-    ).toBeVisible()
+      ).queryByText('Required'),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText('Model').closest('label')).toHaveClass(
+      'ant-form-item-required',
+    )
 
     await user.type(screen.getByLabelText('Name'), 'Maple Shelf')
     await user.click(screen.getByRole('button', { name: 'Save' }))

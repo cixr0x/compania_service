@@ -113,6 +113,22 @@ button {
   padding: 14px 28px;
 }
 
+.topbar-title-group {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+}
+
+.topbar-title-copy {
+  min-width: 0;
+}
+
+.mobile-menu-button {
+  display: none;
+  flex: 0 0 auto;
+}
+
 .topbar h1,
 .page-panel h2 {
   color: var(--text);
@@ -134,13 +150,16 @@ button {
 }
 
 .page-content {
+  min-width: 0;
   padding: 24px 28px;
 }
 
 .page-panel {
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 1px solid #f0f0f0;
   border-radius: 8px;
+  min-width: 0;
+  overflow: hidden;
   padding: 20px;
 }
 
@@ -149,6 +168,8 @@ button {
   display: flex;
   gap: 16px;
   justify-content: space-between;
+  margin-bottom: 4px;
+  min-width: 0;
 }
 
 .page-description {
@@ -208,6 +229,12 @@ button {
   display: grid;
   gap: 14px;
   margin-top: 18px;
+  min-width: 0;
+}
+
+.entity-data-table {
+  max-width: 100%;
+  min-width: 0;
 }
 
 .entity-data-table .ant-table {
@@ -224,6 +251,10 @@ button {
 
 .entity-data-table .ant-table-cell {
   white-space: nowrap;
+}
+
+.entity-data-table .entity-data-table-action-cell {
+  background: var(--panel);
 }
 
 .entity-data-table .ant-table-row {
@@ -245,19 +276,19 @@ button {
 }
 
 .form-section {
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 0;
+  border-top: 1px solid #f0f0f0;
   display: grid;
-  gap: 14px;
+  gap: 12px;
   margin: 0;
-  padding: 16px;
+  padding: 14px 0 0;
 }
 
 .form-section legend {
   color: var(--text);
-  font-size: 14px;
-  font-weight: 800;
-  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 8px 0 0;
 }
 
 .form-grid {
@@ -284,16 +315,6 @@ button {
   display: flex;
   gap: 8px;
   justify-content: space-between;
-}
-
-.field-required {
-  background: var(--accent-soft);
-  border-radius: 999px;
-  color: var(--accent-strong);
-  font-size: 10px;
-  font-weight: 800;
-  padding: 2px 7px;
-  text-transform: uppercase;
 }
 
 .image-preview-field {
@@ -329,28 +350,22 @@ button {
   text-align: center;
 }
 
-.field-control {
-  display: block;
-  min-width: 0;
-  width: 100%;
-}
-
 .checkbox-control {
   align-items: center;
   display: flex;
   min-height: 36px;
 }
 
-.field-control-adorned {
-  align-items: center;
-  width: 100%;
+.field-validation-message {
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
 }
 
-.field-adornment {
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 800;
-  padding: 0 10px;
+.entity-form .ant-input-number,
+.entity-form .ant-input-group-wrapper,
+.entity-form .ant-select {
+  width: 100%;
 }
 
 .form-actions {
@@ -408,7 +423,8 @@ button {
 }
 
 .report-table {
-  min-width: 1420px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .report-table thead tr:first-child th {
@@ -432,6 +448,22 @@ button {
   gap: 12px;
   grid-template-columns: minmax(0, 1fr);
   padding-bottom: 16px;
+}
+
+.import-controls-grid {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(160px, 180px) minmax(160px, 180px) minmax(220px, 1fr) minmax(280px, auto);
+}
+
+.import-actions-item {
+  min-width: 0;
+}
+
+.import-actions {
+  justify-content: flex-end;
+  width: 100%;
 }
 
 .source-lock-note {
@@ -463,12 +495,35 @@ button {
   text-transform: uppercase;
 }
 
+@media (max-width: 991px) {
+  .app-sider {
+    display: none;
+  }
+
+  .mobile-menu-button {
+    display: inline-flex;
+  }
+
+  .mobile-navigation-drawer .ant-drawer-body {
+    background: #001529;
+    padding: 0;
+  }
+
+  .drawer-brand-block {
+    align-items: center;
+    background: #001529;
+    display: flex;
+    gap: 12px;
+    min-height: 64px;
+    padding: 14px 18px;
+  }
+}
+
 @media (max-width: 780px) {
   .app-shell {
     min-height: 100svh;
   }
 
-  .topbar,
   .page-heading-row {
     align-items: stretch;
     flex-direction: column;
@@ -477,6 +532,14 @@ button {
   .topbar {
     gap: 10px;
     padding: 16px;
+  }
+
+  .topbar-title-group {
+    flex: 1 1 auto;
+  }
+
+  .topbar h1 {
+    font-size: 19px;
   }
 
   .primary-action {
@@ -494,6 +557,15 @@ button {
   .import-controls {
     align-items: stretch;
     grid-template-columns: 1fr;
+  }
+
+  .import-controls-grid {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .import-actions {
+    justify-content: flex-start;
   }
 
   .split-summary {

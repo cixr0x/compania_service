@@ -193,6 +193,9 @@ describe('SalesImportPage', () => {
     expect(screen.getByText('3')).toBeVisible()
     expect(screen.getByText('Commit')).toBeVisible()
     expect(screen.getByText(/choose a csv or xlsx file/i)).toBeVisible()
+    expect(
+      screen.getByRole('group', { name: 'Workflow actions' }),
+    ).toBeVisible()
     expect(screen.getByText(/upload a file to stage rows/i)).toBeVisible()
     expect(screen.getByText(/validate the uploaded batch/i)).toBeVisible()
   })

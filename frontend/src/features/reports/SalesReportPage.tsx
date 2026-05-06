@@ -23,6 +23,7 @@ const DEFAULT_REPORT_SOURCES: SalesReportSource[] = [
   'event',
 ]
 const EMPTY_PERIODS: SalesReportPeriod[] = []
+const REPORT_TABLE_WIDTH = 1560
 
 const monthFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'long',
@@ -68,79 +69,101 @@ export function SalesReportPage() {
   const columns = useMemo<ColumnsType<SalesReportRow>>(
     () => [
       {
+        align: 'right',
         dataIndex: 'projectId',
         key: 'projectId',
         title: 'Project ID',
+        width: 104,
       },
       {
         dataIndex: 'productName',
         key: 'productName',
         title: 'Product',
+        width: 220,
       },
       ...sources.map((source) => ({
         children: [
           {
+            align: 'right' as const,
             key: `${source}-quantity`,
             render: (_value: unknown, row: SalesReportRow) =>
               row[source].quantity,
             title: 'Quantity',
+            width: 104,
           },
           {
+            align: 'right' as const,
             key: `${source}-amount`,
             render: (_value: unknown, row: SalesReportRow) =>
               formatMoney(row[source].amount),
             title: 'Amount',
+            width: 128,
           },
         ],
         key: source,
         title: sourceLabels[source],
       })),
       {
+        align: 'right',
         dataIndex: 'totalQuantity',
         key: 'totalQuantity',
         title: 'Total Quantity',
+        width: 128,
       },
       {
+        align: 'right',
         dataIndex: 'totalAmount',
         key: 'totalAmount',
         render: (value: SalesReportRow['totalAmount']) => formatMoney(value),
         title: 'Total Amount',
+        width: 136,
       },
       {
         dataIndex: 'model',
         key: 'model',
         render: (value: SalesReportRow['model']) => value || '-',
         title: 'Model',
+        width: 140,
       },
       {
+        align: 'right',
         dataIndex: 'fee',
         key: 'fee',
         render: (value: SalesReportRow['fee']) => formatMoney(value),
         title: 'Fee',
+        width: 116,
       },
       {
+        align: 'right',
         dataIndex: 'totalCost',
         key: 'totalCost',
         render: (value: SalesReportRow['totalCost']) => formatMoney(value),
         title: 'Total Cost',
+        width: 128,
       },
       {
+        align: 'right',
         dataIndex: 'income',
         key: 'income',
         render: (value: SalesReportRow['income']) => formatMoney(value),
         title: 'Income',
+        width: 128,
       },
       {
+        align: 'right',
         dataIndex: 'profit',
         key: 'profit',
         render: (value: SalesReportRow['profit']) => formatMoney(value),
         title: 'Profit',
+        width: 128,
       },
       {
+        align: 'right',
         dataIndex: 'ownerProfit',
         key: 'ownerProfit',
         render: (value: SalesReportRow['ownerProfit']) => formatMoney(value),
         title: 'Owner Profit',
+        width: 136,
       },
     ],
     [sources],
@@ -226,8 +249,8 @@ export function SalesReportPage() {
         }}
         pagination={false}
         rowKey={(row) => `${row.projectId}-${row.productName}`}
-        scroll={{ x: 'max-content' }}
-        size="middle"
+        scroll={{ x: REPORT_TABLE_WIDTH }}
+        size="small"
       />
     </section>
   )

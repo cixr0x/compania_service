@@ -95,11 +95,14 @@ describe('EntityForm', () => {
     renderEntityForm({ onChange })
 
     expect(screen.getByText('Status')).toBeVisible()
-    expect(screen.getByText('Required')).toBeVisible()
+    expect(screen.queryByText('Required')).not.toBeInTheDocument()
 
     const statusSelect = screen.getByRole('combobox', { name: 'Status' })
 
     expect(statusSelect.closest('.ant-select')).toBeInTheDocument()
+    expect(screen.getByText('Status').closest('label')).toHaveClass(
+      'ant-form-item-required',
+    )
     expect(statusSelect).toHaveAttribute('aria-required', 'true')
     expect(screen.getAllByRole('combobox', { name: 'Status' })).toHaveLength(1)
 

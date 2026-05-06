@@ -8,10 +8,13 @@ type ProductRow = {
   id: number
   amount?: string | number
   adminCost?: number
+  isActive?: boolean
   name: string
   productionCost?: number
+  saleDate?: string
   tag: string
   totalCost?: number
+  units?: number
 }
 
 const rows: ProductRow[] = [
@@ -104,6 +107,56 @@ describe('DataTable', () => {
 
     expect(screen.getByText('1,000,000.00')).toBeVisible()
     expect(screen.getByText('1,250.50')).toBeVisible()
+  })
+
+  it('formats operational values with aligned numeric cells, date text, boolean tags, and edit actions', async () => {
+    const user = userEvent.setup()
+    const onRowDoubleClick = vi.fn()
+    const expectedDate = new Intl.DateTimeFormat(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(2026, 4, 4))
+
+    render(
+      <DataTable
+        columns={[
+          { key: 'id', header: 'ID' },
+          { key: 'saleDate', header: 'Date', valueType: 'date' },
+          { key: 'isActive', header: 'Active', valueType: 'boolean' },
+          { key: 'units', header: 'Units', valueType: 'number' },
+          { key: 'amount', header: 'Amount', valueFormat: 'money' },
+        ]}
+        getRowId={(row) => row.id}
+        onRowDoubleClick={onRowDoubleClick}
+        onSearchChange={vi.fn()}
+        rows={[
+          {
+            amount: 1250,
+            id: 7,
+            isActive: true,
+            name: 'Sale',
+            saleDate: '2026-05-04T10:00:00.000Z',
+            tag: 'store',
+            units: 3,
+          },
+        ]}
+        searchValue=""
+      />,
+    )
+
+    expect(screen.getByText(expectedDate)).toBeVisible()
+    expect(screen.getByText('Yes').closest('.ant-tag')).toBeInTheDocument()
+    expect(screen.getByText('3').closest('td')).toHaveClass('ant-table-cell-right')
+    expect(screen.getByText('1,250.00').closest('td')).toHaveClass(
+      'ant-table-cell-right',
+    )
+
+    await user.click(screen.getByRole('button', { name: /edit sale/i }))
+
+    expect(onRowDoubleClick).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 7 }),
+    )
   })
 
   it('paginates longer datasets with a result range summary', () => {

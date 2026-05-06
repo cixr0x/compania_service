@@ -373,6 +373,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     : 0
   const stagedRowColumns: TableProps<ImportStageRow>['columns'] = [
     {
+      align: 'right',
       dataIndex: 'rowNumber',
       title: 'Row',
       width: 80,
@@ -395,12 +396,14 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
       title: 'Matched Product',
     },
     {
+      align: 'right',
       dataIndex: 'quantity',
       render: (value: ImportStageRow['quantity']) => value ?? '-',
       title: 'Quantity',
       width: 110,
     },
     {
+      align: 'right',
       dataIndex: 'amount',
       render: (value: ImportStageRow['amount']) => formatDecimal(value),
       title: 'Amount',
@@ -433,7 +436,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
           layout="vertical"
           onFinish={handleUpload}
         >
-          <Space align="end" size="middle" wrap>
+          <div className="import-controls-grid">
             <Form.Item label="Source">
               <Select
                 aria-label="Source"
@@ -473,46 +476,45 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
               </Space>
             </Form.Item>
 
-            <Form.Item>
-              <Button
-                disabled={isUploadDisabled}
-                htmlType="submit"
-                loading={uploadMutation.isPending}
-                type="primary"
+            <Form.Item className="import-actions-item">
+              <Space
+                aria-label="Workflow actions"
+                className="import-actions"
+                role="group"
+                size="small"
+                wrap
               >
-                Upload
-              </Button>
-            </Form.Item>
-
-            <Form.Item>
-              <Button
-                disabled={!hasActiveBatch || validateMutation.isPending}
-                loading={validateMutation.isPending}
-                onClick={() => validateMutation.mutate()}
-              >
-                Validate/Revalidate
-              </Button>
-            </Form.Item>
-
-            <Form.Item>
-              <Button
-                disabled={!canCommit || commitMutation.isPending}
-                loading={commitMutation.isPending}
-                type="primary"
-                onClick={() => commitMutation.mutate()}
-              >
-                Commit
-              </Button>
-            </Form.Item>
-
-            {hasActiveBatch ? (
-              <Form.Item>
+                <Button
+                  disabled={isUploadDisabled}
+                  htmlType="submit"
+                  loading={uploadMutation.isPending}
+                  type="primary"
+                >
+                  Upload
+                </Button>
+                <Button
+                  disabled={!hasActiveBatch || validateMutation.isPending}
+                  loading={validateMutation.isPending}
+                  onClick={() => validateMutation.mutate()}
+                >
+                  Validate/Revalidate
+                </Button>
+                <Button
+                  disabled={!canCommit || commitMutation.isPending}
+                  loading={commitMutation.isPending}
+                  type="primary"
+                  onClick={() => commitMutation.mutate()}
+                >
+                  Commit
+                </Button>
+                {hasActiveBatch ? (
                 <Button disabled={isAnyMutationPending} onClick={resetImport}>
                   New import
                 </Button>
-              </Form.Item>
-            ) : null}
-          </Space>
+                ) : null}
+              </Space>
+            </Form.Item>
+          </div>
         </Form>
 
         {hasActiveBatch ? (
@@ -604,7 +606,8 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
               }}
               pagination={{ pageSize: 10, showSizeChanger: false }}
               rowKey="idImportStage"
-              scroll={{ x: true }}
+              scroll={{ x: 1040 }}
+              size="small"
             />
           </Spin>
         </section>
