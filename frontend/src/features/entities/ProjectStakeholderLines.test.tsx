@@ -89,6 +89,7 @@ describe('ProjectStakeholderLines', () => {
     })
 
     expect(stakeholderSelect.closest('.ant-select')).toBeInTheDocument()
+    expect(stakeholderSelect).not.toHaveAccessibleDescription()
     expect(percentageInput.closest('.ant-input-number')).toBeInTheDocument()
   })
 

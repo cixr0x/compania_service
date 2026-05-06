@@ -265,7 +265,7 @@ Ant Design application rules for this project:
 - Keep screens meaningful by emphasizing the user's work mission, clear goals, and immediate operation results.
 - Design for growth by favoring reusable modules and discoverable workflows over one-off custom UI.
 - Use Ant Design `Table` for structured operational data, with search/filtering, sorting, pagination, loading, and empty states where useful.
-- Use Ant Design data-entry components for forms and keep labels, hints, validation, and formatting close to the relevant field.
+- Use Ant Design data-entry components for forms and keep labels, validation, and formatting close to the relevant field. Do not render per-field helper descriptions unless a future requirement explicitly asks for them.
 - Use Ant Design feedback components such as `Alert`, `Message`, `Notification`, `Spin`, `Modal`, and `Popconfirm` according to feedback severity.
 
 Main navigation:

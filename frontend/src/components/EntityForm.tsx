@@ -156,9 +156,6 @@ export function EntityForm({
       value,
       focusedFieldName === field.name,
     )
-    const helperId = field.helperText
-      ? `${config.path}-${field.name}-helper`
-      : undefined
     const fieldId = `${config.path}-${field.name}-field`
     const fieldClassName =
       field.span === 'full' ? 'form-field form-field-full' : 'form-field'
@@ -197,22 +194,15 @@ export function EntityForm({
       <Form.Item
         className={fieldClassName}
         extra={
-          isRequired || field.helperText ? (
+          isRequired ? (
             <Space orientation="vertical" size={2}>
-              {isRequired ? (
-                <span aria-hidden="true" className="field-required">
-                  Required
-                </span>
-              ) : null}
+              <span aria-hidden="true" className="field-required">
+                Required
+              </span>
               {isRequiredSelectInvalid ? (
                 <Typography.Text type="danger">
                   {field.label} is required.
                 </Typography.Text>
-              ) : null}
-              {field.helperText ? (
-                <span className="field-helper" id={helperId}>
-                  {field.helperText}
-                </span>
               ) : null}
             </Space>
           ) : undefined
@@ -235,7 +225,6 @@ export function EntityForm({
           ) : null}
           {field.type === 'computed' ? (
             <Input
-              aria-describedby={helperId}
               id={fieldId}
               inputMode={isMoneyField ? 'decimal' : undefined}
               readOnly
@@ -244,7 +233,6 @@ export function EntityForm({
             />
           ) : field.type === 'textarea' ? (
             <Input.TextArea
-              aria-describedby={helperId}
               id={fieldId}
               onChange={(event) => onChange(field.name, event.target.value)}
               required={isRequired}
@@ -253,14 +241,12 @@ export function EntityForm({
             />
           ) : field.type === 'checkbox' ? (
             <Checkbox
-              aria-describedby={helperId}
               checked={getCheckboxValue(value)}
               id={fieldId}
               onChange={(event) => onChange(field.name, event.target.checked)}
             />
           ) : field.type === 'select' ? (
             <Select
-              aria-describedby={helperId}
               aria-label={field.label}
               aria-required={isRequired}
               id={selectControlId}
@@ -272,7 +258,6 @@ export function EntityForm({
             />
           ) : isMoneyField ? (
             <Input
-              aria-describedby={helperId}
               id={fieldId}
               inputMode="decimal"
               max={field.max}
@@ -293,7 +278,6 @@ export function EntityForm({
             />
           ) : field.type === 'number' ? (
             <InputNumber
-              aria-describedby={helperId}
               id={fieldId}
               max={field.max}
               min={field.min}
@@ -317,7 +301,6 @@ export function EntityForm({
             />
           ) : (
             <Input
-              aria-describedby={helperId}
               id={fieldId}
               max={field.max}
               min={field.min}

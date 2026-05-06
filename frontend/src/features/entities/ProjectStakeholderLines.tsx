@@ -247,7 +247,6 @@ export function ProjectStakeholderLines({
             required
           >
             <Select
-              aria-describedby={`project-split-stakeholder-${row.rowKey}-helper`}
               aria-label="Stakeholder"
               id={`project-split-stakeholder-${row.rowKey}`}
               onChange={(value) =>
@@ -257,12 +256,6 @@ export function ProjectStakeholderLines({
               placeholder="Select stakeholder..."
               value={row.idStakeholder || undefined}
             />
-            <Typography.Text
-              id={`project-split-stakeholder-${row.rowKey}-helper`}
-              type="secondary"
-            >
-              Stakeholder receiving this share.
-            </Typography.Text>
           </Form.Item>
         )
       },

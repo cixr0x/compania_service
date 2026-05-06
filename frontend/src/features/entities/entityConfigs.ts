@@ -15,7 +15,6 @@ export type EntityField = {
     | 'select'
     | 'text'
     | 'textarea'
-  helperText?: string
   required?: boolean
   requiredOnCreate?: boolean
   section?: string
@@ -172,7 +171,6 @@ export const entityConfigs = {
     ],
     fields: [
       text('name', 'Name', {
-        helperText: 'Public product name shown in lists and sale matching.',
         required: true,
         section: 'Product details',
       }),
@@ -181,33 +179,26 @@ export const entityConfigs = {
         section: 'Product details',
       }),
       textarea('description', 'Description', {
-        helperText: 'Short internal description for identifying this product.',
         section: 'Product details',
         span: 'full',
       }),
       text('image', 'Image URL', {
-        helperText: 'Direct image URL used in catalog previews.',
         section: 'Product details',
         span: 'full',
       }),
       text('idEcommerce', 'Ecommerce external ID', {
-        helperText: 'External product ID used by ecommerce imports.',
         section: 'Channel mapping',
       }),
       text('idStore', 'Store external ID', {
-        helperText: 'External product ID used by store imports.',
         section: 'Channel mapping',
       }),
       text('idEvent', 'Event external ID', {
-        helperText: 'External product ID used by event imports.',
         section: 'Channel mapping',
       }),
       text('idSurface', 'Surface external ID', {
-        helperText: 'External product ID used by surface imports.',
         section: 'Channel mapping',
       }),
       select('idModel', 'Model', undefined, {
-        helperText: 'Pricing model that classifies this product.',
         optionSource: {
           labelField: 'name',
           path: 'models',
@@ -218,8 +209,6 @@ export const entityConfigs = {
         valueType: 'number',
       }),
       number('ownership', 'Owner-retained profit', {
-        helperText:
-          'Percentage of profit retained by the owner for this product.',
         max: 100,
         min: 0,
         section: 'Commercial attributes',
@@ -227,7 +216,6 @@ export const entityConfigs = {
         suffix: '%',
       }),
       text('tag', 'Tag', {
-        helperText: 'Optional short label for filtering or reporting.',
         section: 'Commercial attributes',
       }),
     ],
@@ -245,11 +233,9 @@ export const entityConfigs = {
     ],
     fields: [
       text('name', 'Name', {
-        helperText: 'Compact model name used to group products.',
         required: true,
       }),
       textarea('description', 'Description', {
-        helperText: 'Optional notes about this model.',
         span: 'full',
       }),
     ],
@@ -274,7 +260,6 @@ export const entityConfigs = {
     ],
     fields: [
       select('idProduct', 'Product', undefined, {
-        helperText: 'Product this batch purchase will produce or sell.',
         optionSource: {
           labelField: 'name',
           path: 'products',
@@ -283,38 +268,30 @@ export const entityConfigs = {
         requiredOnCreate: true,
         valueType: 'number',
       }),
-      checkbox('isActive', 'Active', {
-        helperText:
-          'Marks this as the current project for the product. Only one active project is allowed per product.',
-      }),
+      checkbox('isActive', 'Active'),
       number('units', 'Units', {
-        helperText: 'Whole number of units planned for the project.',
         min: 0,
         step: 1,
       }),
       number('unitCost', 'Unit Cost', {
-        helperText: 'Currency cost per unit.',
         min: 0,
         prefix: '$',
         step: 0.01,
         valueFormat: 'money',
       }),
       number('productionCost', 'Production Cost', {
-        helperText: 'Currency production cost for the project.',
         min: 0,
         prefix: '$',
         step: 0.01,
         valueFormat: 'money',
       }),
       number('adminCost', 'Admin Cost', {
-        helperText: 'Currency cost for project administration.',
         min: 0,
         prefix: '$',
         step: 0.01,
         valueFormat: 'money',
       }),
       computed('totalCost', 'Total Cost', getProjectTotalCost, {
-        helperText: 'Production cost plus administrative cost.',
         prefix: '$',
         valueFormat: 'money',
       }),
@@ -329,7 +306,6 @@ export const entityConfigs = {
     columns: [column('idStakeholder', 'ID'), column('name', 'Name')],
     fields: [
       text('name', 'Name', {
-        helperText: 'Stakeholder display name.',
         required: true,
       }),
     ],
@@ -347,7 +323,6 @@ export const entityConfigs = {
     ],
     fields: [
       select('idProject', 'Project', undefined, {
-        helperText: 'Project whose stakeholder split must total 100%.',
         optionSource: {
           labelField: 'idProject',
           labelFormatter: formatProjectOption,
@@ -357,7 +332,6 @@ export const entityConfigs = {
         valueType: 'number',
       }),
       select('idStakeholder', 'Stakeholder', undefined, {
-        helperText: 'Stakeholder receiving this share.',
         optionSource: {
           labelField: 'name',
           path: 'stakeholders',
@@ -366,7 +340,6 @@ export const entityConfigs = {
         valueType: 'number',
       }),
       number('stakePercentage', 'Stake Percentage', {
-        helperText: 'Percentage share for this stakeholder.',
         max: 100,
         min: 0,
         step: 0.01,
@@ -394,11 +367,9 @@ export const entityConfigs = {
         name: 'date',
         label: 'Date',
         type: 'date',
-        helperText: 'Sale date.',
         required: true,
       },
       select('idProduct', 'Product', undefined, {
-        helperText: 'Product sold in this sale.',
         optionSource: {
           labelField: 'name',
           path: 'products',
@@ -408,7 +379,6 @@ export const entityConfigs = {
         valueType: 'number',
       }),
       select('idProject', 'Project', undefined, {
-        helperText: 'Project linked to this sale. Required for all sales.',
         optionSource: {
           labelField: 'idProject',
           labelFormatter: formatProjectOption,
@@ -419,12 +389,10 @@ export const entityConfigs = {
         valueType: 'number',
       }),
       number('quantity', 'Quantity', {
-        helperText: 'Whole number of units sold.',
         min: 1,
         step: 1,
       }),
       number('amount', 'Amount', {
-        helperText: 'Sale amount in currency.',
         min: 0,
         prefix: '$',
         step: 0.01,
@@ -439,10 +407,8 @@ export const entityConfigs = {
           { label: 'Event', value: 'event' },
           { label: 'Surface', value: 'surface' },
         ],
-        { helperText: 'Sales channel matching import sources.' },
       ),
       number('fee', 'Fee', {
-        helperText: 'Fee amount in currency.',
         min: 0,
         prefix: '$',
         step: 0.01,

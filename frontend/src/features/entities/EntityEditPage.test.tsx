@@ -123,13 +123,13 @@ describe('EntityEditPage', () => {
     ).toBeVisible()
 
     const nameInput = screen.getByLabelText(/name/i)
-    const imageInput = screen.getByLabelText(/image url/i)
-    const ownershipInput = screen.getByLabelText(/owner-retained profit/i)
 
     expect(nameInput).toBeRequired()
-    expect(nameInput).toHaveAccessibleDescription(/public product name/i)
-    expect(imageInput).toHaveAccessibleDescription(/catalog previews/i)
-    expect(ownershipInput).toHaveAccessibleDescription(/percentage of profit/i)
+    expect(nameInput).not.toHaveAccessibleDescription()
+    expect(screen.getByLabelText(/image url/i)).not.toHaveAccessibleDescription()
+    expect(
+      screen.getByLabelText(/owner-retained profit/i),
+    ).not.toHaveAccessibleDescription()
     expect(screen.getByText('%')).toBeVisible()
   })
 
@@ -575,7 +575,7 @@ describe('EntityEditPage', () => {
     }
   })
 
-  it('renders sales source as the import-source select with numeric guidance', async () => {
+  it('renders sales source as the import-source select with numeric constraints', async () => {
     const user = userEvent.setup()
 
     renderEntityEditPage('/sales/new', '/:entityName/:id')
@@ -591,10 +591,19 @@ describe('EntityEditPage', () => {
     expect(screen.getByTitle('Surface')).toBeInTheDocument()
     expect(screen.getByLabelText('Quantity')).toHaveAttribute('step', '1')
     expect(screen.getByLabelText('Quantity')).toHaveAttribute('min', '1')
-    expect(screen.getByLabelText('Amount')).toHaveAccessibleDescription(
-      /currency/i,
-    )
+    expect(screen.getByLabelText('Amount')).not.toHaveAccessibleDescription()
     expect(screen.getAllByText('$')).toHaveLength(2)
+  })
+
+  it('does not configure field helper descriptions for entity forms', () => {
+    for (const [entityName, config] of Object.entries(entityConfigs)) {
+      for (const field of config.fields) {
+        expect(
+          field,
+          `${entityName}.${field.name} should not render helper text`,
+        ).not.toHaveProperty('helperText')
+      }
+    }
   })
 
   it('configures every foreign key form field as a select', () => {
@@ -671,9 +680,7 @@ describe('EntityEditPage', () => {
       name: 'Stakeholder',
     })
     expect(stakeholderSelect.closest('.ant-select')).toBeInTheDocument()
-    expect(stakeholderSelect).toHaveAccessibleDescription(
-      /stakeholder receiving/i,
-    )
+    expect(stakeholderSelect).not.toHaveAccessibleDescription()
     expect(
       within(splitSection).queryByRole('button', { name: /remove row/i }),
     ).not.toBeInTheDocument()
