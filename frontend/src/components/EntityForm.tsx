@@ -2,9 +2,20 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-  type FormEvent,
   type ReactNode,
 } from 'react'
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Form,
+  Image,
+  Input,
+  InputNumber,
+  Select,
+  Space,
+  Typography,
+} from 'antd'
 import type {
   EntityConfig,
   EntityField,
@@ -61,6 +72,10 @@ function getCheckboxValue(value: unknown): boolean {
   return value === true || value === 'true' || value === 1 || value === '1'
 }
 
+function isFieldRequired(field: EntityField, isCreate: boolean): boolean {
+  return Boolean(field.required || (field.requiredOnCreate && isCreate))
+}
+
 function groupFields(fields: EntityField[]) {
   const groups: { fields: EntityField[]; title: string | null }[] = []
 
@@ -97,15 +112,15 @@ function ImageUrlPreview({
 }) {
   if (!imageUrl) {
     return (
-      <div className="image-preview-placeholder">
+      <Typography.Text className="image-preview-placeholder" type="secondary">
         Add an image URL to preview it here.
-      </div>
+      </Typography.Text>
     )
   }
 
   return (
     <div className="image-preview-frame">
-      <img alt={altText} src={imageUrl} />
+      <Image alt={altText} preview={false} src={imageUrl} />
     </div>
   )
 }
@@ -122,6 +137,7 @@ export function EntityForm({
 }: EntityFormProps) {
   const fieldGroups = groupFields(config.fields)
   const [focusedFieldName, setFocusedFieldName] = useState<string | null>(null)
+  const [submitAttempted, setSubmitAttempted] = useState(false)
   const moneyInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   useLayoutEffect(() => {
@@ -129,11 +145,6 @@ export function EntityForm({
       moneyInputRefs.current[focusedFieldName]?.select()
     }
   }, [focusedFieldName])
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    onSubmit()
-  }
 
   function renderField(field: EntityField) {
     const value =
@@ -151,9 +162,7 @@ export function EntityForm({
     const fieldId = `${config.path}-${field.name}-field`
     const fieldClassName =
       field.span === 'full' ? 'form-field form-field-full' : 'form-field'
-    const isRequired = Boolean(
-      field.required || (field.requiredOnCreate && isCreate),
-    )
+    const isRequired = isFieldRequired(field, isCreate)
     const controlClassName =
       field.type === 'checkbox'
         ? 'field-control checkbox-control'
@@ -161,6 +170,13 @@ export function EntityForm({
         ? 'field-control field-control-adorned'
         : 'field-control'
     const isMoneyField = field.valueFormat === 'money'
+    const fieldRules = isRequired
+      ? [{ message: `${field.label} is required.`, required: true }]
+      : undefined
+    const selectControlId =
+      field.type === 'select' ? `${fieldId}-ant-select` : fieldId
+    const isRequiredSelectInvalid =
+      field.type === 'select' && isRequired && submitAttempted && inputValue === ''
 
     if (field.type === 'imagePreview') {
       const imageUrl = getPreviewValue(values, field.previewSourceField)
@@ -169,32 +185,56 @@ export function EntityForm({
 
       return (
         <div className="form-field image-preview-field" key={field.name}>
-          <span className="field-label-row">
-            <span>{field.label}</span>
-          </span>
+          <Typography.Text className="field-label-row" strong>
+            {field.label}
+          </Typography.Text>
           <ImageUrlPreview altText={altText} imageUrl={imageUrl} />
         </div>
       )
     }
 
     return (
-      <div className={fieldClassName} key={field.name}>
-        <span className="field-label-row">
-          <label htmlFor={fieldId}>{field.label}</label>
-          {isRequired ? (
-            <span aria-hidden="true" className="field-required">
-              Required
-            </span>
-          ) : null}
-        </span>
-        <span className={controlClassName}>
+      <Form.Item
+        className={fieldClassName}
+        extra={
+          isRequired || field.helperText ? (
+            <Space orientation="vertical" size={2}>
+              {isRequired ? (
+                <span aria-hidden="true" className="field-required">
+                  Required
+                </span>
+              ) : null}
+              {isRequiredSelectInvalid ? (
+                <Typography.Text type="danger">
+                  {field.label} is required.
+                </Typography.Text>
+              ) : null}
+              {field.helperText ? (
+                <span className="field-helper" id={helperId}>
+                  {field.helperText}
+                </span>
+              ) : null}
+            </Space>
+          ) : undefined
+        }
+        help={
+          isRequiredSelectInvalid ? `${field.label} is required.` : undefined
+        }
+        htmlFor={selectControlId}
+        key={field.name}
+        label={field.label}
+        required={isRequired}
+        rules={fieldRules}
+        validateStatus={isRequiredSelectInvalid ? 'error' : undefined}
+      >
+        <Space.Compact className={controlClassName}>
           {field.prefix ? (
-            <span aria-hidden="true" className="field-adornment">
+            <Typography.Text className="field-adornment">
               {field.prefix}
-            </span>
+            </Typography.Text>
           ) : null}
           {field.type === 'computed' ? (
-            <input
+            <Input
               aria-describedby={helperId}
               id={fieldId}
               inputMode={isMoneyField ? 'decimal' : undefined}
@@ -203,7 +243,7 @@ export function EntityForm({
               value={inputValue}
             />
           ) : field.type === 'textarea' ? (
-            <textarea
+            <Input.TextArea
               aria-describedby={helperId}
               id={fieldId}
               onChange={(event) => onChange(field.name, event.target.value)}
@@ -212,91 +252,127 @@ export function EntityForm({
               value={inputValue}
             />
           ) : field.type === 'checkbox' ? (
-            <input
+            <Checkbox
               aria-describedby={helperId}
               checked={getCheckboxValue(value)}
               id={fieldId}
               onChange={(event) => onChange(field.name, event.target.checked)}
-              type="checkbox"
             />
           ) : field.type === 'select' ? (
-            <select
+            <Select
+              aria-describedby={helperId}
+              aria-label={field.label}
+              aria-required={isRequired}
+              id={selectControlId}
+              onChange={(nextValue) => onChange(field.name, nextValue ?? '')}
+              options={field.options ?? []}
+              placeholder="Select..."
+              status={isRequiredSelectInvalid ? 'error' : undefined}
+              value={inputValue || undefined}
+            />
+          ) : isMoneyField ? (
+            <Input
               aria-describedby={helperId}
               id={fieldId}
-              onChange={(event) => onChange(field.name, event.target.value)}
-              required={isRequired}
-              value={inputValue}
-            >
-              <option value="">Select...</option>
-              {field.options?.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              aria-describedby={helperId}
-              id={fieldId}
-              inputMode={isMoneyField ? 'decimal' : undefined}
-              onBlur={() => {
-                if (isMoneyField) {
-                  setFocusedFieldName((currentFieldName) =>
-                    currentFieldName === field.name ? null : currentFieldName,
-                  )
-                }
-              }}
-              onChange={(event) => onChange(field.name, event.target.value)}
-              onFocus={() => {
-                if (isMoneyField) {
-                  setFocusedFieldName(field.name)
-                }
-              }}
+              inputMode="decimal"
               max={field.max}
               min={field.min}
+              onBlur={() => {
+                setFocusedFieldName((currentFieldName) =>
+                  currentFieldName === field.name ? null : currentFieldName,
+                )
+              }}
+              onChange={(event) => onChange(field.name, event.target.value)}
+              onFocus={() => setFocusedFieldName(field.name)}
               required={isRequired}
               ref={(input) => {
-                if (isMoneyField) {
-                  moneyInputRefs.current[field.name] = input
+                moneyInputRefs.current[field.name] = input?.input ?? null
+              }}
+              type="text"
+              value={inputValue}
+            />
+          ) : field.type === 'number' ? (
+            <InputNumber
+              aria-describedby={helperId}
+              id={fieldId}
+              max={field.max}
+              min={field.min}
+              onChange={(nextValue) =>
+                onChange(field.name, nextValue === null ? '' : String(nextValue))
+              }
+              ref={(inputNumber) => {
+                const inputElement =
+                  inputNumber?.nativeElement?.querySelector('input')
+
+                if (field.min !== undefined) {
+                  inputElement?.setAttribute('min', String(field.min))
+                }
+
+                if (field.max !== undefined) {
+                  inputElement?.setAttribute('max', String(field.max))
                 }
               }}
-              step={
-                field.type === 'number' && !isMoneyField
-                  ? (field.step ?? 'any')
-                  : undefined
-              }
-              type={isMoneyField ? 'text' : field.type}
+              step={field.step ?? 'any'}
+              value={inputValue === '' ? null : Number(inputValue)}
+            />
+          ) : (
+            <Input
+              aria-describedby={helperId}
+              id={fieldId}
+              max={field.max}
+              min={field.min}
+              onChange={(event) => onChange(field.name, event.target.value)}
+              required={isRequired}
+              step={field.step ?? 'any'}
+              type={field.type}
               value={inputValue}
             />
           )}
           {field.suffix ? (
-            <span aria-hidden="true" className="field-adornment">
+            <Typography.Text className="field-adornment">
               {field.suffix}
-            </span>
+            </Typography.Text>
           ) : null}
-        </span>
-        {field.helperText ? (
-          <span className="field-helper" id={helperId}>
-            {field.helperText}
-          </span>
-        ) : null}
-      </div>
+        </Space.Compact>
+      </Form.Item>
     )
   }
 
+  function handleFinish() {
+    setSubmitAttempted(true)
+
+    const hasMissingRequiredSelect = config.fields.some(
+      (field) =>
+        field.type === 'select' &&
+        isFieldRequired(field, isCreate) &&
+        getInputValue(field, values[field.name]) === '',
+    )
+
+    if (hasMissingRequiredSelect) {
+      return
+    }
+
+    onSubmit()
+  }
+
   return (
-    <form
+    <Form
       className={
         config.formLayout === 'compact'
           ? 'entity-form entity-form-compact'
           : 'entity-form'
       }
-      onSubmit={handleSubmit}
+      layout="vertical"
+      onFinish={handleFinish}
     >
       {errorMessage ? (
-        <div className="form-error" role="alert">
-          {errorMessage}
-        </div>
+        <Alert
+          className="form-error"
+          message={errorMessage}
+          role="alert"
+          showIcon
+          type="error"
+        />
       ) : null}
 
       {fieldGroups.map((group, index) =>
@@ -315,10 +391,16 @@ export function EntityForm({
       {children}
 
       <div className="form-actions">
-        <button className="primary-action" disabled={isSaving} type="submit">
+        <Button
+          className="primary-action"
+          disabled={isSaving}
+          htmlType="submit"
+          loading={isSaving}
+          type="primary"
+        >
           {isSaving ? 'Saving...' : 'Save'}
-        </button>
+        </Button>
       </div>
-    </form>
+    </Form>
   )
 }

@@ -48,6 +48,23 @@ function renderEntityEditPage(initialEntry: string, editPath: string) {
   )
 }
 
+async function selectAntOption(
+  user: ReturnType<typeof userEvent.setup>,
+  combobox: HTMLElement,
+  optionName: string,
+) {
+  await user.click(combobox)
+  await clickAntOptionByTitle(user, optionName)
+}
+
+async function clickAntOptionByTitle(
+  user: ReturnType<typeof userEvent.setup>,
+  optionName: string,
+) {
+  const options = await screen.findAllByTitle(optionName)
+  await user.click(options[options.length - 1])
+}
+
 describe('EntityEditPage', () => {
   beforeEach(() => {
     vi.mocked(getJson).mockResolvedValue([])
@@ -75,7 +92,11 @@ describe('EntityEditPage', () => {
     ).not.toBeInTheDocument()
 
     await user.type(screen.getByLabelText('Name'), 'Maple Shelf')
-    await user.selectOptions(await screen.findByLabelText('Model'), '7')
+    await selectAntOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Model' }),
+      'Furniture',
+    )
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
@@ -122,16 +143,16 @@ describe('EntityEditPage', () => {
 
     renderEntityEditPage('/products/new', '/:entityName/:id')
 
-    const modelSelect = await screen.findByLabelText('Model')
-    expect(modelSelect.tagName).toBe('SELECT')
-    expect(
-      await screen.findByRole('option', { name: 'Furniture' }),
-    ).toHaveValue('7')
-    expect(screen.getByRole('option', { name: 'Lighting' })).toHaveValue('9')
-    expect(screen.queryByRole('option', { name: '7' })).not.toBeInTheDocument()
+    const modelSelect = await screen.findByRole('combobox', { name: 'Model' })
+    expect(modelSelect.closest('.ant-select')).toBeInTheDocument()
 
+    await user.click(modelSelect)
+    expect(await screen.findByTitle('Furniture')).toBeInTheDocument()
+    expect(screen.getByTitle('Lighting')).toBeInTheDocument()
+    expect(screen.queryByTitle('7')).not.toBeInTheDocument()
+
+    await clickAntOptionByTitle(user, 'Furniture')
     await user.type(screen.getByLabelText('Name'), 'Maple Shelf')
-    await user.selectOptions(modelSelect, '7')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
@@ -143,19 +164,26 @@ describe('EntityEditPage', () => {
   })
 
   it('requires a model when creating a product', async () => {
+    const user = userEvent.setup()
     vi.mocked(getJson).mockResolvedValue([
       { idModel: 7, name: 'Furniture', description: 'Furniture model' },
     ])
 
     renderEntityEditPage('/products/new', '/:entityName/:id')
 
-    const modelSelect = await screen.findByLabelText('Model')
-    expect(modelSelect).toBeRequired()
+    const modelSelect = await screen.findByRole('combobox', { name: 'Model' })
+    expect(modelSelect).toHaveAttribute('aria-required', 'true')
     expect(
       within(
         screen.getByRole('group', { name: 'Commercial attributes' }),
       ).getByText('Required'),
     ).toBeVisible()
+
+    await user.type(screen.getByLabelText('Name'), 'Maple Shelf')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(postJson).not.toHaveBeenCalled()
+    expect(screen.getByText('Model is required.')).toBeVisible()
   })
 
   it('updates the product image preview when the image URL changes', async () => {
@@ -221,6 +249,43 @@ describe('EntityEditPage', () => {
         ownership: 50,
         tag: 'office',
       })
+    })
+  })
+
+  it('requires confirmation before deleting an existing product', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockResolvedValue({
+      id: 101,
+      description: 'Standing desk',
+      idEcommerce: 'EC-101',
+      idEvent: 'EV-101',
+      idModel: 7,
+      idStore: 'ST-101',
+      idSurface: 'SF-101',
+      image: 'desk.png',
+      model: { idModel: 7, name: 'Furniture' },
+      name: 'Walnut Desk',
+      ownership: 50,
+      tag: 'office',
+    })
+    vi.mocked(deleteJson).mockResolvedValue({})
+
+    renderEntityEditPage('/products/101', '/:entityName/:id')
+
+    expect(await screen.findByDisplayValue('Walnut Desk')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
+
+    expect(deleteJson).not.toHaveBeenCalled()
+    expect(screen.queryByText('List page')).not.toBeInTheDocument()
+    expect(
+      screen.getByText('Delete this record? This action cannot be undone.'),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Confirm delete' }))
+
+    await waitFor(() => {
+      expect(deleteJson).toHaveBeenCalledWith('/products/101')
+      expect(screen.getByText('List page')).toBeVisible()
     })
   })
 
@@ -310,33 +375,37 @@ describe('EntityEditPage', () => {
 
     renderEntityEditPage('/sales/new', '/:entityName/:id')
 
-    const productSelect = await screen.findByLabelText('Product')
-    expect(productSelect.tagName).toBe('SELECT')
-    expect(productSelect).toBeRequired()
-    expect(
-      await screen.findByRole('option', { name: 'Walnut Desk' }),
-    ).toHaveValue('101')
-    expect(screen.getByRole('option', { name: 'Maple Shelf' })).toHaveValue(
-      '102',
-    )
+    const productSelect = await screen.findByRole('combobox', {
+      name: 'Product',
+    })
+    expect(productSelect.closest('.ant-select')).toBeInTheDocument()
+    expect(productSelect).toHaveAttribute('aria-required', 'true')
 
-    const projectSelect = await screen.findByLabelText('Project')
-    expect(projectSelect.tagName).toBe('SELECT')
-    expect(projectSelect).toBeRequired()
-    expect(
-      await screen.findByRole('option', { name: 'Project #501 - Walnut Desk' }),
-    ).toHaveValue('501')
-    expect(
-      screen.getByRole('option', { name: 'Project #502 - Maple Shelf' }),
-    ).toHaveValue('502')
+    await user.click(productSelect)
+    expect(await screen.findByTitle('Walnut Desk')).toBeInTheDocument()
+    expect(screen.getByTitle('Maple Shelf')).toBeInTheDocument()
+    await clickAntOptionByTitle(user, 'Walnut Desk')
+
+    const projectSelect = await screen.findByRole('combobox', {
+      name: 'Project',
+    })
+    expect(projectSelect.closest('.ant-select')).toBeInTheDocument()
+    expect(projectSelect).toHaveAttribute('aria-required', 'true')
+
+    await user.click(projectSelect)
+    expect(await screen.findByTitle('Project #501 - Walnut Desk')).toBeInTheDocument()
+    expect(screen.getByTitle('Project #502 - Maple Shelf')).toBeInTheDocument()
+    await clickAntOptionByTitle(user, 'Project #501 - Walnut Desk')
 
     await user.type(screen.getByLabelText('Date'), '2026-05-05')
-    await user.selectOptions(productSelect, '101')
-    await user.selectOptions(projectSelect, '501')
     await user.type(screen.getByLabelText('Quantity'), '2')
     await user.type(screen.getByLabelText('Amount'), '1,000,000.00')
     await user.type(screen.getByLabelText('Fee'), '1,250.50')
-    await user.selectOptions(screen.getByLabelText('Source'), 'store')
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Source' }),
+      'Store',
+    )
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
@@ -364,17 +433,16 @@ describe('EntityEditPage', () => {
 
     renderEntityEditPage('/projects/new', '/:entityName/:id')
 
-    const productSelect = await screen.findByLabelText('Product')
-    expect(productSelect.tagName).toBe('SELECT')
-    expect(
-      await screen.findByRole('option', { name: 'Maple Shelf' }),
-    ).toHaveValue('42')
-    expect(screen.getByRole('option', { name: 'Walnut Desk' })).toHaveValue(
-      '43',
-    )
-    expect(screen.queryByRole('option', { name: '42' })).not.toBeInTheDocument()
+    const productSelect = await screen.findByRole('combobox', {
+      name: 'Product',
+    })
+    expect(productSelect.closest('.ant-select')).toBeInTheDocument()
 
-    await user.selectOptions(productSelect, '42')
+    await user.click(productSelect)
+    expect(await screen.findByTitle('Maple Shelf')).toBeInTheDocument()
+    expect(screen.getByTitle('Walnut Desk')).toBeInTheDocument()
+    expect(screen.queryByTitle('42')).not.toBeInTheDocument()
+    await clickAntOptionByTitle(user, 'Maple Shelf')
     await user.click(screen.getByLabelText('Active'))
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '1,000,000.00')
@@ -403,15 +471,15 @@ describe('EntityEditPage', () => {
 
     renderEntityEditPage('/projects/new', '/:entityName/:id')
 
-    const productSelect = await screen.findByLabelText('Product')
-    expect(
-      await screen.findByRole('option', { name: 'Maple Shelf' }),
-    ).toHaveValue('42')
+    const productSelect = await screen.findByRole('combobox', {
+      name: 'Product',
+    })
+    expect(productSelect.closest('.ant-select')).toBeInTheDocument()
     const totalCostInput = screen.getByLabelText('Total Cost')
     expect(totalCostInput).toHaveValue('0.00')
     expect(totalCostInput).toHaveAttribute('readonly')
 
-    await user.selectOptions(productSelect, '42')
+    await selectAntOption(user, productSelect, 'Maple Shelf')
     await user.type(screen.getByLabelText('Production Cost'), '7,500.25')
     await user.type(screen.getByLabelText('Admin Cost'), '2,250.50')
 
@@ -507,21 +575,20 @@ describe('EntityEditPage', () => {
     }
   })
 
-  it('renders sales source as the import-source select with numeric guidance', () => {
+  it('renders sales source as the import-source select with numeric guidance', async () => {
+    const user = userEvent.setup()
+
     renderEntityEditPage('/sales/new', '/:entityName/:id')
 
     expect(screen.getByRole('heading', { name: 'Create Sale' })).toBeVisible()
 
-    const sourceSelect = screen.getByLabelText('Source')
-    expect(sourceSelect.tagName).toBe('SELECT')
-    expect(screen.getByRole('option', { name: 'Ecommerce' })).toHaveValue(
-      'ecommerce',
-    )
-    expect(screen.getByRole('option', { name: 'Store' })).toHaveValue('store')
-    expect(screen.getByRole('option', { name: 'Event' })).toHaveValue('event')
-    expect(screen.getByRole('option', { name: 'Surface' })).toHaveValue(
-      'surface',
-    )
+    const sourceSelect = screen.getByRole('combobox', { name: 'Source' })
+    expect(sourceSelect.closest('.ant-select')).toBeInTheDocument()
+    await user.click(sourceSelect)
+    expect(await screen.findByTitle('Ecommerce')).toBeInTheDocument()
+    expect(screen.getByTitle('Store')).toBeInTheDocument()
+    expect(screen.getByTitle('Event')).toBeInTheDocument()
+    expect(screen.getByTitle('Surface')).toBeInTheDocument()
     expect(screen.getByLabelText('Quantity')).toHaveAttribute('step', '1')
     expect(screen.getByLabelText('Quantity')).toHaveAttribute('min', '1')
     expect(screen.getByLabelText('Amount')).toHaveAccessibleDescription(
@@ -580,11 +647,10 @@ describe('EntityEditPage', () => {
 
     renderEntityEditPage('/projects/new', '/:entityName/:id')
 
-    const productSelect = await screen.findByLabelText('Product')
-    expect(
-      await screen.findByRole('option', { name: 'Maple Shelf' }),
-    ).toHaveValue('42')
-    await user.selectOptions(productSelect, '42')
+    const productSelect = await screen.findByRole('combobox', {
+      name: 'Product',
+    })
+    await selectAntOption(user, productSelect, 'Maple Shelf')
     await user.click(screen.getByLabelText('Active'))
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '1,000,000.00')
@@ -601,10 +667,10 @@ describe('EntityEditPage', () => {
     await user.click(
       within(splitSection).getByRole('button', { name: 'Add stakeholder' }),
     )
-    const stakeholderSelect = within(splitSection).getByLabelText('Stakeholder')
-    expect(stakeholderSelect.tagName).toBe('SELECT')
-    expect(screen.getByRole('option', { name: 'Alicia' })).toHaveValue('10')
-    expect(screen.getByRole('option', { name: 'Bruno' })).toHaveValue('11')
+    const stakeholderSelect = within(splitSection).getByRole('combobox', {
+      name: 'Stakeholder',
+    })
+    expect(stakeholderSelect.closest('.ant-select')).toBeInTheDocument()
     expect(stakeholderSelect).toHaveAccessibleDescription(
       /stakeholder receiving/i,
     )
@@ -615,17 +681,29 @@ describe('EntityEditPage', () => {
       within(splitSection).getByText(/total must equal 100%/i),
     ).toBeVisible()
 
-    await user.selectOptions(stakeholderSelect, '10')
+    await selectAntOption(user, stakeholderSelect, 'Alicia')
     await user.type(
       within(splitSection).getAllByLabelText('Stake Percentage')[0],
       '60',
     )
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(postJson).not.toHaveBeenCalled()
+    expect(putJson).not.toHaveBeenCalled()
+    expect(
+      within(splitSection).getByText('Total stake percentage must equal 100%.'),
+    ).toBeVisible()
+
     await user.click(
       within(splitSection).getByRole('button', { name: 'Add stakeholder' }),
     )
-    await user.selectOptions(
-      within(splitSection).getAllByLabelText('Stakeholder')[1],
-      '11',
+    await selectAntOption(
+      user,
+      within(splitSection).getAllByRole('combobox', {
+        name: 'Stakeholder',
+      })[1],
+      'Bruno',
     )
     await user.type(
       within(splitSection).getAllByLabelText('Stake Percentage')[1],
@@ -710,15 +788,22 @@ describe('EntityEditPage', () => {
 
     renderEntityEditPage('/projects/77', '/:entityName/:id')
 
-    expect(await screen.findByLabelText('Product')).toHaveValue('42')
+    expect(
+      (await screen.findByRole('combobox', { name: 'Product' })).closest(
+        '.ant-select',
+      ),
+    ).toHaveTextContent('Maple Shelf')
     const splitSection = await screen.findByRole('group', {
       name: 'Stakeholder Split',
     })
-    expect(within(splitSection).getAllByLabelText('Stakeholder')[0]).toHaveValue(
-      '10',
+    const stakeholderSelects = within(splitSection).getAllByRole('combobox', {
+      name: 'Stakeholder',
+    })
+    expect(stakeholderSelects[0].closest('.ant-select')).toHaveTextContent(
+      'Alicia',
     )
-    expect(within(splitSection).getAllByLabelText('Stakeholder')[1]).toHaveValue(
-      '11',
+    expect(stakeholderSelects[1].closest('.ant-select')).toHaveTextContent(
+      'Bruno',
     )
     expect(
       within(splitSection).getByText('Total allocation: 100%'),
@@ -775,9 +860,18 @@ describe('EntityEditPage', () => {
     const participationSection = screen.getByRole('region', {
       name: 'Project Participation',
     })
+    const participationTable = within(participationSection).getByRole('table')
     expect(
-      within(participationSection).getByText('Project #77 - Maple Shelf'),
+      within(participationTable).getByRole('columnheader', { name: 'Project' }),
     ).toBeVisible()
-    expect(within(participationSection).getByText('60%')).toBeVisible()
+    expect(
+      within(participationTable).getByRole('columnheader', {
+        name: 'Stake %',
+      }),
+    ).toBeVisible()
+    expect(
+      within(participationTable).getByText('Project #77 - Maple Shelf'),
+    ).toBeVisible()
+    expect(within(participationTable).getByText('60%')).toBeVisible()
   })
 })

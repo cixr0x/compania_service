@@ -1,5 +1,17 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery } from '@tanstack/react-query'
+import {
+  Alert,
+  Button,
+  Empty,
+  Popconfirm,
+  Result,
+  Space,
+  Spin,
+  Table,
+  Typography,
+} from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { deleteJson, getJson, patchJson, postJson, putJson } from '../../api/client'
 import { EntityForm } from '../../components/EntityForm'
@@ -227,42 +239,51 @@ function StakeholderProjectsSection({ stakeholder }: { stakeholder: EntityRow })
   const projects = Array.isArray(stakeholder.projects)
     ? (stakeholder.projects as EntityRow[])
     : []
+  const columns: ColumnsType<EntityRow> = [
+    {
+      dataIndex: 'project',
+      key: 'project',
+      render: (_value, projectRow) => formatProjectParticipation(projectRow),
+      title: 'Project',
+    },
+    {
+      dataIndex: 'stakePercentage',
+      key: 'stakePercentage',
+      render: (value) => formatPercentage(value) || '-',
+      title: 'Stake %',
+      width: 140,
+    },
+  ]
 
   return (
     <section
       aria-labelledby="stakeholder-project-participation-heading"
       className="detail-section"
     >
-      <div className="section-heading-row">
-        <h3 id="stakeholder-project-participation-heading">
+      <Space className="section-heading-row" align="center">
+        <Typography.Title
+          id="stakeholder-project-participation-heading"
+          level={3}
+        >
           Project Participation
-        </h3>
-        <span>{projects.length} projects</span>
-      </div>
+        </Typography.Title>
+        <Typography.Text type="secondary">
+          {projects.length} projects
+        </Typography.Text>
+      </Space>
 
       {projects.length === 0 ? (
-        <p className="muted-copy">
-          This stakeholder is not assigned to any projects.
-        </p>
+        <Empty description="This stakeholder is not assigned to any projects." />
       ) : (
-        <div className="table-scroll">
-          <table className="data-table detail-table">
-            <thead>
-              <tr>
-                <th scope="col">Project</th>
-                <th scope="col">Stake %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.map((projectRow, index) => (
-                <tr key={`${projectRow.idProject ?? index}`}>
-                  <td>{formatProjectParticipation(projectRow)}</td>
-                  <td>{formatPercentage(projectRow.stakePercentage)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table
+          columns={columns}
+          dataSource={projects}
+          pagination={false}
+          rowKey={(projectRow, index) =>
+            String(projectRow.idProject ?? index ?? '')
+          }
+          size="small"
+        />
       )}
     </section>
   )
@@ -349,17 +370,13 @@ export function EntityEditPage() {
     onSuccess: () => navigate(`/${config!.path}`),
   })
 
-  const errorMessage = useMemo(() => {
-    if (mutationError) {
-      return mutationError
-    }
-
+  const detailErrorMessage = useMemo(() => {
     if (detailQuery.isError) {
       return `Unable to load ${config?.title.toLowerCase() ?? 'record'}.`
     }
 
     return null
-  }, [config?.title, detailQuery.isError, mutationError])
+  }, [config?.title, detailQuery.isError])
 
   const formValues =
     isCreate || isDirty ? draftValues : (detailQuery.data ?? {})
@@ -367,11 +384,15 @@ export function EntityEditPage() {
   if (!config || !formConfig) {
     return (
       <section className="page-panel" aria-labelledby="unknown-entity-heading">
-        <p className="eyebrow">Workspace</p>
-        <h2 id="unknown-entity-heading">Unknown Entity</h2>
-        <p className="page-description">
-          The requested admin entity is not configured.
-        </p>
+        <Result
+          status="404"
+          title={
+            <Typography.Title id="unknown-entity-heading" level={2}>
+              Unknown Entity
+            </Typography.Title>
+          }
+          subTitle="The requested admin entity is not configured."
+        />
       </section>
     )
   }
@@ -394,40 +415,51 @@ export function EntityEditPage() {
       className="page-panel"
       aria-labelledby={`${config.path}-form-heading`}
     >
-      <div className="page-heading-row">
+      <Space className="page-heading-row" align="center">
         <div>
-          <p className="eyebrow">Workspace</p>
-          <h2 id={`${config.path}-form-heading`}>
+          <Typography.Text className="eyebrow">Workspace</Typography.Text>
+          <Typography.Title id={`${config.path}-form-heading`} level={2}>
             {isCreate
               ? `Create ${config.singularTitle}`
               : `Edit ${config.title}`}
-          </h2>
+          </Typography.Title>
         </div>
-        <Link className="secondary-action" to={`/${config.path}`}>
-          Back
+        <Link to={`/${config.path}`}>
+          <Button>Back</Button>
         </Link>
-      </div>
+      </Space>
 
       {detailQuery.isLoading ? (
-        <p className="page-description">Loading record...</p>
+        <Spin description="Loading record..." />
       ) : (
-        <EntityForm
-          config={formConfig}
-          errorMessage={errorMessage}
-          isCreate={isCreate}
-          isSaving={saveMutation.isPending}
-          onChange={handleChange}
-          onSubmit={handleSave}
-          values={formValues}
-        >
-          {config.path === 'projects' ? (
-            <ProjectStakeholderLines
-              isCreate={isCreate}
-              onDraftChange={setProjectSplitState}
-              projectId={isCreate ? null : id}
+        <>
+          {detailErrorMessage ? (
+            <Alert
+              className="form-error"
+              message={detailErrorMessage}
+              role="alert"
+              showIcon
+              type="error"
             />
           ) : null}
-        </EntityForm>
+          <EntityForm
+            config={formConfig}
+            errorMessage={mutationError}
+            isCreate={isCreate}
+            isSaving={saveMutation.isPending}
+            onChange={handleChange}
+            onSubmit={handleSave}
+            values={formValues}
+          >
+            {config.path === 'projects' ? (
+              <ProjectStakeholderLines
+                isCreate={isCreate}
+                onDraftChange={setProjectSplitState}
+                projectId={isCreate ? null : id}
+              />
+            ) : null}
+          </EntityForm>
+        </>
       )}
 
       {config.path === 'stakeholders' && !isCreate && detailQuery.data ? (
@@ -436,17 +468,20 @@ export function EntityEditPage() {
 
       {!isCreate ? (
         <div className="danger-zone">
-          <button
-            className="danger-action"
-            disabled={deleteMutation.isPending}
-            onClick={() => {
+          <Popconfirm
+            cancelText="Cancel"
+            okButtonProps={{ danger: true, loading: deleteMutation.isPending }}
+            okText="Confirm delete"
+            onConfirm={() => {
               setMutationError(null)
               deleteMutation.mutate()
             }}
-            type="button"
+            title="Delete this record? This action cannot be undone."
           >
-            {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-          </button>
+            <Button danger loading={deleteMutation.isPending}>
+              Delete
+            </Button>
+          </Popconfirm>
         </div>
       ) : null}
     </section>

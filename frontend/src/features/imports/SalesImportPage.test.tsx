@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -69,10 +69,14 @@ const rowErrors: ImportError[] = [
   },
 ]
 
-function mockImportQueries(rows: ImportStageRow[], errors: ImportError[]) {
+function mockImportQueries(
+  rows: ImportStageRow[],
+  errors: ImportError[],
+  batch: ImportBatch = importBatch,
+) {
   vi.mocked(getJson).mockImplementation((path: string) => {
     if (path === '/import-batches/1') {
-      return Promise.resolve(importBatch)
+      return Promise.resolve(batch)
     }
 
     if (path === '/import-batches/1/stage') {
@@ -110,19 +114,61 @@ function renderSalesImportPage() {
   )
 }
 
+async function selectAntOption(
+  user: ReturnType<typeof userEvent.setup>,
+  combobox: HTMLElement,
+  optionName: string,
+) {
+  await user.click(combobox)
+  const options = await screen.findAllByTitle(optionName)
+  await user.click(options[options.length - 1])
+}
+
+function getFileInput() {
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]')
+
+  if (!input) {
+    throw new Error('Expected a file input rendered by Ant Design Upload')
+  }
+
+  return input
+}
+
 describe('SalesImportPage', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
   })
 
-  it('shows imported descriptions beside matched product names', async () => {
+  it('renders staged rows in an Ant Design table with expected columns and status tags', async () => {
     mockImportQueries(stagedRows, [])
 
     renderSalesImportPage()
 
-    expect(await screen.findByText('Starter kit black bundle')).toBeVisible()
-    expect(screen.getByText('Starter Kit')).toBeVisible()
+    const stagedRowsRegion = await screen.findByRole('region', {
+      name: 'Staged Rows',
+    })
+    const table = within(stagedRowsRegion).getByRole('table')
+
+    expect(table.closest('.ant-table-wrapper')).toBeInTheDocument()
+    for (const columnName of [
+      'Row',
+      'External ID',
+      'Imported Description',
+      'Matched Product',
+      'Quantity',
+      'Amount',
+      'Status',
+    ]) {
+      expect(
+        within(table).getByRole('columnheader', { name: columnName }),
+      ).toBeVisible()
+    }
+    expect(
+      await within(stagedRowsRegion).findByText('Starter kit black bundle'),
+    ).toBeVisible()
+    expect(within(table).getByText('Starter Kit')).toBeVisible()
+    expect(within(table).getByText('Valid').closest('.ant-tag')).toBeInTheDocument()
   })
 
   it('formats staged sale amounts with commas and two decimal places', async () => {
@@ -163,7 +209,11 @@ describe('SalesImportPage', () => {
       </MemoryRouter>,
     )
 
-    await user.upload(screen.getByLabelText('Sales file'), file)
+    const fileInput = getFileInput()
+
+    expect(fileInput.closest('.ant-upload-wrapper')).toBeInTheDocument()
+
+    await user.upload(fileInput, file)
 
     expect(screen.getByText('sales.csv')).toBeVisible()
   })
@@ -176,10 +226,30 @@ describe('SalesImportPage', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Import date')).toHaveValue('2026-05-04')
     })
-    expect(screen.getByLabelText('Source')).toHaveValue('store')
+    const sourceSelect = screen.getByRole('combobox', { name: 'Source' })
+
+    expect(sourceSelect.closest('.ant-select')).toHaveTextContent('Store')
     expect(
       screen.getByText('Source is locked for the active batch: Store.'),
     ).toBeVisible()
+  })
+
+  it('renders import errors as an Ant Design alert with list items', async () => {
+    mockImportQueries(stagedRows, rowErrors)
+
+    renderSalesImportPage()
+
+    const importErrorsRegion = await screen.findByRole('region', {
+      name: 'Import Errors',
+    })
+    const alert = await within(importErrorsRegion).findByRole('alert')
+    const list = within(alert).getByRole('list', { name: 'Import error list' })
+
+    expect(alert).toHaveClass('ant-alert-warning')
+    expect(list).not.toHaveClass('ant-list')
+    expect(within(list).getByRole('listitem')).toHaveTextContent(
+      'Row 2 amount Amount is required',
+    )
   })
 
   it('wires /imports/:id to the import page before generic entity routes', async () => {
@@ -198,7 +268,7 @@ describe('SalesImportPage', () => {
     expect(screen.queryByRole('heading', { name: /Edit/i })).not.toBeInTheDocument()
   })
 
-  it('enables commit only when rows, import date, and no errors are present', async () => {
+  it('keeps commit disabled until validated, dated, error-free, and complete', async () => {
     const user = userEvent.setup()
     mockImportQueries(stagedRows, rowErrors)
 
@@ -209,7 +279,34 @@ describe('SalesImportPage', () => {
 
     cleanup()
     vi.clearAllMocks()
-    mockImportQueries(stagedRows, [])
+    mockImportQueries(
+      [
+        {
+          ...stagedRows[0],
+          idProduct: null,
+          product: null,
+        },
+      ],
+      [],
+      {
+        ...importBatch,
+        importDate: null,
+      },
+    )
+
+    renderSalesImportPage()
+
+    const incompleteCommit = await screen.findByRole('button', { name: /commit/i })
+    await user.type(screen.getByLabelText('Import date'), '2026-05-05')
+
+    expect(incompleteCommit).toBeDisabled()
+
+    cleanup()
+    vi.clearAllMocks()
+    mockImportQueries(stagedRows, [], {
+      ...importBatch,
+      importDate: null,
+    })
 
     renderSalesImportPage()
 
@@ -244,6 +341,10 @@ describe('SalesImportPage', () => {
     await user.type(await screen.findByLabelText('Import date'), '2026-05-05')
 
     expect(screen.getByRole('button', { name: /commit/i })).toBeDisabled()
+    const alert = screen.getByRole('alert')
+
+    expect(alert).toHaveClass('ant-alert-error')
+    expect(alert).toHaveTextContent('Unable to load batch')
   })
 
   it('keeps commit disabled while validation refetch is pending', async () => {
@@ -368,17 +469,18 @@ describe('SalesImportPage', () => {
 
     renderSalesImportPage()
 
-    expect(await screen.findByLabelText('Sales file')).toBeDisabled()
+    expect(await screen.findByText('sales.csv')).toBeVisible()
+    expect(getFileInput()).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Upload' })).toBeDisabled()
 
     await user.click(screen.getByRole('button', { name: 'New import' }))
 
     expect(screen.queryByText('Active batch #1')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Sales file')).toBeEnabled()
+    expect(getFileInput()).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Upload' })).toBeEnabled()
   })
 
-  it('uploads FormData with selected source and file for a new import', async () => {
+  it('uploads FormData with source selected from Ant Select and file selected from Ant Upload', async () => {
     const user = userEvent.setup()
     const file = new File(['external_id,amount'], 'sales.csv', {
       type: 'text/csv',
@@ -416,8 +518,14 @@ describe('SalesImportPage', () => {
       </MemoryRouter>,
     )
 
-    await user.selectOptions(screen.getByLabelText('Source'), 'event')
-    await user.upload(screen.getByLabelText('Sales file'), file)
+    const sourceSelect = screen.getByRole('combobox', { name: 'Source' })
+    const fileInput = getFileInput()
+
+    expect(sourceSelect.closest('.ant-select')).toBeInTheDocument()
+    expect(fileInput.closest('.ant-upload-wrapper')).toBeInTheDocument()
+
+    await selectAntOption(user, sourceSelect, 'Event')
+    await user.upload(fileInput, file)
     await user.click(screen.getByRole('button', { name: 'Upload' }))
 
     await waitFor(() => {
