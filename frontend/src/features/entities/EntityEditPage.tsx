@@ -303,6 +303,23 @@ function getSelectedProduct(values: EntityRow, products: EntityRow[] | undefined
     : null
 }
 
+function getActiveProjectForProduct(
+  productId: number | null,
+  projects: EntityRow[] | undefined,
+) {
+  if (productId === null || !Array.isArray(projects)) {
+    return null
+  }
+
+  return (
+    projects.find(
+      (project) =>
+        getNumericId(project.idProduct) === productId &&
+        (project.isActive === true || project.isActive === 'true'),
+    ) ?? null
+  )
+}
+
 function withSalesCalculatedValues(
   values: EntityRow,
   products: EntityRow[] | undefined,
@@ -533,10 +550,26 @@ export function EntityEditPage() {
       nextFields.add(name)
       return nextFields
     })
-    setDraftValues((currentValues) => ({
-      ...(isDirty ? currentValues : (detailQuery.data ?? {})),
-      [name]: value,
-    }))
+    setDraftValues((currentValues) => {
+      const nextValues = {
+        ...(isDirty ? currentValues : (detailQuery.data ?? {})),
+        [name]: value,
+      }
+
+      if (config?.path === 'sales' && name === 'idProduct') {
+        const activeProject = getActiveProjectForProduct(
+          getNumericId(value),
+          optionRowsByPath.projects,
+        )
+
+        nextValues.idProject =
+          activeProject && activeProject.idProject !== undefined
+            ? String(activeProject.idProject)
+            : ''
+      }
+
+      return nextValues
+    })
   }
 
   function handleSave() {

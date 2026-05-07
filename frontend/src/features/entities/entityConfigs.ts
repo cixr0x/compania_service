@@ -17,6 +17,7 @@ export type EntityField = {
     | 'textarea'
   required?: boolean
   requiredOnCreate?: boolean
+  readOnly?: boolean
   section?: string
   span?: 'full'
   prefix?: string
@@ -535,6 +536,7 @@ export const entityConfigs = {
           path: 'projects',
           valueField: 'idProject',
         },
+        readOnly: true,
         required: true,
         valueType: 'number',
       }),

@@ -226,6 +226,7 @@ export function EntityForm({
             <Select
               aria-label={field.label}
               aria-required={isRequired}
+              disabled={field.readOnly}
               id={selectControlId}
               onChange={(nextValue) => onChange(field.name, nextValue ?? '')}
               options={field.options ?? []}

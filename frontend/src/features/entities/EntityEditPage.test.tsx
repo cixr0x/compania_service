@@ -430,7 +430,7 @@ describe('EntityEditPage', () => {
     )
   })
 
-  it('requires product and project selectors when creating a sale and saves their ids', async () => {
+  it('auto assigns the read-only sale project from the selected product active project', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
       if (path === '/products') {
@@ -445,11 +445,19 @@ describe('EntityEditPage', () => {
           {
             idProject: 501,
             idProduct: 101,
+            isActive: true,
             product: { id: 101, name: 'Walnut Desk' },
           },
           {
             idProject: 502,
+            idProduct: 101,
+            isActive: false,
+            product: { id: 101, name: 'Walnut Desk' },
+          },
+          {
+            idProject: 503,
             idProduct: 102,
+            isActive: true,
             product: { id: 102, name: 'Maple Shelf' },
           },
         ]
@@ -480,12 +488,13 @@ describe('EntityEditPage', () => {
       name: 'Project',
     })
     expect(projectSelect.closest('.ant-select')).toBeInTheDocument()
+    expect(projectSelect.closest('.ant-select')).toHaveClass(
+      'ant-select-disabled',
+    )
     expect(projectSelect).toHaveAttribute('aria-required', 'true')
-
-    await user.click(projectSelect)
-    expect(await screen.findByTitle('Project #501 - Walnut Desk')).toBeInTheDocument()
-    expect(screen.getByTitle('Project #502 - Maple Shelf')).toBeInTheDocument()
-    await clickAntOptionByTitle(user, 'Project #501 - Walnut Desk')
+    expect(projectSelect.closest('.ant-select')).toHaveTextContent(
+      'Project #501 - Walnut Desk',
+    )
 
     await user.type(screen.getByLabelText('Date'), '2026-05-05')
     await user.type(screen.getByLabelText('Quantity'), '2')
