@@ -86,12 +86,14 @@ Application settings store configurable values by unique code. Settings are expo
 - `unit_cost`: numeric cost per unit.
 - `production_cost`: numeric production cost for the project.
 - `admin_cost`: numeric administrative cost.
+- `cost_adjustment`: signed numeric adjustment added to the derived total project cost. Positive values increase project cost and negative values reduce it.
+- `adjustment_description`: optional text describing the cost adjustment.
 - `is_active`: boolean flag indicating whether this is the current active project for the product.
 - `active_product_id`: internal nullable unique key maintained by the backend to enforce that only one active project can exist for a product.
 
 Derived values:
 
-- `total_project_cost`: displayed-only value calculated as `production_cost + admin_cost`.
+- `total_project_cost`: displayed-only value calculated as `production_cost + admin_cost + cost_adjustment`.
 
 ### stakeholder
 
@@ -304,7 +306,7 @@ Entity pages:
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
 - Product create/edit forms show the Fee Amount money field only when the selected pricing model has code `consigna`.
 - Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
-- Project create/edit forms include an active flag plus unit cost, production cost, and administrative cost fields. They also display a read-only total cost field derived from production cost plus administrative cost, updated immediately as either cost field changes.
+- Project create/edit forms include an active flag plus unit cost, production cost, administrative cost, and cost adjustment fields. They also display a read-only total cost field derived from production cost plus administrative cost plus cost adjustment, updated immediately as any cost field changes. The Adjustment Description field appears only when cost adjustment is non-zero.
 - Project table views display the same derived total cost with money formatting.
 - Project create/edit forms include a Stakeholder Split detail section. The section loads stakeholders by name, allows adding/removing stakeholder percentage lines, requires complete rows totaling exactly `100` when lines are present, and saves the project header before saving the split lines.
 - Project stakeholder splits are not exposed as a standalone primary navigation item in the MVP UI.

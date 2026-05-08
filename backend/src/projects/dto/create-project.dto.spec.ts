@@ -10,6 +10,8 @@ describe('CreateProjectDto', () => {
     unitCost: 12.5,
     productionCost: 125,
     adminCost: 15,
+    costAdjustment: -10.5,
+    adjustmentDescription: 'Damaged packaging discount',
   };
 
   async function validatePayload(payload: Record<string, unknown>) {
@@ -32,5 +34,23 @@ describe('CreateProjectDto', () => {
     });
 
     expect(errors.map((error) => error.property)).toContain('productionCost');
+  });
+
+  it('accepts a signed project cost adjustment with a text description', async () => {
+    const dto = plainToInstance(CreateProjectDto, {
+      ...validPayload,
+      costAdjustment: '-10.50',
+      adjustmentDescription: 'Damaged packaging discount',
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.map((error) => error.property)).not.toContain(
+      'costAdjustment',
+    );
+    expect(errors.map((error) => error.property)).not.toContain(
+      'adjustmentDescription',
+    );
+    expect(dto.costAdjustment).toBe(-10.5);
   });
 });

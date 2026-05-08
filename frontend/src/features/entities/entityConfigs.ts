@@ -204,7 +204,11 @@ function roundCurrency(value: number) {
 }
 
 function getProjectTotalCost(row: EntityRow) {
-  return sumMoneyValues(row.productionCost, row.adminCost)
+  return sumMoneyValues(row.productionCost, row.adminCost, row.costAdjustment)
+}
+
+function hasProjectCostAdjustment(row: EntityRow) {
+  return (parseMoneyNumber(row.costAdjustment) ?? 0) !== 0
 }
 
 function getSaleTax(row: EntityRow) {
@@ -381,6 +385,7 @@ export const entityConfigs = {
       column('unitCost', 'Unit Cost', { valueFormat: 'money' }),
       column('productionCost', 'Production Cost', { valueFormat: 'money' }),
       column('adminCost', 'Admin Cost', { valueFormat: 'money' }),
+      column('costAdjustment', 'Cost Adjustment', { valueFormat: 'money' }),
       column('totalCost', 'Total Cost', {
         valueFormat: 'money',
         valueGetter: getProjectTotalCost,
@@ -418,6 +423,15 @@ export const entityConfigs = {
         prefix: '$',
         step: 0.01,
         valueFormat: 'money',
+      }),
+      number('costAdjustment', 'Cost Adjustment', {
+        prefix: '$',
+        step: 0.01,
+        valueFormat: 'money',
+      }),
+      textarea('adjustmentDescription', 'Adjustment Description', {
+        span: 'full',
+        visibleWhen: hasProjectCostAdjustment,
       }),
       computed('totalCost', 'Total Cost', getProjectTotalCost, {
         prefix: '$',

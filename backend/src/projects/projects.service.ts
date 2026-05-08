@@ -121,6 +121,7 @@ export class ProjectsService {
     return {
       ...dto,
       isActive: dto.isActive ?? false,
+      costAdjustment: dto.costAdjustment ?? 0,
       activeProductId: dto.isActive ? dto.idProduct : null,
     };
   }

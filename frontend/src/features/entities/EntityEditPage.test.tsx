@@ -674,6 +674,49 @@ describe('EntityEditPage', () => {
     )
   })
 
+  it('shows project adjustment description only for non-zero cost adjustments', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockResolvedValue([
+      { id: 42, name: 'Maple Shelf', idModel: 7 },
+    ])
+    vi.mocked(postJson).mockResolvedValue({ idProject: 501 })
+
+    renderEntityEditPage('/projects/new', '/:entityName/:id')
+
+    await selectAntOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Product' }),
+      'Maple Shelf',
+    )
+
+    const totalCostInput = screen.getByLabelText('Total Cost')
+    expect(screen.getByLabelText('Cost Adjustment')).toHaveValue('')
+    expect(
+      screen.queryByLabelText('Adjustment Description'),
+    ).not.toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Production Cost'), '7,500.25')
+    await user.type(screen.getByLabelText('Admin Cost'), '2,250.50')
+    await user.type(screen.getByLabelText('Cost Adjustment'), '-250.75')
+
+    expect(totalCostInput).toHaveValue('9,500.00')
+    const adjustmentDescription = await screen.findByLabelText(
+      'Adjustment Description',
+    )
+    await user.type(adjustmentDescription, 'Damaged packaging discount')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith(
+        '/projects',
+        expect.objectContaining({
+          adjustmentDescription: 'Damaged packaging discount',
+          costAdjustment: -250.75,
+        }),
+      )
+    })
+  })
+
   it('recalculates project total cost while replacing existing cost values', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
@@ -691,6 +734,8 @@ describe('EntityEditPage', () => {
           idProduct: 42,
           idProject: 77,
           isActive: true,
+          costAdjustment: -500,
+          adjustmentDescription: 'Launch discount',
           productionCost: 7500,
           unitCost: 10,
           units: 100,
@@ -707,15 +752,25 @@ describe('EntityEditPage', () => {
     renderEntityEditPage('/projects/77', '/:entityName/:id')
 
     const totalCostInput = await screen.findByLabelText('Total Cost')
-    expect(totalCostInput).toHaveValue('7,750.00')
+    expect(totalCostInput).toHaveValue('7,250.00')
+    expect(screen.getByLabelText('Adjustment Description')).toHaveValue(
+      'Launch discount',
+    )
 
     await user.click(screen.getByLabelText('Production Cost'))
     await user.keyboard('1000')
-    expect(totalCostInput).toHaveValue('1,250.00')
+    expect(totalCostInput).toHaveValue('750.00')
 
     await user.click(screen.getByLabelText('Admin Cost'))
     await user.keyboard('500')
+    expect(totalCostInput).toHaveValue('1,000.00')
+
+    await user.click(screen.getByLabelText('Cost Adjustment'))
+    await user.keyboard('0')
     expect(totalCostInput).toHaveValue('1,500.00')
+    expect(
+      screen.queryByLabelText('Adjustment Description'),
+    ).not.toBeInTheDocument()
   })
 
   it('configures every money field and money table column for currency formatting', () => {
@@ -724,6 +779,7 @@ describe('EntityEditPage', () => {
       ['projects', 'unitCost'],
       ['projects', 'productionCost'],
       ['projects', 'adminCost'],
+      ['projects', 'costAdjustment'],
       ['projects', 'totalCost'],
       ['sales', 'amount'],
       ['sales', 'fee'],

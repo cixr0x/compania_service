@@ -123,6 +123,7 @@ describe('EntityListPage', () => {
     vi.mocked(getJson).mockResolvedValue([
       {
         adminCost: 2250.5,
+        costAdjustment: -250.75,
         idProduct: 42,
         idProject: 501,
         isActive: true,
@@ -135,8 +136,10 @@ describe('EntityListPage', () => {
     renderEntityList('/projects')
 
     expect(await screen.findByRole('heading', { name: 'Projects' })).toBeVisible()
+    expect(screen.getAllByText('Cost Adjustment')).not.toHaveLength(0)
     expect(screen.getAllByText('Total Cost')).not.toHaveLength(0)
-    expect(await screen.findByText('$9,750.75')).toBeVisible()
+    expect(await screen.findByText('$-250.75')).toBeVisible()
+    expect(await screen.findByText('$9,500.00')).toBeVisible()
   })
 
   it('shows related entity names instead of foreign key IDs in entity tables', async () => {

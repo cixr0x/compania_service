@@ -52,6 +52,8 @@ export type Project = {
   unitCost: DecimalValue
   productionCost: DecimalValue
   adminCost: DecimalValue
+  costAdjustment: DecimalValue
+  adjustmentDescription: string | null
   product?: Product
   stakeholders?: ProjectStakeholder[]
 }

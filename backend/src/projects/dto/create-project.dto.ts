@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsNumber, IsOptional, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class CreateProjectDto {
   @Type(() => Number)
@@ -30,4 +37,13 @@ export class CreateProjectDto {
   @IsNumber()
   @Min(0)
   adminCost!: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  costAdjustment?: number;
+
+  @IsOptional()
+  @IsString()
+  adjustmentDescription?: string;
 }

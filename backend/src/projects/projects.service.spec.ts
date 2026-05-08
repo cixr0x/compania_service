@@ -9,6 +9,8 @@ type ProjectCreateMock = (args: {
     unitCost: number;
     productionCost: number;
     adminCost: number;
+    costAdjustment?: number;
+    adjustmentDescription?: string;
     isActive?: boolean;
   };
 }) => Promise<unknown>;
@@ -67,6 +69,8 @@ describe('ProjectsService', () => {
       unitCost: '4.50',
       productionCost: '7.75',
       adminCost: '2.25',
+      costAdjustment: '0.00',
+      adjustmentDescription: null,
       isActive: false,
     });
   });
@@ -94,8 +98,36 @@ describe('ProjectsService', () => {
         unitCost: 4.5,
         productionCost: 7.75,
         adminCost: 2.25,
+        costAdjustment: 0,
         isActive: true,
         activeProductId: 42,
+      },
+    });
+  });
+
+  it('creates projects with signed cost adjustment details', async () => {
+    const service = new ProjectsService(prisma);
+    await service.create({
+      idProduct: 42,
+      units: 10,
+      unitCost: 4.5,
+      productionCost: 7.75,
+      adminCost: 2.25,
+      costAdjustment: -1.5,
+      adjustmentDescription: 'Damaged packaging discount',
+    });
+
+    expect(projectCreate).toHaveBeenCalledWith({
+      data: {
+        idProduct: 42,
+        units: 10,
+        unitCost: 4.5,
+        productionCost: 7.75,
+        adminCost: 2.25,
+        costAdjustment: -1.5,
+        adjustmentDescription: 'Damaged packaging discount',
+        isActive: false,
+        activeProductId: null,
       },
     });
   });
