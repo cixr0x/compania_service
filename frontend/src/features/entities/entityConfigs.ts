@@ -241,6 +241,19 @@ function getSaleOwnerProfit(row: EntityRow) {
   return roundCurrency(getSaleProfit(row) * (ownerPercentage / 100))
 }
 
+function getSaleProductModelName(row: EntityRow) {
+  const product = asEntityRow(row.product)
+  const model = asEntityRow(product?.model)
+  const name = model?.name
+  const code = model?.code
+
+  if (typeof name === 'string' && name.trim() !== '') {
+    return name.trim()
+  }
+
+  return typeof code === 'string' && code.trim() !== '' ? code.trim() : ''
+}
+
 function getModelCode(row: EntityRow): string | null {
   const selectedCode = row.selectedModelCode
 
@@ -580,6 +593,7 @@ export const entityConfigs = {
         required: true,
         valueType: 'number',
       }),
+      computed('productModel', 'Model', getSaleProductModelName),
       select('idProject', 'Project', undefined, {
         optionSource: {
           labelField: 'idProject',

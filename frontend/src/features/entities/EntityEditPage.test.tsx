@@ -501,7 +501,7 @@ describe('EntityEditPage', () => {
           {
             feeAmount: 625.25,
             id: 101,
-            model: { code: 'consigna' },
+            model: { code: 'consigna', name: 'Consigna' },
             name: 'Walnut Desk',
             ownership: 25,
           },
@@ -564,6 +564,8 @@ describe('EntityEditPage', () => {
     expect(projectSelect.closest('.ant-select')).toHaveTextContent(
       'Project #501 - Walnut Desk',
     )
+    expect(screen.getByLabelText('Model')).toHaveValue('Consigna')
+    expect(screen.getByLabelText('Model')).toHaveAttribute('readonly')
 
     await user.type(screen.getByLabelText('Date'), '2026-05-05')
     await user.type(screen.getByLabelText('Quantity'), '2')
