@@ -94,6 +94,10 @@ function groupFields(fields: EntityField[]) {
   return groups
 }
 
+function isFieldVisible(field: EntityField, values: EntityRow) {
+  return field.visibleWhen ? field.visibleWhen(values) : true
+}
+
 function getPreviewValue(values: EntityRow, fieldName: string | undefined) {
   if (!fieldName) {
     return ''
@@ -136,7 +140,10 @@ export function EntityForm({
   isSaving = false,
   errorMessage = null,
 }: EntityFormProps) {
-  const fieldGroups = groupFields(config.fields)
+  const visibleFields = config.fields.filter((field) =>
+    isFieldVisible(field, values),
+  )
+  const fieldGroups = groupFields(visibleFields)
   const [focusedFieldName, setFocusedFieldName] = useState<string | null>(null)
   const [submitAttempted, setSubmitAttempted] = useState(false)
   const moneyInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -309,7 +316,7 @@ export function EntityForm({
   function handleFinish() {
     setSubmitAttempted(true)
 
-    const hasMissingRequiredSelect = config.fields.some(
+    const hasMissingRequiredSelect = visibleFields.some(
       (field) =>
         field.type === 'select' &&
         isFieldRequired(field, isCreate) &&

@@ -25,4 +25,17 @@ describe('Product DTO validation', () => {
 
     expect(errors.map((error) => error.property)).not.toContain('idModel');
   });
+
+  it('accepts a numeric product fee amount', async () => {
+    const dto = plainToInstance(CreateProductDto, {
+      name: 'Consigna Product',
+      idModel: 7,
+      feeAmount: '125.50',
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.map((error) => error.property)).not.toContain('feeAmount');
+    expect(dto.feeAmount).toBe(125.5);
+  });
 });

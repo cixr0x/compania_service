@@ -204,6 +204,68 @@ describe('EntityEditPage', () => {
     expect(screen.getByText('Model is required.')).toBeVisible()
   })
 
+  it('shows and saves product fee amount only for the consigna model', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockResolvedValue([
+      { code: 'retail', idModel: 7, name: 'Retail' },
+      { code: 'consigna', idModel: 9, name: 'Consigna' },
+    ])
+    vi.mocked(postJson).mockResolvedValue({ id: 102 })
+
+    renderEntityEditPage('/products/new', '/:entityName/:id')
+
+    expect(screen.queryByLabelText('Fee Amount')).not.toBeInTheDocument()
+
+    const modelSelect = await screen.findByRole('combobox', { name: 'Model' })
+    await selectAntOption(user, modelSelect, 'Retail')
+    expect(screen.queryByLabelText('Fee Amount')).not.toBeInTheDocument()
+
+    await selectAntOption(user, modelSelect, 'Consigna')
+    const feeAmountInput = await screen.findByLabelText('Fee Amount')
+    expect(feeAmountInput).toBeVisible()
+    expect(feeAmountInput).toHaveValue('')
+
+    await user.type(screen.getByLabelText('Name'), 'Consigna Shelf')
+    await user.type(feeAmountInput, '1,250.50')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith('/products', {
+        feeAmount: 1250.5,
+        idModel: 9,
+        name: 'Consigna Shelf',
+      })
+    })
+  })
+
+  it('hides product fee amount for existing products using non-consigna models', async () => {
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/models') {
+        return [
+          { code: 'retail', idModel: 7, name: 'Retail' },
+          { code: 'consigna', idModel: 9, name: 'Consigna' },
+        ]
+      }
+
+      if (path === '/products/101') {
+        return {
+          feeAmount: 125.5,
+          id: 101,
+          idModel: 7,
+          model: { code: 'retail', idModel: 7, name: 'Retail' },
+          name: 'Retail Shelf',
+        }
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
+
+    renderEntityEditPage('/products/101', '/:entityName/:id')
+
+    expect(await screen.findByDisplayValue('Retail Shelf')).toBeVisible()
+    expect(screen.queryByLabelText('Fee Amount')).not.toBeInTheDocument()
+  })
+
   it('updates the product image preview when the image URL changes', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockResolvedValue([])
@@ -658,6 +720,7 @@ describe('EntityEditPage', () => {
 
   it('configures every money field and money table column for currency formatting', () => {
     const moneyFields: Array<[EntityName, string]> = [
+      ['products', 'feeAmount'],
       ['projects', 'unitCost'],
       ['projects', 'productionCost'],
       ['projects', 'adminCost'],

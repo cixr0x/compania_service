@@ -58,6 +58,12 @@ export class CreateProductDto {
   ownership?: number;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  feeAmount?: number;
+
+  @IsOptional()
   @IsString()
   @MaxLength(255)
   tag?: string;

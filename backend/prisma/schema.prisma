@@ -27,6 +27,7 @@ model Product {
   idSurface    String?       @unique @map("id_surface") @db.VarChar(255)
   idModel      Int?          @map("id_model")
   ownership    Decimal       @default(0) @db.Decimal(7, 2)
+  feeAmount    Decimal?      @map("fee_amount") @db.Decimal(12, 2)
   tag          String?       @db.VarChar(255)
   model        PricingModel? @relation(fields: [idModel], references: [idModel], onDelete: SetNull)
   projects     Project[]

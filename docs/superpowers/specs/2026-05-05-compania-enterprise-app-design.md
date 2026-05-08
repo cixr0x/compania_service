@@ -68,6 +68,7 @@ Application settings store configurable values by unique code. Settings are expo
 - `id_surface`: external product ID used by surface imports.
 - `id_model`: foreign key to `model`.
 - `ownership`: numeric percentage retained by the product owner for future profit calculations.
+- `fee_amount`: optional numeric fee amount used by products with the `consigna` pricing model.
 - `tag`: text.
 
 ### model
@@ -297,9 +298,11 @@ Entity pages:
 - Double-click table row navigates to edit form; table rows also expose a visible Edit action for discoverability.
 - Entity table columns backed by foreign keys display the related entity name/label rather than the raw foreign key ID. Primary key ID columns may still display IDs.
 - Table cells that display a product name show a small product image thumbnail to the left of the name when the product has an image URL.
+- Product list tables include Fee Amount as money, populated for products whose model code is `consigna`.
 - Forms use backend validation responses for field-level error display. Form pages do not use the old Workspace eyebrow row; navigation back to the list is provided by a Cancel button beside Save.
 - Product create/edit forms load pricing models and show model names in the model selector while submitting the selected model ID to the API.
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
+- Product create/edit forms show the Fee Amount money field only when the selected pricing model has code `consigna`.
 - Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
 - Project create/edit forms include an active flag plus unit cost, production cost, and administrative cost fields. They also display a read-only total cost field derived from production cost plus administrative cost, updated immediately as either cost field changes.
 - Project table views display the same derived total cost with money formatting.

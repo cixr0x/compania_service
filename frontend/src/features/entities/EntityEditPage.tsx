@@ -135,7 +135,8 @@ function buildEntityPayload(
     config.fields.flatMap((field) => {
       if (
         (field.type === 'computed' && !field.persistComputed) ||
-        field.type === 'imagePreview'
+        field.type === 'imagePreview' ||
+        (field.visibleWhen && !field.visibleWhen(values))
       ) {
         return []
       }
@@ -301,6 +302,36 @@ function getSelectedProduct(values: EntityRow, products: EntityRow[] | undefined
   return values.product && typeof values.product === 'object'
     ? (values.product as EntityRow)
     : null
+}
+
+function getModelCode(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null
+  }
+
+  const code = (value as { code?: unknown }).code
+  return typeof code === 'string' && code.trim() !== ''
+    ? code.trim().toLowerCase()
+    : null
+}
+
+function getSelectedModelCode(values: EntityRow, models: EntityRow[] | undefined) {
+  const selectedModelId = getNumericId(values.idModel)
+  const optionModel = Array.isArray(models)
+    ? models.find((model) => getNumericId(model.idModel) === selectedModelId)
+    : null
+
+  return getModelCode(optionModel) ?? getModelCode(values.model)
+}
+
+function withProductDerivedValues(
+  values: EntityRow,
+  models: EntityRow[] | undefined,
+): EntityRow {
+  return {
+    ...values,
+    selectedModelCode: getSelectedModelCode(values, models),
+  }
 }
 
 function getActiveProjectForProduct(
@@ -525,6 +556,8 @@ export function EntityEditPage() {
           optionRowsByPath.products,
           salesTaxRate,
         )
+      : config?.path === 'products'
+        ? withProductDerivedValues(formValues, optionRowsByPath.models)
       : formValues
 
   if (!config || !formConfig) {

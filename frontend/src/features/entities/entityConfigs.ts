@@ -18,6 +18,7 @@ export type EntityField = {
   required?: boolean
   requiredOnCreate?: boolean
   readOnly?: boolean
+  visibleWhen?: (values: EntityRow) => boolean
   section?: string
   span?: 'full'
   prefix?: string
@@ -235,6 +236,25 @@ function getSaleOwnerProfit(row: EntityRow) {
   return roundCurrency(getSaleProfit(row) * (ownerPercentage / 100))
 }
 
+function getModelCode(row: EntityRow): string | null {
+  const selectedCode = row.selectedModelCode
+
+  if (typeof selectedCode === 'string' && selectedCode.trim() !== '') {
+    return selectedCode.trim().toLowerCase()
+  }
+
+  const model = asEntityRow(row.model)
+  const modelCode = model?.code
+
+  return typeof modelCode === 'string' && modelCode.trim() !== ''
+    ? modelCode.trim().toLowerCase()
+    : null
+}
+
+function isConsignaModel(row: EntityRow) {
+  return getModelCode(row) === 'consigna'
+}
+
 export const entityConfigs = {
   products: {
     title: 'Products',
@@ -252,6 +272,10 @@ export const entityConfigs = {
       column('idEvent', 'Event ID'),
       column('idSurface', 'Surface ID'),
       column('ownership', 'Ownership'),
+      column('feeAmount', 'Fee Amount', {
+        valueFormat: 'money',
+        valueGetter: (row) => (isConsignaModel(row) ? row.feeAmount : null),
+      }),
       column('tag', 'Tag'),
       column('idModel', 'Model', {
         valueGetter: (row) => getRelatedEntityName(row, 'model'),
@@ -303,6 +327,14 @@ export const entityConfigs = {
         section: 'Commercial attributes',
         step: 0.01,
         suffix: '%',
+      }),
+      number('feeAmount', 'Fee Amount', {
+        min: 0,
+        prefix: '$',
+        section: 'Commercial attributes',
+        step: 0.01,
+        valueFormat: 'money',
+        visibleWhen: isConsignaModel,
       }),
       text('tag', 'Tag', {
         section: 'Commercial attributes',

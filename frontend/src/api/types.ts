@@ -26,6 +26,7 @@ export type Product = {
   idSurface: string | null
   idModel: number | null
   ownership: DecimalValue
+  feeAmount?: DecimalValue | null
   tag: string | null
   model?: PricingModel | null
 }
