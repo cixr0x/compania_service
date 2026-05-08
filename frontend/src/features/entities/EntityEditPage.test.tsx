@@ -479,6 +479,7 @@ describe('EntityEditPage', () => {
         amount: 125.5,
         date: '2026-05-04',
         fee: 3.5,
+        feeOverride: false,
         idProduct: 101,
         idProject: 501,
         quantity: 2,
@@ -497,7 +498,13 @@ describe('EntityEditPage', () => {
     vi.mocked(getJson).mockImplementation(async (path) => {
       if (path === '/products') {
         return [
-          { id: 101, name: 'Walnut Desk', ownership: 25 },
+          {
+            feeAmount: 625.25,
+            id: 101,
+            model: { code: 'consigna' },
+            name: 'Walnut Desk',
+            ownership: 25,
+          },
           { id: 102, name: 'Maple Shelf', ownership: 50 },
         ]
       }
@@ -561,7 +568,9 @@ describe('EntityEditPage', () => {
     await user.type(screen.getByLabelText('Date'), '2026-05-05')
     await user.type(screen.getByLabelText('Quantity'), '2')
     await user.type(screen.getByLabelText('Amount'), '1,000,000.00')
-    await user.type(screen.getByLabelText('Fee'), '1,250.50')
+    expect(screen.getByLabelText('Override Fee')).not.toBeChecked()
+    expect(screen.getByLabelText('Fee')).toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Fee')).toHaveValue('1,250.50')
     expect(screen.getByLabelText('Tax')).toHaveValue('34,000.00')
     expect(screen.getByLabelText('Tax')).toHaveAttribute('readonly')
     expect(screen.getByLabelText('Profit')).toHaveValue('964,749.50')
@@ -578,6 +587,7 @@ describe('EntityEditPage', () => {
         amount: 1000000,
         date: '2026-05-05',
         fee: 1250.5,
+        feeOverride: false,
         idProduct: 101,
         idProject: 501,
         quantity: 2,
@@ -592,6 +602,86 @@ describe('EntityEditPage', () => {
     expect(getJson).toHaveBeenCalledWith('/products')
     expect(getJson).toHaveBeenCalledWith('/projects')
     expect(getJson).toHaveBeenCalledWith('/settings?search=sales_tax&pageSize=100')
+  })
+
+  it('allows a manual sale fee only when override fee is enabled', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products') {
+        return [
+          {
+            id: 101,
+            model: { code: 'interno' },
+            name: 'Internal Desk',
+            ownership: 25,
+          },
+        ]
+      }
+
+      if (path === '/projects') {
+        return [
+          {
+            idProject: 501,
+            idProduct: 101,
+            isActive: true,
+            product: { id: 101, name: 'Internal Desk' },
+          },
+        ]
+      }
+
+      if (path === '/settings?search=sales_tax&pageSize=100') {
+        return [{ code: 'sales_tax', value: '0.034' }]
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
+    vi.mocked(postJson).mockResolvedValue({ idSale: 31 })
+
+    renderEntityEditPage('/sales/new', '/:entityName/:id')
+
+    await selectAntOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Product' }),
+      'Internal Desk',
+    )
+    await user.type(screen.getByLabelText('Date'), '2026-05-05')
+    await user.type(screen.getByLabelText('Quantity'), '2')
+    await user.type(screen.getByLabelText('Amount'), '100')
+
+    const feeInput = screen.getByLabelText('Fee')
+    expect(feeInput).toHaveAttribute('readonly')
+    expect(feeInput).toHaveValue('10.00')
+
+    await user.click(screen.getByLabelText('Override Fee'))
+    expect(feeInput).not.toHaveAttribute('readonly')
+    await user.click(feeInput)
+    await user.keyboard('3.25')
+    await user.clear(screen.getByLabelText('Amount'))
+    await user.type(screen.getByLabelText('Amount'), '200')
+
+    expect(feeInput).toHaveValue('3.25')
+    expect(screen.getByLabelText('Profit')).toHaveValue('189.95')
+
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Source' }),
+      'Store',
+    )
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith('/sales', {
+        amount: 200,
+        date: '2026-05-05',
+        fee: 3.25,
+        feeOverride: true,
+        idProduct: 101,
+        idProject: 501,
+        quantity: 2,
+        source: 'store',
+        tax: 6.8,
+      })
+    })
   })
 
   it('renders project product choices by product name and saves the selected product id', async () => {

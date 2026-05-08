@@ -1,6 +1,7 @@
 import { Transform, Type } from 'class-transformer';
 import {
   IsInt,
+  IsBoolean,
   IsNotEmpty,
   IsNumber,
   IsString,
@@ -35,11 +36,17 @@ export class CreateSaleDto {
   @Min(0)
   amount!: number;
 
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
   source!: string;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @IsBoolean()
+  feeOverride?: boolean;
 
   @ValidateIf((_, value) => value !== undefined)
   @Transform(({ value }) => transformSaleNumber(value))

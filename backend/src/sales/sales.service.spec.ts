@@ -1,5 +1,6 @@
 import { SalesService } from './sales.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SaleFeeCalculatorService } from './sale-fee-calculator.service';
 
 describe('SalesService', () => {
   const prisma = {
@@ -19,18 +20,26 @@ describe('SalesService', () => {
       findUnique: jest.fn(),
     },
   } as any;
+  const feeCalculator = {
+    calculateFee: jest.fn(),
+  } as unknown as jest.Mocked<SaleFeeCalculatorService>;
 
   beforeEach(() => {
     jest.resetAllMocks();
     jest
       .spyOn(prisma.setting, 'findUnique')
       .mockResolvedValue({ value: '0.034' });
+    jest.spyOn(feeCalculator, 'calculateFee').mockResolvedValue(9.5);
   });
+
+  function buildService() {
+    return new SalesService(prisma as PrismaService, feeCalculator);
+  }
 
   it('loads product names for sale project references in list responses', async () => {
     jest.spyOn(prisma.sale, 'findMany').mockResolvedValue([]);
 
-    const service = new SalesService(prisma as PrismaService);
+    const service = buildService();
     await service.findAll({ page: 1, pageSize: 25 });
 
     expect(prisma.sale.findMany).toHaveBeenCalledWith({
@@ -61,7 +70,7 @@ describe('SalesService', () => {
       .spyOn(prisma.project, 'findUnique')
       .mockResolvedValue({ idProject: 51, idProduct: 7 });
 
-    const service = new SalesService(prisma as PrismaService);
+    const service = buildService();
     await service.create({
       date: '2026-05-05',
       idProject: 51,
@@ -79,10 +88,17 @@ describe('SalesService', () => {
         quantity: 2,
         amount: 120,
         source: 'ecommerce',
-        fee: 0,
+        fee: 9.5,
+        feeOverride: false,
         tax: 4.08,
         taxPct: 0.034,
       },
+    });
+    expect(feeCalculator.calculateFee).toHaveBeenCalledWith({
+      amount: 120,
+      idProduct: 7,
+      idProject: 51,
+      quantity: 2,
     });
     expect(prisma.setting.findUnique).toHaveBeenCalledWith({
       where: { code: 'sales_tax' },
@@ -105,7 +121,7 @@ describe('SalesService', () => {
       .spyOn(prisma.project, 'findUnique')
       .mockResolvedValue({ idProject: 51, idProduct: 7 });
 
-    const service = new SalesService(prisma as PrismaService);
+    const service = buildService();
     await service.create({
       date: '2026-05-05',
       idProject: 51,
@@ -114,14 +130,18 @@ describe('SalesService', () => {
       amount: 120,
       source: 'ecommerce',
       fee: 1.5,
+      feeOverride: true,
     });
 
     const call = prisma.sale.create.mock.calls[0][0];
     expect(call.data.date).toBeInstanceOf(Date);
     expect(call.data.date).toEqual(new Date('2026-05-05'));
+    expect(call.data.fee).toBe(1.5);
+    expect(call.data.feeOverride).toBe(true);
+    expect(feeCalculator.calculateFee).not.toHaveBeenCalled();
   });
 
-  it('does not include fee in update data when fee is omitted', async () => {
+  it('recalculates fee in update data when fee override is disabled', async () => {
     jest.spyOn(prisma.sale, 'findUnique').mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
@@ -143,12 +163,18 @@ describe('SalesService', () => {
       fee: '1.50',
     });
 
-    const service = new SalesService(prisma as PrismaService);
+    const service = buildService();
     await service.update(1, { quantity: 3 });
 
     expect(prisma.sale.update).toHaveBeenCalledWith({
       where: { idSale: 1 },
-      data: { quantity: 3 },
+      data: { quantity: 3, fee: 9.5 },
+    });
+    expect(feeCalculator.calculateFee).toHaveBeenCalledWith({
+      amount: '120.00',
+      idProduct: 7,
+      idProject: 51,
+      quantity: 3,
     });
   });
 
@@ -174,16 +200,22 @@ describe('SalesService', () => {
       fee: '1.50',
     });
 
-    const service = new SalesService(prisma as PrismaService);
+    const service = buildService();
     await service.update(1, { amount: 130 });
 
     expect(prisma.sale.update).toHaveBeenCalledWith({
       where: { idSale: 1 },
-      data: { amount: 130, tax: 4.42, taxPct: 0.034 },
+      data: { amount: 130, fee: 9.5, tax: 4.42, taxPct: 0.034 },
+    });
+    expect(feeCalculator.calculateFee).toHaveBeenCalledWith({
+      amount: 130,
+      idProduct: 7,
+      idProject: 51,
+      quantity: 2,
     });
   });
 
-  it('recalculates tax from the current amount when fee changes', async () => {
+  it('preserves manual fee when fee override is enabled', async () => {
     jest.spyOn(prisma.sale, 'findUnique').mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
@@ -193,6 +225,7 @@ describe('SalesService', () => {
       amount: '120.00',
       source: 'ecommerce',
       fee: '1.50',
+      feeOverride: true,
     });
     jest.spyOn(prisma.sale, 'update').mockResolvedValue({
       idSale: 1,
@@ -206,13 +239,14 @@ describe('SalesService', () => {
       tax: '4.08',
     });
 
-    const service = new SalesService(prisma as PrismaService);
-    await service.update(1, { fee: 2 });
+    const service = buildService();
+    await service.update(1, { fee: 2, feeOverride: true });
 
     expect(prisma.sale.update).toHaveBeenCalledWith({
       where: { idSale: 1 },
-      data: { fee: 2, tax: 4.08, taxPct: 0.034 },
+      data: { fee: 2, feeOverride: true, tax: 4.08, taxPct: 0.034 },
     });
+    expect(feeCalculator.calculateFee).not.toHaveBeenCalled();
   });
 
   it('rejects sale writes when the sales tax setting is missing', async () => {
@@ -222,7 +256,7 @@ describe('SalesService', () => {
       .spyOn(prisma.project, 'findUnique')
       .mockResolvedValue({ idProject: 51, idProduct: 7 });
 
-    const service = new SalesService(prisma as PrismaService);
+    const service = buildService();
 
     await expect(
       service.create({
@@ -255,7 +289,7 @@ describe('SalesService', () => {
       fee: '0.00',
     });
 
-    const service = new SalesService(prisma as PrismaService);
+    const service = buildService();
     await service.create({
       date: '2026-05-05',
       idProject: 51,
@@ -280,7 +314,7 @@ describe('SalesService', () => {
       .spyOn(prisma.project, 'findUnique')
       .mockResolvedValue({ idProject: 51, idProduct: 8 });
 
-    const service = new SalesService(prisma as PrismaService);
+    const service = buildService();
 
     await expect(
       service.create({
@@ -298,7 +332,7 @@ describe('SalesService', () => {
   it('throws a client error when create references a missing product', async () => {
     jest.spyOn(prisma.product, 'findUnique').mockResolvedValue(null);
 
-    const service = new SalesService(prisma as PrismaService);
+    const service = buildService();
 
     await expect(
       service.create({
@@ -327,7 +361,7 @@ describe('SalesService', () => {
     });
     jest.spyOn(prisma.product, 'findUnique').mockResolvedValue(null);
 
-    const service = new SalesService(prisma as PrismaService);
+    const service = buildService();
 
     await expect(service.update(1, { idProduct: 999 })).rejects.toThrow(
       'Product 999 was not found',
@@ -350,7 +384,7 @@ describe('SalesService', () => {
       .spyOn(prisma.project, 'findUnique')
       .mockResolvedValue({ idProject: 52, idProduct: 8 });
 
-    const service = new SalesService(prisma as PrismaService);
+    const service = buildService();
 
     await expect(service.update(1, { idProject: 52 })).rejects.toThrow(
       'Project 52 does not belong to product 7',

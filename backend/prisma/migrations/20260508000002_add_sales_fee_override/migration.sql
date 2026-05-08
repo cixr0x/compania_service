@@ -1,0 +1,2 @@
+ALTER TABLE `sales`
+ADD COLUMN `fee_override` BOOLEAN NOT NULL DEFAULT false;

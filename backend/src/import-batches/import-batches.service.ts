@@ -15,6 +15,7 @@ import {
 } from './import-validator.service';
 import { parseSaleDate } from '../sales/dto/sale-date-string.validator';
 import { PrismaService } from '../prisma/prisma.service';
+import { SaleFeeCalculatorService } from '../sales/sale-fee-calculator.service';
 
 const batchDetailInclude = {
   _count: { select: { stageRows: true, errors: true } },
@@ -40,6 +41,7 @@ export class ImportBatchesService {
     private readonly prisma: PrismaService,
     private readonly parser: ImportParserService,
     private readonly validator: ImportValidatorService,
+    private readonly feeCalculator: SaleFeeCalculatorService,
   ) {}
 
   async create(dto: CreateImportBatchDto, file?: Express.Multer.File) {
@@ -284,18 +286,31 @@ export class ImportBatchesService {
         throw new BadRequestException('Batch has incomplete staged rows');
       }
 
-      await tx.sale.createMany({
-        data: validation.stageRows.map((row) => ({
+      const saleRows = await Promise.all(
+        validation.stageRows.map(async (row) => ({
           date: batch.importDate as Date,
           source: batch.source,
           idProduct: row.idProduct as number,
           idProject: row.idProject as number,
           quantity: row.quantity as number,
           amount: row.amount as Prisma.Decimal | number,
-          fee: 0,
+          fee: await this.feeCalculator.calculateFee(
+            {
+              amount: row.amount,
+              idProduct: row.idProduct as number,
+              idProject: row.idProject as number,
+              quantity: row.quantity,
+            },
+            tx,
+          ),
+          feeOverride: false,
           tax: 0,
           taxPct: 0,
         })),
+      );
+
+      await tx.sale.createMany({
+        data: saleRows,
       });
 
       return tx.importBatch.update({
@@ -358,8 +373,8 @@ export class ImportBatchesService {
     return data;
   }
 
-  private ensureBatchCanMutate(status: ImportStatus | string) {
-    if (mutableTerminalStatuses.includes(status as ImportStatus)) {
+  private ensureBatchCanMutate(status: ImportStatus) {
+    if (mutableTerminalStatuses.includes(status)) {
       throw new BadRequestException(
         `Import batch cannot be changed when status is ${status}`,
       );
@@ -466,7 +481,7 @@ export class ImportBatchesService {
         row.rawRow &&
         typeof row.rawRow === 'object' &&
         !Array.isArray(row.rawRow)
-          ? (row.rawRow as Record<string, unknown>)
+          ? row.rawRow
           : {},
     };
   }

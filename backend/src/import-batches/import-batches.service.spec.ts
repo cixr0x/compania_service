@@ -3,6 +3,7 @@ import { ImportBatchesService } from './import-batches.service';
 import { ImportParserService } from './import-parser.service';
 import { ImportValidatorService } from './import-validator.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SaleFeeCalculatorService } from '../sales/sale-fee-calculator.service';
 
 describe('ImportBatchesService', () => {
   const prisma = {
@@ -30,13 +31,28 @@ describe('ImportBatchesService', () => {
   const validator = {
     validateRows: jest.fn(),
   } as any as ImportValidatorService;
+  const feeCalculator = {
+    calculateFee: jest.fn(),
+  } as unknown as jest.Mocked<SaleFeeCalculatorService>;
 
   beforeEach(() => {
     jest.resetAllMocks();
     jest
       .spyOn(prisma, '$transaction')
       .mockImplementation(async (callback) => callback(prisma));
+    jest
+      .spyOn(feeCalculator, 'calculateFee')
+      .mockImplementation(async (row) => (row.idProduct === 7 ? 7.63 : 1.2));
   });
+
+  function buildService() {
+    return new ImportBatchesService(
+      prisma as PrismaService,
+      parser,
+      validator,
+      feeCalculator,
+    );
+  }
 
   it('rejects commit when import date is missing', async () => {
     jest.spyOn(prisma.importBatch, 'findUnique').mockResolvedValue({
@@ -45,11 +61,7 @@ describe('ImportBatchesService', () => {
       importDate: null,
       source: 'store',
     });
-    const service = new ImportBatchesService(
-      prisma as PrismaService,
-      parser,
-      validator,
-    );
+    const service = buildService();
 
     await expect(service.commit(1)).rejects.toThrow(
       new BadRequestException('Import date is required before commit'),
@@ -65,11 +77,7 @@ describe('ImportBatchesService', () => {
       source: 'store',
     });
     jest.spyOn(prisma.importStage, 'findMany').mockResolvedValue([]);
-    const service = new ImportBatchesService(
-      prisma as PrismaService,
-      parser,
-      validator,
-    );
+    const service = buildService();
 
     await expect(service.commit(1)).rejects.toThrow(
       new BadRequestException('Batch has incomplete staged rows'),
@@ -77,7 +85,7 @@ describe('ImportBatchesService', () => {
     expect(prisma.sale.createMany).not.toHaveBeenCalled();
   });
 
-  it('creates sales with selected import date, batch source, fee zero, tax zero, and tax pct zero on commit', async () => {
+  it('creates sales with selected import date, batch source, calculated fee, tax zero, and tax pct zero on commit', async () => {
     const importDate = new Date('2026-05-05T00:00:00.000Z');
     jest.spyOn(prisma.importBatch, 'findUnique').mockResolvedValue({
       idImportBatch: 1,
@@ -146,11 +154,7 @@ describe('ImportBatchesService', () => {
       importDate,
       source: 'event',
     });
-    const service = new ImportBatchesService(
-      prisma as PrismaService,
-      parser,
-      validator,
-    );
+    const service = buildService();
 
     await service.commit(1);
 
@@ -195,7 +199,8 @@ describe('ImportBatchesService', () => {
           idProject: 70,
           quantity: 2,
           amount: 30.5,
-          fee: 0,
+          fee: 7.63,
+          feeOverride: false,
           tax: 0,
           taxPct: 0,
         },
@@ -206,12 +211,31 @@ describe('ImportBatchesService', () => {
           idProject: 80,
           quantity: 1,
           amount: 12,
-          fee: 0,
+          fee: 1.2,
+          feeOverride: false,
           tax: 0,
           taxPct: 0,
         },
       ],
     });
+    expect(feeCalculator.calculateFee).toHaveBeenCalledWith(
+      {
+        amount: 30.5,
+        idProduct: 7,
+        idProject: 70,
+        quantity: 2,
+      },
+      prisma,
+    );
+    expect(feeCalculator.calculateFee).toHaveBeenCalledWith(
+      {
+        amount: 12,
+        idProduct: 8,
+        idProject: 80,
+        quantity: 1,
+      },
+      prisma,
+    );
     expect(prisma.importBatch.update).toHaveBeenCalledWith({
       where: { idImportBatch: 1 },
       data: { status: 'committed', committedAt: expect.any(Date) },
@@ -274,11 +298,7 @@ describe('ImportBatchesService', () => {
       idImportBatch: 1,
       status: 'has_errors',
     });
-    const service = new ImportBatchesService(
-      prisma as PrismaService,
-      parser,
-      validator,
-    );
+    const service = buildService();
 
     await expect(service.commit(1)).rejects.toThrow(
       new BadRequestException('Batch has validation errors'),
@@ -335,11 +355,7 @@ describe('ImportBatchesService', () => {
         amount: '30.50',
       },
     ]);
-    const service = new ImportBatchesService(
-      prisma as PrismaService,
-      parser,
-      validator,
-    );
+    const service = buildService();
 
     await expect(service.commit(1)).rejects.toThrow(
       new BadRequestException('Import batch must be validated before commit'),
@@ -396,11 +412,7 @@ describe('ImportBatchesService', () => {
       importDate,
       source: 'event',
     });
-    const service = new ImportBatchesService(
-      prisma as PrismaService,
-      parser,
-      validator,
-    );
+    const service = buildService();
 
     await service.commit(1);
 
@@ -432,11 +444,7 @@ describe('ImportBatchesService', () => {
       status: 'has_errors',
       source: 'event',
     });
-    const service = new ImportBatchesService(
-      prisma as PrismaService,
-      parser,
-      validator,
-    );
+    const service = buildService();
 
     await service.update(1, { source: 'event' });
 
@@ -497,11 +505,7 @@ describe('ImportBatchesService', () => {
       idImportBatch: 1,
       status: 'validated',
     });
-    const service = new ImportBatchesService(
-      prisma as PrismaService,
-      parser,
-      validator,
-    );
+    const service = buildService();
 
     await service.validate(1);
 
@@ -527,11 +531,7 @@ describe('ImportBatchesService', () => {
       status: 'committed',
       _count: { stageRows: 1, errors: 0 },
     });
-    const service = new ImportBatchesService(
-      prisma as PrismaService,
-      parser,
-      validator,
-    );
+    const service = buildService();
 
     await expect(service.cancel(1)).rejects.toThrow(
       new BadRequestException('Committed batches cannot be cancelled'),

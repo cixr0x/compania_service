@@ -98,6 +98,10 @@ function isFieldVisible(field: EntityField, values: EntityRow) {
   return field.visibleWhen ? field.visibleWhen(values) : true
 }
 
+function isFieldReadOnly(field: EntityField, values: EntityRow) {
+  return Boolean(field.readOnly || field.readOnlyWhen?.(values))
+}
+
 function getPreviewValue(values: EntityRow, fieldName: string | undefined) {
   if (!fieldName) {
     return ''
@@ -169,6 +173,7 @@ export function EntityForm({
       field.span === 'full' ? 'form-field form-field-full' : 'form-field'
     const isRequired = isFieldRequired(field, isCreate)
     const isMoneyField = field.valueFormat === 'money'
+    const readOnly = isFieldReadOnly(field, values)
     const fieldRules = isRequired
       ? [{ message: `${field.label} is required.`, required: true }]
       : undefined
@@ -216,6 +221,7 @@ export function EntityForm({
           <Input.TextArea
             id={fieldId}
             onChange={(event) => onChange(field.name, event.target.value)}
+            readOnly={readOnly}
             required={isRequired}
             rows={4}
             value={inputValue}
@@ -224,6 +230,7 @@ export function EntityForm({
           <div className="checkbox-control">
             <Checkbox
               checked={getCheckboxValue(value)}
+              disabled={readOnly}
               id={fieldId}
               onChange={(event) => onChange(field.name, event.target.checked)}
             />
@@ -233,7 +240,7 @@ export function EntityForm({
             <Select
               aria-label={field.label}
               aria-required={isRequired}
-              disabled={field.readOnly}
+              disabled={readOnly}
               id={selectControlId}
               onChange={(nextValue) => onChange(field.name, nextValue ?? '')}
               options={field.options ?? []}
@@ -261,6 +268,7 @@ export function EntityForm({
             onChange={(event) => onChange(field.name, event.target.value)}
             onFocus={() => setFocusedFieldName(field.name)}
             required={isRequired}
+            readOnly={readOnly}
             ref={(input) => {
               moneyInputRefs.current[field.name] = input?.input ?? null
             }}
@@ -277,6 +285,7 @@ export function EntityForm({
             onChange={(nextValue) =>
               onChange(field.name, nextValue === null ? '' : String(nextValue))
             }
+            readOnly={readOnly}
             ref={(inputNumber) => {
               const inputElement =
                 inputNumber?.nativeElement?.querySelector('input')
@@ -302,6 +311,7 @@ export function EntityForm({
             min={field.min}
             onChange={(event) => onChange(field.name, event.target.value)}
             prefix={field.prefix}
+            readOnly={readOnly}
             required={isRequired}
             step={field.step ?? 'any'}
             suffix={field.suffix}

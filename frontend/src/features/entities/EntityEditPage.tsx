@@ -304,6 +304,21 @@ function getSelectedProduct(values: EntityRow, products: EntityRow[] | undefined
     : null
 }
 
+function getSelectedProject(values: EntityRow, projects: EntityRow[] | undefined) {
+  const selectedProjectId = getNumericId(values.idProject)
+  const optionProject = projects?.find(
+    (project) => getNumericId(project.idProject) === selectedProjectId,
+  )
+
+  if (optionProject) {
+    return optionProject
+  }
+
+  return values.project && typeof values.project === 'object'
+    ? (values.project as EntityRow)
+    : null
+}
+
 function getModelCode(value: unknown): string | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null
@@ -322,6 +337,54 @@ function getSelectedModelCode(values: EntityRow, models: EntityRow[] | undefined
     : null
 
   return getModelCode(optionModel) ?? getModelCode(values.model)
+}
+
+function getProductModelCode(product: EntityRow | null) {
+  return getModelCode(product?.model)
+}
+
+function getBooleanValue(value: unknown) {
+  return value === true || value === 'true' || value === 1 || value === '1'
+}
+
+function getProjectTotalCost(project: EntityRow | null) {
+  if (!project) {
+    return 0
+  }
+
+  return (
+    (parseMoneyNumber(project.productionCost) ?? 0) +
+    (parseMoneyNumber(project.adminCost) ?? 0) +
+    (parseMoneyNumber(project.costAdjustment) ?? 0)
+  )
+}
+
+function calculateSaleFee(
+  values: EntityRow,
+  product: EntityRow | null,
+  project: EntityRow | null,
+) {
+  const amount = parseMoneyNumber(values.amount) ?? 0
+  const quantity = parseMoneyNumber(values.quantity) ?? 0
+  const modelCode = getProductModelCode(product)
+
+  if (modelCode === 'consigna256') {
+    return roundCurrency(amount * 0.25)
+  }
+
+  if (modelCode === 'ladrillo') {
+    return roundCurrency(amount * 0.13 + getProjectTotalCost(project) * 0.025)
+  }
+
+  if (modelCode === 'interno') {
+    return roundCurrency(amount * 0.1)
+  }
+
+  if (modelCode === 'consigna') {
+    return roundCurrency(quantity * (parseMoneyNumber(product?.feeAmount) ?? 0))
+  }
+
+  return parseMoneyNumber(values.fee) ?? 0
 }
 
 function withProductDerivedValues(
@@ -354,23 +417,34 @@ function getActiveProjectForProduct(
 function withSalesCalculatedValues(
   values: EntityRow,
   products: EntityRow[] | undefined,
+  projects: EntityRow[] | undefined,
   salesTaxRate: number | null,
 ): EntityRow {
   const amount = parseMoneyNumber(values.amount) ?? 0
-  const fee = parseMoneyNumber(values.fee) ?? 0
   const product = getSelectedProduct(values, products)
+  const project = getSelectedProject(values, projects)
+  const calculatedFee = calculateSaleFee(values, product, project)
+  const feeOverride = getBooleanValue(values.feeOverride)
+  const fee =
+    feeOverride && values.fee !== null && values.fee !== undefined
+      ? values.fee
+      : calculatedFee
   const ownerPercentage = parseMoneyNumber(product?.ownership) ?? 0
   const tax =
     salesTaxRate === null
       ? (parseMoneyNumber(values.tax) ?? 0)
       : roundCurrency(amount * salesTaxRate)
-  const profit = roundCurrency(amount - fee - tax)
+  const profit = roundCurrency(amount - (parseMoneyNumber(fee) ?? 0) - tax)
 
   return {
     ...values,
+    fee,
+    feeOverride,
     ownerPercentage,
     ownerProfit: roundCurrency(profit * (ownerPercentage / 100)),
     profit,
+    product,
+    project,
     salesTaxRate,
     tax,
   }
@@ -554,6 +628,7 @@ export function EntityEditPage() {
       ? withSalesCalculatedValues(
           formValues,
           optionRowsByPath.products,
+          optionRowsByPath.projects,
           salesTaxRate,
         )
       : config?.path === 'products'

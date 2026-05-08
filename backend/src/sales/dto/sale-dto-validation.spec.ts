@@ -13,6 +13,7 @@ describe('Sale DTO validation', () => {
     'source',
     'amount',
     'fee',
+    'feeOverride',
   ] as const)('rejects explicit null for update %s', async (field) => {
     const dto = plainToInstance(UpdateSaleDto, { [field]: null });
 
@@ -65,6 +66,40 @@ describe('Sale DTO validation', () => {
     const errors = await validate(dto);
 
     expect(errors.map((error) => error.property)).toContain('fee');
+  });
+
+  it('accepts fee override as a boolean on create and update', async () => {
+    const createDto = plainToInstance(CreateSaleDto, {
+      date: '2026-05-05',
+      feeOverride: true,
+      idProject: 51,
+      idProduct: 7,
+      quantity: 2,
+      amount: 120,
+      source: 'ecommerce',
+    });
+    const updateDto = plainToInstance(UpdateSaleDto, {
+      feeOverride: false,
+    });
+
+    await expect(validate(createDto)).resolves.toHaveLength(0);
+    await expect(validate(updateDto)).resolves.toHaveLength(0);
+  });
+
+  it('rejects non-boolean fee override values', async () => {
+    const dto = plainToInstance(CreateSaleDto, {
+      date: '2026-05-05',
+      feeOverride: 'false',
+      idProject: 51,
+      idProduct: 7,
+      quantity: 2,
+      amount: 120,
+      source: 'ecommerce',
+    });
+
+    const errors = await validate(dto);
+
+    expect(errors.map((error) => error.property)).toContain('feeOverride');
   });
 
   it('requires a project when creating a sale', async () => {

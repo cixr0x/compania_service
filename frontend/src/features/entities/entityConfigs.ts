@@ -18,6 +18,7 @@ export type EntityField = {
   required?: boolean
   requiredOnCreate?: boolean
   readOnly?: boolean
+  readOnlyWhen?: (values: EntityRow) => boolean
   visibleWhen?: (values: EntityRow) => boolean
   section?: string
   span?: 'full'
@@ -257,6 +258,10 @@ function getModelCode(row: EntityRow): string | null {
 
 function isConsignaModel(row: EntityRow) {
   return getModelCode(row) === 'consigna'
+}
+
+function isFeeOverrideEnabled(row: EntityRow) {
+  return row.feeOverride === true || row.feeOverride === 'true'
 }
 
 export const entityConfigs = {
@@ -606,9 +611,11 @@ export const entityConfigs = {
           { label: 'Surface', value: 'surface' },
         ],
       ),
+      checkbox('feeOverride', 'Override Fee'),
       number('fee', 'Fee', {
         min: 0,
         prefix: '$',
+        readOnlyWhen: (row) => !isFeeOverrideEnabled(row),
         step: 0.01,
         valueFormat: 'money',
       }),
