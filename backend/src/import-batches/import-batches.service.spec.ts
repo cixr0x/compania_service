@@ -4,6 +4,7 @@ import { ImportParserService } from './import-parser.service';
 import { ImportValidatorService } from './import-validator.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SaleFeeCalculatorService } from '../sales/sale-fee-calculator.service';
+import { SaleFinancialsCalculatorService } from '../sales/sale-financials-calculator.service';
 
 describe('ImportBatchesService', () => {
   const prisma = {
@@ -34,6 +35,9 @@ describe('ImportBatchesService', () => {
   const feeCalculator = {
     calculateFee: jest.fn(),
   } as unknown as jest.Mocked<SaleFeeCalculatorService>;
+  const financialsCalculator = {
+    calculateFinancials: jest.fn(),
+  } as unknown as jest.Mocked<SaleFinancialsCalculatorService>;
 
   beforeEach(() => {
     jest.resetAllMocks();
@@ -43,6 +47,13 @@ describe('ImportBatchesService', () => {
     jest
       .spyOn(feeCalculator, 'calculateFee')
       .mockImplementation(async (row) => (row.idProduct === 7 ? 7.63 : 1.2));
+    jest
+      .spyOn(financialsCalculator, 'calculateFinancials')
+      .mockImplementation(async (row) =>
+        row.idProduct === 7
+          ? { ownerProfit: 5.72, profit: 22.87 }
+          : { ownerProfit: 1.08, profit: 10.8 },
+      );
   });
 
   function buildService() {
@@ -51,6 +62,7 @@ describe('ImportBatchesService', () => {
       parser,
       validator,
       feeCalculator,
+      financialsCalculator,
     );
   }
 
@@ -201,6 +213,8 @@ describe('ImportBatchesService', () => {
           amount: 30.5,
           fee: 7.63,
           feeOverride: false,
+          ownerProfit: 5.72,
+          profit: 22.87,
           tax: 0,
           taxPct: 0,
         },
@@ -213,6 +227,8 @@ describe('ImportBatchesService', () => {
           amount: 12,
           fee: 1.2,
           feeOverride: false,
+          ownerProfit: 1.08,
+          profit: 10.8,
           tax: 0,
           taxPct: 0,
         },
@@ -224,6 +240,24 @@ describe('ImportBatchesService', () => {
         idProduct: 7,
         idProject: 70,
         quantity: 2,
+      },
+      prisma,
+    );
+    expect(financialsCalculator.calculateFinancials).toHaveBeenCalledWith(
+      {
+        amount: 30.5,
+        fee: 7.63,
+        idProduct: 7,
+        tax: 0,
+      },
+      prisma,
+    );
+    expect(financialsCalculator.calculateFinancials).toHaveBeenCalledWith(
+      {
+        amount: 12,
+        fee: 1.2,
+        idProduct: 8,
+        tax: 0,
       },
       prisma,
     );

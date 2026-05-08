@@ -16,6 +16,7 @@ import {
 import { parseSaleDate } from '../sales/dto/sale-date-string.validator';
 import { PrismaService } from '../prisma/prisma.service';
 import { SaleFeeCalculatorService } from '../sales/sale-fee-calculator.service';
+import { SaleFinancialsCalculatorService } from '../sales/sale-financials-calculator.service';
 
 const batchDetailInclude = {
   _count: { select: { stageRows: true, errors: true } },
@@ -42,6 +43,7 @@ export class ImportBatchesService {
     private readonly parser: ImportParserService,
     private readonly validator: ImportValidatorService,
     private readonly feeCalculator: SaleFeeCalculatorService,
+    private readonly financialsCalculator: SaleFinancialsCalculatorService,
   ) {}
 
   async create(dto: CreateImportBatchDto, file?: Express.Multer.File) {
@@ -287,26 +289,42 @@ export class ImportBatchesService {
       }
 
       const saleRows = await Promise.all(
-        validation.stageRows.map(async (row) => ({
-          date: batch.importDate as Date,
-          source: batch.source,
-          idProduct: row.idProduct as number,
-          idProject: row.idProject as number,
-          quantity: row.quantity as number,
-          amount: row.amount as Prisma.Decimal | number,
-          fee: await this.feeCalculator.calculateFee(
+        validation.stageRows.map(async (row) => {
+          const idProduct = row.idProduct as number;
+          const fee = await this.feeCalculator.calculateFee(
             {
               amount: row.amount,
-              idProduct: row.idProduct as number,
+              idProduct,
               idProject: row.idProject as number,
               quantity: row.quantity,
             },
             tx,
-          ),
-          feeOverride: false,
-          tax: 0,
-          taxPct: 0,
-        })),
+          );
+          const financials =
+            await this.financialsCalculator.calculateFinancials(
+              {
+                amount: row.amount,
+                fee,
+                idProduct,
+                tax: 0,
+              },
+              tx,
+            );
+
+          return {
+            date: batch.importDate as Date,
+            source: batch.source,
+            idProduct,
+            idProject: row.idProject as number,
+            quantity: row.quantity as number,
+            amount: row.amount as Prisma.Decimal | number,
+            fee,
+            feeOverride: false,
+            ...financials,
+            tax: 0,
+            taxPct: 0,
+          };
+        }),
       );
 
       await tx.sale.createMany({

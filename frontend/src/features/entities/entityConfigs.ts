@@ -639,10 +639,12 @@ export const entityConfigs = {
         valueFormat: 'money',
       }),
       computed('profit', 'Profit', getSaleProfit, {
+        persistComputed: true,
         prefix: '$',
         valueFormat: 'money',
       }),
       computed('ownerProfit', 'Owner Profit', getSaleOwnerProfit, {
+        persistComputed: true,
         prefix: '$',
         valueFormat: 'money',
       }),

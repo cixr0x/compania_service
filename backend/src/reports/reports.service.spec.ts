@@ -37,6 +37,7 @@ describe('ReportsService', () => {
         amount: '200.00',
         fee: '5.00',
         idProject: 501,
+        ownerProfit: '47.50',
         product: {
           id: 42,
           image: 'https://example.test/maple-shelf.jpg',
@@ -44,6 +45,7 @@ describe('ReportsService', () => {
           name: 'Maple Shelf',
           ownership: '25.00',
         },
+        profit: '190.00',
         project: {
           adminCost: '20.00',
           idProject: 501,
@@ -57,6 +59,7 @@ describe('ReportsService', () => {
         amount: '150.00',
         fee: '2.00',
         idProject: 501,
+        ownerProfit: '35.00',
         product: {
           id: 42,
           image: 'https://example.test/maple-shelf.jpg',
@@ -64,6 +67,7 @@ describe('ReportsService', () => {
           name: 'Maple Shelf',
           ownership: '25.00',
         },
+        profit: '140.00',
         project: {
           adminCost: '20.00',
           idProject: 501,
@@ -77,6 +81,7 @@ describe('ReportsService', () => {
         amount: '300.00',
         fee: '10.00',
         idProject: 502,
+        ownerProfit: '65.00',
         product: {
           id: 42,
           image: 'https://example.test/maple-shelf.jpg',
@@ -84,6 +89,7 @@ describe('ReportsService', () => {
           name: 'Maple Shelf',
           ownership: '25.00',
         },
+        profit: '260.00',
         project: {
           adminCost: '30.00',
           idProject: 502,
@@ -117,10 +123,10 @@ describe('ReportsService', () => {
         event: { amount: 0, quantity: 0 },
         fee: 7,
         model: 'Furniture',
-        ownerProfit: 82.78,
+        ownerProfit: 82.5,
         productImage: 'https://example.test/maple-shelf.jpg',
         productName: 'Maple Shelf',
-        profit: 331.1,
+        profit: 330,
         projectId: 501,
         store: { amount: 200, quantity: 2 },
         surface: { amount: 0, quantity: 0 },
@@ -132,10 +138,10 @@ describe('ReportsService', () => {
         event: { amount: 300, quantity: 3 },
         fee: 10,
         model: 'Furniture',
-        ownerProfit: 69.95,
+        ownerProfit: 65,
         productImage: 'https://example.test/maple-shelf.jpg',
         productName: 'Maple Shelf',
-        profit: 279.8,
+        profit: 260,
         projectId: 502,
         store: { amount: 0, quantity: 0 },
         surface: { amount: 0, quantity: 0 },
@@ -151,12 +157,14 @@ describe('ReportsService', () => {
         amount: '80.00',
         fee: '0.00',
         idProject: 701,
+        ownerProfit: '40.00',
         product: {
           id: 88,
           model: null,
           name: 'Event Kit',
           ownership: '50.00',
         },
+        profit: '80.00',
         project: {
           adminCost: '10.00',
           idProject: 701,

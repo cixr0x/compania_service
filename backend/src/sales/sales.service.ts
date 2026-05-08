@@ -10,6 +10,7 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 import { parseSaleDate } from './dto/sale-date-string.validator';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { SaleFeeCalculatorService } from './sale-fee-calculator.service';
+import { SaleFinancialsCalculatorService } from './sale-financials-calculator.service';
 
 const saleInclude = {
   product: true,
@@ -22,6 +23,7 @@ export class SalesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly feeCalculator: SaleFeeCalculatorService,
+    private readonly financialsCalculator: SaleFinancialsCalculatorService,
   ) {}
 
   async create(dto: CreateSaleDto) {
@@ -86,12 +88,20 @@ export class SalesService {
           idProject: dto.idProject,
           quantity: dto.quantity,
         });
+    const taxDetails = await this.calculateTaxDetails(dto.amount);
+    const financials = await this.financialsCalculator.calculateFinancials({
+      amount: dto.amount,
+      fee,
+      idProduct: dto.idProduct,
+      tax: taxDetails.tax,
+    });
 
     return {
       ...this.normalizeSaleWriteData(dto),
       fee,
       feeOverride,
-      ...(await this.calculateTaxDetails(dto.amount)),
+      ...taxDetails,
+      ...financials,
     } as Prisma.SaleUncheckedCreateInput;
   }
 
@@ -100,9 +110,11 @@ export class SalesService {
     current: {
       amount: unknown;
       feeOverride?: boolean | null;
+      fee: unknown;
       idProduct: number;
       idProject: number;
       quantity: number;
+      tax: unknown;
     },
   ): Promise<Prisma.SaleUncheckedUpdateInput> {
     const data = this.normalizeSaleWriteData(dto);
@@ -125,14 +137,28 @@ export class SalesService {
       });
     }
 
+    let nextTax = data.tax ?? current.tax;
     if (
       dto.amount !== undefined ||
       dto.fee !== undefined ||
       dto.tax !== undefined
     ) {
+      const taxDetails = await this.calculateTaxDetails(
+        data.amount ?? current.amount,
+      );
+      Object.assign(data, taxDetails);
+      nextTax = taxDetails.tax;
+    }
+
+    if (this.shouldCalculateFinancials(dto, data)) {
       Object.assign(
         data,
-        await this.calculateTaxDetails(data.amount ?? current.amount),
+        await this.financialsCalculator.calculateFinancials({
+          amount: data.amount ?? current.amount,
+          fee: data.fee ?? current.fee,
+          idProduct: dto.idProduct ?? current.idProduct,
+          tax: nextTax,
+        }),
       );
     }
 
@@ -186,6 +212,22 @@ export class SalesService {
       tax: roundCurrency((numericAmount ?? 0) * taxRate),
       taxPct: taxRate,
     };
+  }
+
+  private shouldCalculateFinancials(
+    dto: UpdateSaleDto,
+    data: Record<string, unknown>,
+  ) {
+    return (
+      data.amount !== undefined ||
+      data.fee !== undefined ||
+      data.tax !== undefined ||
+      data.profit !== undefined ||
+      data.ownerProfit !== undefined ||
+      dto.feeOverride !== undefined ||
+      dto.idProduct !== undefined ||
+      dto.quantity !== undefined
+    );
   }
 
   private async ensureProductExists(idProduct: number) {

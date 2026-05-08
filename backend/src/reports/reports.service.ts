@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { ImportSource } from '../common/constants/import-sources';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalesSummaryQueryDto } from './dto/sales-summary-query.dto';
@@ -25,10 +26,7 @@ type SalesSummaryRow = Record<ReportSource, SourceTotals> & {
   totalQuantity: number;
 };
 
-type SalesSummaryAccumulator = SalesSummaryRow & {
-  ownerPercentage: number;
-  tax: number;
-};
+type SalesSummaryAccumulator = SalesSummaryRow & {};
 
 type SalesSummaryResponse = {
   rows: SalesSummaryRow[];
@@ -96,7 +94,6 @@ export class ReportsService {
         rowsByProductProject.get(key) ??
         createEmptyRow({
           model: sale.product.model?.name ?? '',
-          ownerPercentage: toNumber(sale.product.ownership),
           productImage: normalizeImageUrl(sale.product.image),
           productName: sale.product.name,
           projectId: sale.idProject,
@@ -110,7 +107,8 @@ export class ReportsService {
       row.totalQuantity += sale.quantity;
       row.totalAmount += toNumber(sale.amount);
       row.fee += toNumber(sale.fee);
-      row.tax += toNumber(sale.tax);
+      row.profit += toNumber(sale.profit);
+      row.ownerProfit += toNumber(sale.ownerProfit);
       recomputeFinancials(row);
       rowsByProductProject.set(key, row);
     }
@@ -141,13 +139,11 @@ function createEmptySourceTotals(): SourceTotals {
 
 function createEmptyRow({
   model,
-  ownerPercentage,
   productImage,
   productName,
   projectId,
 }: {
   model: string;
-  ownerPercentage: number;
   productImage: string | null;
   productName: string;
   projectId: number;
@@ -157,7 +153,6 @@ function createEmptyRow({
     event: createEmptySourceTotals(),
     fee: 0,
     model,
-    ownerPercentage,
     ownerProfit: 0,
     productImage,
     productName,
@@ -165,7 +160,6 @@ function createEmptyRow({
     projectId,
     store: createEmptySourceTotals(),
     surface: createEmptySourceTotals(),
-    tax: 0,
     totalAmount: 0,
     totalQuantity: 0,
   };
@@ -174,9 +168,8 @@ function createEmptyRow({
 function recomputeFinancials(row: SalesSummaryAccumulator) {
   row.totalAmount = roundCurrency(row.totalAmount);
   row.fee = roundCurrency(row.fee);
-  row.tax = roundCurrency(row.tax);
-  row.profit = roundCurrency(row.totalAmount - row.fee - row.tax);
-  row.ownerProfit = roundCurrency(row.profit * (row.ownerPercentage / 100));
+  row.profit = roundCurrency(row.profit);
+  row.ownerProfit = roundCurrency(row.ownerProfit);
 
   for (const source of ALL_REPORT_SOURCES) {
     row[source].amount = roundCurrency(row[source].amount);
@@ -184,8 +177,7 @@ function recomputeFinancials(row: SalesSummaryAccumulator) {
 }
 
 function stripAccumulator(row: SalesSummaryAccumulator): SalesSummaryRow {
-  const { ownerPercentage: _ownerPercentage, tax: _tax, ...publicRow } = row;
-  return publicRow;
+  return row;
 }
 
 function isReportSource(source: string): source is ReportSource {
@@ -202,18 +194,15 @@ function toNumber(value: unknown): number {
     return Number.isFinite(numericValue) ? numericValue : 0;
   }
 
-  if (value && typeof value === 'object' && 'toString' in value) {
-    const numericValue = Number(value.toString());
-    return Number.isFinite(numericValue) ? numericValue : 0;
+  if (value instanceof Prisma.Decimal) {
+    return value.toNumber();
   }
 
   return 0;
 }
 
 function normalizeImageUrl(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() !== ''
-    ? value.trim()
-    : null;
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
 }
 
 function roundCurrency(value: number): number {

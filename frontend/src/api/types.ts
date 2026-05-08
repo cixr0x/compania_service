@@ -79,6 +79,8 @@ export type Sale = {
   feeOverride?: boolean
   tax: DecimalValue
   taxPct: DecimalValue
+  profit: DecimalValue
+  ownerProfit: DecimalValue
   product?: Product
   project?: Project
 }

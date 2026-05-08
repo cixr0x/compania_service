@@ -97,6 +97,8 @@ model Sale {
   feeOverride Boolean  @default(false) @map("fee_override")
   tax         Decimal  @default(0) @db.Decimal(12, 2)
   taxPct      Decimal  @default(0) @map("tax_pct") @db.Decimal(9, 6)
+  profit      Decimal  @default(0) @db.Decimal(12, 2)
+  ownerProfit Decimal  @default(0) @map("owner_profit") @db.Decimal(12, 2)
   product     Product  @relation(fields: [idProduct], references: [id], onDelete: Restrict)
   project     Project  @relation(fields: [idProject], references: [idProject], onDelete: Restrict)
 

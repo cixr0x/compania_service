@@ -128,6 +128,8 @@ Rules:
 - `fee_override`: boolean flag. Defaults to `false`; when `true`, the manually entered `fee` is preserved and automatic fee recalculation is skipped.
 - `tax`: numeric tax. Manual sales calculate and persist tax as `amount * settings.sales_tax`; the setting value is a decimal multiplier, for example `0.034` for `3.4%`. Imported sales still default tax to `0` until import tax calculation is explicitly added.
 - `tax_pct`: numeric tax rate used to calculate the stored tax. Manual sales persist the current `settings.sales_tax` decimal multiplier, for example `0.034`; this value is not displayed in the UI. Imported sales default to `0` until import tax calculation is explicitly added.
+- `profit`: numeric stored profit, calculated as `amount - fee - tax`.
+- `owner_profit`: numeric stored owner profit, calculated as `profit * product.ownership / 100`.
 
 Sale fee calculation is centralized in the backend so each pricing model can own its business rule. Current model-code rules are:
 
@@ -209,7 +211,7 @@ Validation errors for an import batch and optionally a specific staged row.
 11. User clicks commit.
 12. Backend revalidates the entire batch inside a transaction.
 13. If any error remains, no sales rows are inserted and errors remain visible.
-14. If the batch is valid, backend inserts all staged rows into `sales`, stamps `source`, stamps the selected import date into `sales.date`, links `sales.id_project` to the matched product's active project, calculates `fee` from the matched product's pricing model, sets `fee_override` to `false`, sets `tax` and `tax_pct` to `0`, and marks the batch as `committed`.
+14. If the batch is valid, backend inserts all staged rows into `sales`, stamps `source`, stamps the selected import date into `sales.date`, links `sales.id_project` to the matched product's active project, calculates `fee` from the matched product's pricing model, sets `fee_override` to `false`, sets `tax` and `tax_pct` to `0`, calculates stored `profit` and `owner_profit`, and marks the batch as `committed`.
 
 The final `sales` table should only contain committed, validated data.
 
@@ -237,8 +239,8 @@ Calculations:
 - Source quantity and amount are summed from `sales.quantity` and `sales.amount` for each source.
 - `Total Quantity` and `Total Amount` are summed across all sources for the row.
 - `Fee` is summed from `sales.fee`.
-- `Profit` is `Total Amount - Fee - Tax`.
-- `Owner Profit` is `Profit * product.ownership / 100`.
+- `Profit` is summed from `sales.profit`.
+- `Owner Profit` is summed from `sales.owner_profit`.
 
 ## REST API Design
 
@@ -323,7 +325,7 @@ Entity pages:
 - Foreign key fields in create/edit forms should be selectors backed by the related entity list, not open numeric inputs.
 - Money fields in tables and import review screens should display with a dollar prefix, comma grouping, and two decimals, for example `$1,000,000.00`. Editable money fields may accept comma separators and submit numeric values to the API.
 - Optional text fields preserve empty strings on update. A cleared optional text field must be submitted and saved as `""`; fields that are truly omitted from a PATCH payload remain unchanged.
-- The sales CRUD table displays tax, profit, and owner profit as money columns. Sales create/edit forms calculate fee from the selected product's pricing model and linked project, keep the Fee field read-only by default, and expose an `Override Fee` checkbox that enables manual fee editing and stops fee autocalculation. Sales create/edit forms calculate tax from `amount * settings.sales_tax`, recalculate it as amount or fee changes, and persist the tax on save. Backend sale writes also persist `tax_pct` from the current `settings.sales_tax` value, but `tax_pct` is not shown in the UI. The same form displays read-only profit as `amount - fee - tax` and owner profit as `profit * product.ownership / 100`; profit and owner profit are computed display values and are not persisted.
+- The sales CRUD table displays tax, profit, and owner profit as money columns. Sales create/edit forms calculate fee from the selected product's pricing model and linked project, keep the Fee field read-only by default, and expose an `Override Fee` checkbox that enables manual fee editing and stops fee autocalculation. Sales create/edit forms calculate tax from `amount * settings.sales_tax`, recalculate it as amount or fee changes, and persist the tax on save. Backend sale writes also persist `tax_pct` from the current `settings.sales_tax` value, but `tax_pct` is not shown in the UI. The same form displays read-only profit as `amount - fee - tax` and owner profit as `profit * product.ownership / 100`; profit and owner profit are computed, persisted values.
 
 Sales import page:
 

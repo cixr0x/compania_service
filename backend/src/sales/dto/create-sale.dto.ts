@@ -59,4 +59,14 @@ export class CreateSaleDto {
   @IsNumber()
   @Min(0)
   tax?: number;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @Transform(({ value }) => transformSaleNumber(value))
+  @IsNumber()
+  profit?: number;
+
+  @ValidateIf((_, value) => value !== undefined)
+  @Transform(({ value }) => transformSaleNumber(value))
+  @IsNumber()
+  ownerProfit?: number;
 }

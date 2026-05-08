@@ -14,6 +14,8 @@ describe('Sale DTO validation', () => {
     'amount',
     'fee',
     'feeOverride',
+    'profit',
+    'ownerProfit',
   ] as const)('rejects explicit null for update %s', async (field) => {
     const dto = plainToInstance(UpdateSaleDto, { [field]: null });
 
@@ -22,7 +24,7 @@ describe('Sale DTO validation', () => {
     expect(errors.map((error) => error.property)).toContain(field);
   });
 
-  it.each(['amount', 'fee'] as const)(
+  it.each(['amount', 'fee', 'profit', 'ownerProfit'] as const)(
     'rejects empty string for create %s',
     async (field) => {
       const dto = plainToInstance(CreateSaleDto, {
@@ -41,7 +43,7 @@ describe('Sale DTO validation', () => {
     },
   );
 
-  it.each(['amount', 'fee'] as const)(
+  it.each(['amount', 'fee', 'profit', 'ownerProfit'] as const)(
     'rejects empty string for update %s',
     async (field) => {
       const dto = plainToInstance(UpdateSaleDto, { [field]: '' });

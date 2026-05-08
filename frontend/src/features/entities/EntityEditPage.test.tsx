@@ -482,15 +482,13 @@ describe('EntityEditPage', () => {
         feeOverride: false,
         idProduct: 101,
         idProject: 501,
+        ownerProfit: 29.43,
+        profit: 117.73,
         quantity: 2,
         source: 'store',
         tax: 4.27,
       })
     })
-    expect(vi.mocked(patchJson).mock.calls[0]?.[1]).not.toHaveProperty('profit')
-    expect(vi.mocked(patchJson).mock.calls[0]?.[1]).not.toHaveProperty(
-      'ownerProfit',
-    )
   })
 
   it('auto assigns the read-only sale project from the selected product active project', async () => {
@@ -592,15 +590,13 @@ describe('EntityEditPage', () => {
         feeOverride: false,
         idProduct: 101,
         idProject: 501,
+        ownerProfit: 241187.38,
+        profit: 964749.5,
         quantity: 2,
         source: 'store',
         tax: 34000,
       })
     })
-    expect(vi.mocked(postJson).mock.calls[0]?.[1]).not.toHaveProperty('profit')
-    expect(vi.mocked(postJson).mock.calls[0]?.[1]).not.toHaveProperty(
-      'ownerProfit',
-    )
     expect(getJson).toHaveBeenCalledWith('/products')
     expect(getJson).toHaveBeenCalledWith('/projects')
     expect(getJson).toHaveBeenCalledWith('/settings?search=sales_tax&pageSize=100')
@@ -679,6 +675,8 @@ describe('EntityEditPage', () => {
         feeOverride: true,
         idProduct: 101,
         idProject: 501,
+        ownerProfit: 47.49,
+        profit: 189.95,
         quantity: 2,
         source: 'store',
         tax: 6.8,
