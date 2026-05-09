@@ -11,12 +11,14 @@ describe('ReportsService', () => {
   beforeEach(() => jest.resetAllMocks());
 
   it('lists available sales report periods by year and month', async () => {
-    jest.spyOn(prisma.sale, 'findMany').mockResolvedValue([
-      { date: new Date('2026-05-05T00:00:00.000Z') },
-      { date: new Date('2026-05-20T00:00:00.000Z') },
-      { date: new Date('2026-06-01T00:00:00.000Z') },
-      { date: new Date('2025-12-31T00:00:00.000Z') },
-    ]);
+    jest
+      .spyOn(prisma.sale, 'findMany')
+      .mockResolvedValue([
+        { date: new Date('2026-05-05T00:00:00.000Z') },
+        { date: new Date('2026-05-20T00:00:00.000Z') },
+        { date: new Date('2026-06-01T00:00:00.000Z') },
+        { date: new Date('2025-12-31T00:00:00.000Z') },
+      ]);
 
     const service = new ReportsService(prisma as PrismaService);
     const result = await service.findSalesSummaryPeriods();
@@ -53,7 +55,6 @@ describe('ReportsService', () => {
         },
         quantity: 2,
         source: 'store',
-        tax: '6.80',
       },
       {
         amount: '150.00',
@@ -75,7 +76,6 @@ describe('ReportsService', () => {
         },
         quantity: 1,
         source: 'ecommerce',
-        tax: '5.10',
       },
       {
         amount: '300.00',
@@ -97,7 +97,6 @@ describe('ReportsService', () => {
         },
         quantity: 3,
         source: 'event',
-        tax: '10.20',
       },
     ]);
 

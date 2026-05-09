@@ -306,7 +306,6 @@ export class ImportBatchesService {
                 amount: row.amount,
                 fee,
                 idProduct,
-                tax: 0,
               },
               tx,
             );
@@ -321,8 +320,6 @@ export class ImportBatchesService {
             fee,
             feeOverride: false,
             ...financials,
-            tax: 0,
-            taxPct: 0,
           };
         }),
       );

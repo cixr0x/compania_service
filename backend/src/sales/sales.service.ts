@@ -16,7 +16,6 @@ const saleInclude = {
   product: true,
   project: { include: { product: true } },
 };
-const SALES_TAX_SETTING_CODE = 'sales_tax';
 
 @Injectable()
 export class SalesService {
@@ -88,19 +87,16 @@ export class SalesService {
           idProject: dto.idProject,
           quantity: dto.quantity,
         });
-    const taxDetails = await this.calculateTaxDetails(dto.amount);
     const financials = await this.financialsCalculator.calculateFinancials({
       amount: dto.amount,
       fee,
       idProduct: dto.idProduct,
-      tax: taxDetails.tax,
     });
 
     return {
       ...this.normalizeSaleWriteData(dto),
       fee,
       feeOverride,
-      ...taxDetails,
       ...financials,
     } as Prisma.SaleUncheckedCreateInput;
   }
@@ -114,7 +110,6 @@ export class SalesService {
       idProduct: number;
       idProject: number;
       quantity: number;
-      tax: unknown;
     },
   ): Promise<Prisma.SaleUncheckedUpdateInput> {
     const data = this.normalizeSaleWriteData(dto);
@@ -137,19 +132,6 @@ export class SalesService {
       });
     }
 
-    let nextTax = data.tax ?? current.tax;
-    if (
-      dto.amount !== undefined ||
-      dto.fee !== undefined ||
-      dto.tax !== undefined
-    ) {
-      const taxDetails = await this.calculateTaxDetails(
-        data.amount ?? current.amount,
-      );
-      Object.assign(data, taxDetails);
-      nextTax = taxDetails.tax;
-    }
-
     if (this.shouldCalculateFinancials(dto, data)) {
       Object.assign(
         data,
@@ -157,7 +139,6 @@ export class SalesService {
           amount: data.amount ?? current.amount,
           fee: data.fee ?? current.fee,
           idProduct: dto.idProduct ?? current.idProduct,
-          tax: nextTax,
         }),
       );
     }
@@ -188,32 +169,6 @@ export class SalesService {
     return data;
   }
 
-  private async getSalesTaxRate() {
-    const setting = await this.prisma.setting.findUnique({
-      where: { code: SALES_TAX_SETTING_CODE },
-      select: { value: true },
-    });
-    const taxRate = toFiniteNumber(setting?.value);
-
-    if (taxRate === null || taxRate < 0) {
-      throw new BadRequestException(
-        'Setting sales_tax must be configured as a decimal tax rate',
-      );
-    }
-
-    return taxRate;
-  }
-
-  private async calculateTaxDetails(amount: unknown) {
-    const numericAmount = toFiniteNumber(amount);
-    const taxRate = await this.getSalesTaxRate();
-
-    return {
-      tax: roundCurrency((numericAmount ?? 0) * taxRate),
-      taxPct: taxRate,
-    };
-  }
-
   private shouldCalculateFinancials(
     dto: UpdateSaleDto,
     data: Record<string, unknown>,
@@ -221,7 +176,6 @@ export class SalesService {
     return (
       data.amount !== undefined ||
       data.fee !== undefined ||
-      data.tax !== undefined ||
       data.profit !== undefined ||
       data.ownerProfit !== undefined ||
       dto.feeOverride !== undefined ||
@@ -259,25 +213,4 @@ export class SalesService {
       );
     }
   }
-}
-
-function toFiniteNumber(value: unknown): number | null {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : null;
-  }
-
-  if (typeof value === 'string') {
-    const numericValue = Number(value);
-    return Number.isFinite(numericValue) ? numericValue : null;
-  }
-
-  if (value instanceof Prisma.Decimal) {
-    return value.toNumber();
-  }
-
-  return null;
-}
-
-function roundCurrency(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
 }

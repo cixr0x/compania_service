@@ -30,13 +30,10 @@ describe('SalesService', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
-    jest
-      .spyOn(prisma.setting, 'findUnique')
-      .mockResolvedValue({ value: '0.034' });
     jest.spyOn(feeCalculator, 'calculateFee').mockResolvedValue(9.5);
     jest
       .spyOn(financialsCalculator, 'calculateFinancials')
-      .mockResolvedValue({ ownerProfit: 26.61, profit: 106.42 });
+      .mockResolvedValue({ ownerProfit: 27.63, profit: 110.5 });
   });
 
   function buildService() {
@@ -64,7 +61,7 @@ describe('SalesService', () => {
     });
   });
 
-  it('creates a sale with default fee and calculated tax when fee is omitted', async () => {
+  it('creates a sale with default fee and persisted profit fields when fee is omitted', async () => {
     jest.spyOn(prisma.sale, 'create').mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
@@ -73,8 +70,6 @@ describe('SalesService', () => {
       amount: '120.00',
       source: 'ecommerce',
       fee: '0.00',
-      tax: '4.08',
-      taxPct: '0.034000',
     });
     jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
     jest
@@ -101,10 +96,8 @@ describe('SalesService', () => {
         source: 'ecommerce',
         fee: 9.5,
         feeOverride: false,
-        ownerProfit: 26.61,
-        profit: 106.42,
-        tax: 4.08,
-        taxPct: 0.034,
+        ownerProfit: 27.63,
+        profit: 110.5,
       },
     });
     expect(feeCalculator.calculateFee).toHaveBeenCalledWith({
@@ -113,15 +106,11 @@ describe('SalesService', () => {
       idProject: 51,
       quantity: 2,
     });
-    expect(prisma.setting.findUnique).toHaveBeenCalledWith({
-      where: { code: 'sales_tax' },
-      select: { value: true },
-    });
+    expect(prisma.setting.findUnique).not.toHaveBeenCalled();
     expect(financialsCalculator.calculateFinancials).toHaveBeenCalledWith({
       amount: 120,
       fee: 9.5,
       idProduct: 7,
-      tax: 4.08,
     });
   });
 
@@ -157,14 +146,13 @@ describe('SalesService', () => {
     expect(call.data.date).toEqual(new Date('2026-05-05'));
     expect(call.data.fee).toBe(1.5);
     expect(call.data.feeOverride).toBe(true);
-    expect(call.data.profit).toBe(106.42);
-    expect(call.data.ownerProfit).toBe(26.61);
+    expect(call.data.profit).toBe(110.5);
+    expect(call.data.ownerProfit).toBe(27.63);
     expect(feeCalculator.calculateFee).not.toHaveBeenCalled();
     expect(financialsCalculator.calculateFinancials).toHaveBeenCalledWith({
       amount: 120,
       fee: 1.5,
       idProduct: 7,
-      tax: 4.08,
     });
   });
 
@@ -178,7 +166,6 @@ describe('SalesService', () => {
       amount: '120.00',
       source: 'ecommerce',
       fee: '1.50',
-      tax: '4.08',
     });
     jest.spyOn(prisma.sale, 'update').mockResolvedValue({
       idSale: 1,
@@ -196,7 +183,7 @@ describe('SalesService', () => {
 
     expect(prisma.sale.update).toHaveBeenCalledWith({
       where: { idSale: 1 },
-      data: { quantity: 3, fee: 9.5, ownerProfit: 26.61, profit: 106.42 },
+      data: { quantity: 3, fee: 9.5, ownerProfit: 27.63, profit: 110.5 },
     });
     expect(feeCalculator.calculateFee).toHaveBeenCalledWith({
       amount: '120.00',
@@ -216,7 +203,6 @@ describe('SalesService', () => {
       amount: '120.00',
       source: 'ecommerce',
       fee: '1.50',
-      tax: '4.08',
     });
     jest.spyOn(prisma.sale, 'update').mockResolvedValue({
       idSale: 1,
@@ -237,10 +223,8 @@ describe('SalesService', () => {
       data: {
         amount: 130,
         fee: 9.5,
-        ownerProfit: 26.61,
-        profit: 106.42,
-        tax: 4.42,
-        taxPct: 0.034,
+        ownerProfit: 27.63,
+        profit: 110.5,
       },
     });
     expect(feeCalculator.calculateFee).toHaveBeenCalledWith({
@@ -262,7 +246,6 @@ describe('SalesService', () => {
       source: 'ecommerce',
       fee: '1.50',
       feeOverride: true,
-      tax: '4.08',
     });
     jest.spyOn(prisma.sale, 'update').mockResolvedValue({
       idSale: 1,
@@ -273,7 +256,6 @@ describe('SalesService', () => {
       amount: '120.00',
       source: 'ecommerce',
       fee: '2.00',
-      tax: '4.08',
     });
 
     const service = buildService();
@@ -284,10 +266,8 @@ describe('SalesService', () => {
       data: {
         fee: 2,
         feeOverride: true,
-        ownerProfit: 26.61,
-        profit: 106.42,
-        tax: 4.08,
-        taxPct: 0.034,
+        ownerProfit: 27.63,
+        profit: 110.5,
       },
     });
     expect(feeCalculator.calculateFee).not.toHaveBeenCalled();
@@ -295,32 +275,44 @@ describe('SalesService', () => {
       amount: '120.00',
       fee: 2,
       idProduct: 7,
-      tax: 4.08,
     });
   });
 
-  it('rejects sale writes when the sales tax setting is missing', async () => {
+  it('does not require a sales tax setting when creating a sale', async () => {
     jest.spyOn(prisma.setting, 'findUnique').mockResolvedValue(null);
     jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
     jest
       .spyOn(prisma.project, 'findUnique')
       .mockResolvedValue({ idProject: 51, idProduct: 7 });
+    jest.spyOn(prisma.sale, 'create').mockResolvedValue({
+      idSale: 1,
+      date: new Date('2026-05-05T00:00:00.000Z'),
+      idProject: 51,
+      idProduct: 7,
+      quantity: 2,
+      amount: '120.00',
+      source: 'ecommerce',
+      fee: '9.50',
+    });
 
     const service = buildService();
 
-    await expect(
-      service.create({
-        date: '2026-05-05',
-        idProject: 51,
-        idProduct: 7,
-        quantity: 2,
-        amount: 120,
-        source: 'ecommerce',
+    await service.create({
+      date: '2026-05-05',
+      idProject: 51,
+      idProduct: 7,
+      quantity: 2,
+      amount: 120,
+      source: 'ecommerce',
+    });
+
+    expect(prisma.setting.findUnique).not.toHaveBeenCalled();
+    expect(prisma.sale.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        ownerProfit: 27.63,
+        profit: 110.5,
       }),
-    ).rejects.toThrow(
-      'Setting sales_tax must be configured as a decimal tax rate',
-    );
-    expect(prisma.sale.create).not.toHaveBeenCalled();
+    });
   });
 
   it('creates a sale only after verifying the project belongs to the product', async () => {

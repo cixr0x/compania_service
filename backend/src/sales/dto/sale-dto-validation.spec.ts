@@ -43,6 +43,31 @@ describe('Sale DTO validation', () => {
     },
   );
 
+  it.each([CreateSaleDto, UpdateSaleDto] as const)(
+    'rejects tax fields as non-whitelisted sale values for %p',
+    async (DtoClass) => {
+      const dto = plainToInstance(DtoClass, {
+        date: '2026-05-05',
+        idProject: 51,
+        idProduct: 7,
+        quantity: 2,
+        amount: 120,
+        source: 'ecommerce',
+        tax: 1.25,
+        taxPct: 0.034,
+      });
+
+      const errors = await validate(dto, {
+        forbidNonWhitelisted: true,
+        whitelist: true,
+      });
+
+      expect(errors.map((error) => error.property)).toEqual(
+        expect.arrayContaining(['tax', 'taxPct']),
+      );
+    },
+  );
+
   it.each(['amount', 'fee', 'profit', 'ownerProfit'] as const)(
     'rejects empty string for update %s',
     async (field) => {

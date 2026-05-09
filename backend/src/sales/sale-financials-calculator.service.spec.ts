@@ -25,11 +25,10 @@ describe('SaleFinancialsCalculatorService', () => {
         amount: 120,
         fee: 9.5,
         idProduct: 7,
-        tax: 4.08,
       }),
     ).resolves.toEqual({
-      ownerProfit: 26.61,
-      profit: 106.42,
+      ownerProfit: 27.63,
+      profit: 110.5,
     });
     expect(prisma.product.findUnique).toHaveBeenCalledWith({
       where: { id: 7 },
@@ -47,10 +46,7 @@ describe('SaleFinancialsCalculatorService', () => {
         amount: 120,
         fee: 9.5,
         idProduct: 999,
-        tax: 4.08,
       }),
-    ).rejects.toThrow(
-      new BadRequestException('Product 999 was not found'),
-    );
+    ).rejects.toThrow(new BadRequestException('Product 999 was not found'));
   });
 });

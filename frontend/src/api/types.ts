@@ -77,8 +77,6 @@ export type Sale = {
   source: string
   fee: DecimalValue
   feeOverride?: boolean
-  tax: DecimalValue
-  taxPct: DecimalValue
   profit: DecimalValue
   ownerProfit: DecimalValue
   product?: Product

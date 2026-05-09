@@ -280,11 +280,6 @@ function formatProjectParticipation(row: EntityRow): string {
   return productName ?? '-'
 }
 
-function getSettingValue(settings: EntityRow[] | undefined, code: string) {
-  const setting = settings?.find((row) => row.code === code)
-  return parseMoneyNumber(setting?.value)
-}
-
 function roundCurrency(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
@@ -418,7 +413,6 @@ function withSalesCalculatedValues(
   values: EntityRow,
   products: EntityRow[] | undefined,
   projects: EntityRow[] | undefined,
-  salesTaxRate: number | null,
 ): EntityRow {
   const amount = parseMoneyNumber(values.amount) ?? 0
   const product = getSelectedProduct(values, products)
@@ -430,11 +424,7 @@ function withSalesCalculatedValues(
       ? values.fee
       : calculatedFee
   const ownerPercentage = parseMoneyNumber(product?.ownership) ?? 0
-  const tax =
-    salesTaxRate === null
-      ? (parseMoneyNumber(values.tax) ?? 0)
-      : roundCurrency(amount * salesTaxRate)
-  const profit = roundCurrency(amount - (parseMoneyNumber(fee) ?? 0) - tax)
+  const profit = roundCurrency(amount - (parseMoneyNumber(fee) ?? 0))
 
   return {
     ...values,
@@ -445,8 +435,6 @@ function withSalesCalculatedValues(
     profit,
     product,
     project,
-    salesTaxRate,
-    tax,
   }
 }
 
@@ -536,12 +524,6 @@ export function EntityEditPage() {
       queryFn: () => getJson<EntityRow[]>(`/${path}`),
     })),
   })
-  const salesTaxQuery = useQuery({
-    enabled: config?.path === 'sales',
-    queryKey: ['settings', 'sales_tax'],
-    queryFn: () =>
-      getJson<EntityRow[]>('/settings?search=sales_tax&pageSize=100'),
-  })
   const optionRowsByPath = useMemo(
     () =>
       Object.fromEntries(
@@ -551,10 +533,6 @@ export function EntityEditPage() {
         ]),
       ) as Partial<Record<EntityConfig['path'], EntityRow[]>>,
     [optionSourceQueries, optionSources],
-  )
-  const salesTaxRate = useMemo(
-    () => getSettingValue(salesTaxQuery.data, 'sales_tax'),
-    [salesTaxQuery.data],
   )
   const formConfig = useMemo(() => {
 
@@ -629,7 +607,6 @@ export function EntityEditPage() {
           formValues,
           optionRowsByPath.products,
           optionRowsByPath.projects,
-          salesTaxRate,
         )
       : config?.path === 'products'
         ? withProductDerivedValues(formValues, optionRowsByPath.models)

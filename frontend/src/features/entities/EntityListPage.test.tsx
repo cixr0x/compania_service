@@ -212,7 +212,6 @@ describe('EntityListPage', () => {
         },
         quantity: 1,
         source: 'store',
-        tax: 12.34,
       },
     ])
 
@@ -230,14 +229,12 @@ describe('EntityListPage', () => {
     expect(screen.queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Product' })).toBeVisible()
     expect(screen.getByRole('columnheader', { name: 'Project' })).toBeVisible()
-    expect(screen.getByRole('columnheader', { name: 'Tax' })).toBeVisible()
+    expect(screen.queryByRole('columnheader', { name: 'Tax' })).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Profit' })).toBeVisible()
     expect(screen.getByRole('columnheader', { name: 'Owner Profit' })).toBeVisible()
-    expect(screen.getAllByText('$100.00')).toHaveLength(1)
+    expect(screen.getAllByText('$100.00')).toHaveLength(2)
     expect(screen.getAllByText('$0.00')).not.toHaveLength(0)
-    expect(screen.getByText('$12.34')).toBeVisible()
-    expect(screen.getByText('$87.66')).toBeVisible()
-    expect(screen.getByText('$21.92')).toBeVisible()
+    expect(screen.getByText('$25.00')).toBeVisible()
     expect(screen.queryByText('42')).not.toBeInTheDocument()
     expect(screen.queryByText('501')).not.toBeInTheDocument()
   })
@@ -299,9 +296,9 @@ describe('EntityListPage', () => {
     vi.mocked(getJson).mockResolvedValue([
       {
         id: 1,
-        code: 'sales_tax_rate',
-        name: 'Sales Tax Rate',
-        description: 'Tax percentage used by future sale calculations',
+        code: 'default_margin',
+        name: 'Default Margin',
+        description: 'Default margin used by future sale calculations',
         value: '16',
       },
     ])
@@ -313,8 +310,8 @@ describe('EntityListPage', () => {
     expect(screen.getByRole('columnheader', { name: 'Name' })).toBeVisible()
     expect(screen.getByRole('columnheader', { name: 'Description' })).toBeVisible()
     expect(screen.getByRole('columnheader', { name: 'Value' })).toBeVisible()
-    expect(await screen.findByText('sales_tax_rate')).toBeVisible()
-    expect(screen.getByText('Sales Tax Rate')).toBeVisible()
+    expect(await screen.findByText('default_margin')).toBeVisible()
+    expect(screen.getByText('Default Margin')).toBeVisible()
     expect(screen.getByText('16')).toBeVisible()
   })
 })

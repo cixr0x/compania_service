@@ -212,21 +212,11 @@ function hasProjectCostAdjustment(row: EntityRow) {
   return (parseMoneyNumber(row.costAdjustment) ?? 0) !== 0
 }
 
-function getSaleTax(row: EntityRow) {
-  const taxRate = parseMoneyNumber(row.salesTaxRate)
-  const amount = parseMoneyNumber(row.amount) ?? 0
-
-  return taxRate === null
-    ? (parseMoneyNumber(row.tax) ?? 0)
-    : roundCurrency(amount * taxRate)
-}
-
 function getSaleProfit(row: EntityRow) {
   return roundCurrency(
     sumMoneyValues(
       row.amount,
       -(parseMoneyNumber(row.fee) ?? 0),
-      -(parseMoneyNumber(row.tax) ?? 0),
     ),
   )
 }
@@ -567,7 +557,6 @@ export const entityConfigs = {
       column('amount', 'Amount', { valueFormat: 'money' }),
       column('source', 'Source'),
       column('fee', 'Fee', { valueFormat: 'money' }),
-      column('tax', 'Tax', { valueFormat: 'money' }),
       column('profit', 'Profit', {
         valueFormat: 'money',
         valueGetter: getSaleProfit,
@@ -631,11 +620,6 @@ export const entityConfigs = {
         prefix: '$',
         readOnlyWhen: (row) => !isFeeOverrideEnabled(row),
         step: 0.01,
-        valueFormat: 'money',
-      }),
-      computed('tax', 'Tax', getSaleTax, {
-        persistComputed: true,
-        prefix: '$',
         valueFormat: 'money',
       }),
       computed('profit', 'Profit', getSaleProfit, {

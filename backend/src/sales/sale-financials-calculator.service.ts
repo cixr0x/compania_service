@@ -6,7 +6,6 @@ type FinancialCalculationInput = {
   amount: unknown;
   fee: unknown;
   idProduct: number;
-  tax: unknown;
 };
 
 type FinancialCalculationClient = Pick<PrismaService, 'product'>;
@@ -30,9 +29,8 @@ export class SaleFinancialsCalculatorService {
 
     const amount = toFiniteNumber(input.amount) ?? 0;
     const fee = toFiniteNumber(input.fee) ?? 0;
-    const tax = toFiniteNumber(input.tax) ?? 0;
     const ownerPercentage = toFiniteNumber(product.ownership) ?? 0;
-    const profit = roundCurrency(amount - fee - tax);
+    const profit = roundCurrency(amount - fee);
 
     return {
       ownerProfit: roundCurrency(profit * (ownerPercentage / 100)),

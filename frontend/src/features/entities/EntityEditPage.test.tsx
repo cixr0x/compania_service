@@ -449,12 +449,7 @@ describe('EntityEditPage', () => {
           project: { idProject: 501 },
           quantity: 2,
           source: 'store',
-          tax: 9.75,
         }
-      }
-
-      if (path === '/settings?search=sales_tax&pageSize=100') {
-        return [{ code: 'sales_tax', value: '0.034' }]
       }
 
       throw new Error(`Unexpected path: ${path}`)
@@ -466,11 +461,10 @@ describe('EntityEditPage', () => {
     expect(await screen.findByLabelText('Date')).toHaveValue('2026-05-04')
     expect(screen.getByLabelText('Amount')).toHaveValue('125.50')
     expect(screen.getByLabelText('Fee')).toHaveValue('3.50')
-    expect(screen.getByLabelText('Tax')).toHaveValue('4.27')
-    expect(screen.getByLabelText('Tax')).toHaveAttribute('readonly')
-    expect(screen.getByLabelText('Profit')).toHaveValue('117.73')
+    expect(screen.queryByLabelText('Tax')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Profit')).toHaveValue('122.00')
     expect(screen.getByLabelText('Profit')).toHaveAttribute('readonly')
-    expect(screen.getByLabelText('Owner Profit')).toHaveValue('29.43')
+    expect(screen.getByLabelText('Owner Profit')).toHaveValue('30.50')
     expect(screen.getByLabelText('Owner Profit')).toHaveAttribute('readonly')
     await userEvent.click(screen.getByRole('button', { name: 'Save' }))
 
@@ -482,11 +476,10 @@ describe('EntityEditPage', () => {
         feeOverride: false,
         idProduct: 101,
         idProject: 501,
-        ownerProfit: 29.43,
-        profit: 117.73,
+        ownerProfit: 30.5,
+        profit: 122,
         quantity: 2,
         source: 'store',
-        tax: 4.27,
       })
     })
   })
@@ -530,10 +523,6 @@ describe('EntityEditPage', () => {
         ]
       }
 
-      if (path === '/settings?search=sales_tax&pageSize=100') {
-        return [{ code: 'sales_tax', value: '0.034' }]
-      }
-
       throw new Error(`Unexpected path: ${path}`)
     })
     vi.mocked(postJson).mockResolvedValue({ idSale: 30 })
@@ -571,10 +560,9 @@ describe('EntityEditPage', () => {
     expect(screen.getByLabelText('Override Fee')).not.toBeChecked()
     expect(screen.getByLabelText('Fee')).toHaveAttribute('readonly')
     expect(screen.getByLabelText('Fee')).toHaveValue('1,250.50')
-    expect(screen.getByLabelText('Tax')).toHaveValue('34,000.00')
-    expect(screen.getByLabelText('Tax')).toHaveAttribute('readonly')
-    expect(screen.getByLabelText('Profit')).toHaveValue('964,749.50')
-    expect(screen.getByLabelText('Owner Profit')).toHaveValue('241,187.38')
+    expect(screen.queryByLabelText('Tax')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Profit')).toHaveValue('998,749.50')
+    expect(screen.getByLabelText('Owner Profit')).toHaveValue('249,687.38')
     await selectAntOption(
       user,
       screen.getByRole('combobox', { name: 'Source' }),
@@ -590,16 +578,14 @@ describe('EntityEditPage', () => {
         feeOverride: false,
         idProduct: 101,
         idProject: 501,
-        ownerProfit: 241187.38,
-        profit: 964749.5,
+        ownerProfit: 249687.38,
+        profit: 998749.5,
         quantity: 2,
         source: 'store',
-        tax: 34000,
       })
     })
     expect(getJson).toHaveBeenCalledWith('/products')
     expect(getJson).toHaveBeenCalledWith('/projects')
-    expect(getJson).toHaveBeenCalledWith('/settings?search=sales_tax&pageSize=100')
   })
 
   it('allows a manual sale fee only when override fee is enabled', async () => {
@@ -625,10 +611,6 @@ describe('EntityEditPage', () => {
             product: { id: 101, name: 'Internal Desk' },
           },
         ]
-      }
-
-      if (path === '/settings?search=sales_tax&pageSize=100') {
-        return [{ code: 'sales_tax', value: '0.034' }]
       }
 
       throw new Error(`Unexpected path: ${path}`)
@@ -658,7 +640,7 @@ describe('EntityEditPage', () => {
     await user.type(screen.getByLabelText('Amount'), '200')
 
     expect(feeInput).toHaveValue('3.25')
-    expect(screen.getByLabelText('Profit')).toHaveValue('189.95')
+    expect(screen.getByLabelText('Profit')).toHaveValue('196.75')
 
     await selectAntOption(
       user,
@@ -675,11 +657,10 @@ describe('EntityEditPage', () => {
         feeOverride: true,
         idProduct: 101,
         idProject: 501,
-        ownerProfit: 47.49,
-        profit: 189.95,
+        ownerProfit: 49.19,
+        profit: 196.75,
         quantity: 2,
         source: 'store',
-        tax: 6.8,
       })
     })
   })
@@ -873,7 +854,6 @@ describe('EntityEditPage', () => {
       ['projects', 'totalCost'],
       ['sales', 'amount'],
       ['sales', 'fee'],
-      ['sales', 'tax'],
       ['sales', 'profit'],
       ['sales', 'ownerProfit'],
     ]
@@ -913,7 +893,7 @@ describe('EntityEditPage', () => {
     expect(screen.getByLabelText('Quantity')).toHaveAttribute('step', '1')
     expect(screen.getByLabelText('Quantity')).toHaveAttribute('min', '1')
     expect(screen.getByLabelText('Amount')).not.toHaveAccessibleDescription()
-    expect(screen.getAllByText('$')).toHaveLength(5)
+    expect(screen.getAllByText('$')).toHaveLength(4)
   })
 
   it('does not configure field helper descriptions for entity forms', () => {
@@ -934,20 +914,20 @@ describe('EntityEditPage', () => {
     renderEntityEditPage('/settings/new', '/:entityName/:id')
 
     expect(screen.getByRole('heading', { name: 'Create Setting' })).toBeVisible()
-    await user.type(screen.getByLabelText('Code'), 'sales_tax_rate')
-    await user.type(screen.getByLabelText('Name'), 'Sales Tax Rate')
+    await user.type(screen.getByLabelText('Code'), 'default_margin')
+    await user.type(screen.getByLabelText('Name'), 'Default Margin')
     await user.type(
       screen.getByLabelText('Description'),
-      'Tax percentage used by future sale calculations',
+      'Default margin used by future sale calculations',
     )
     await user.type(screen.getByLabelText('Value'), '16')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/settings', {
-        code: 'sales_tax_rate',
-        name: 'Sales Tax Rate',
-        description: 'Tax percentage used by future sale calculations',
+        code: 'default_margin',
+        name: 'Default Margin',
+        description: 'Default margin used by future sale calculations',
         value: '16',
       })
     })
