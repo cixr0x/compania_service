@@ -83,7 +83,7 @@ export class SaleFeeCalculatorService {
         (toFiniteNumber(project.adminCost) ?? 0) +
         (toFiniteNumber(project.costAdjustment) ?? 0);
 
-      return roundCurrency(amount * 0.13 + projectTotalCost * 0.025);
+      return roundCurrency(amount * 0.15 + projectTotalCost * 0.025);
     }
 
     throw new BadRequestException(

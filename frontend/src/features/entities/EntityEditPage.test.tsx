@@ -665,6 +665,76 @@ describe('EntityEditPage', () => {
     })
   })
 
+  it('calculates ladrillo sale fees with 15 percent of sale amount plus project cost share', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products') {
+        return [
+          {
+            id: 101,
+            model: { code: 'ladrillo', name: 'Ladrillo' },
+            name: 'Brick Shelf',
+            ownership: 25,
+          },
+        ]
+      }
+
+      if (path === '/projects') {
+        return [
+          {
+            adminCost: 20,
+            costAdjustment: -10,
+            idProject: 501,
+            idProduct: 101,
+            isActive: true,
+            product: { id: 101, name: 'Brick Shelf' },
+            productionCost: 100,
+          },
+        ]
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
+    vi.mocked(postJson).mockResolvedValue({ idSale: 32 })
+
+    renderEntityEditPage('/sales/new', '/:entityName/:id')
+
+    await selectAntOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Product' }),
+      'Brick Shelf',
+    )
+    await user.type(screen.getByLabelText('Date'), '2026-05-05')
+    await user.type(screen.getByLabelText('Quantity'), '2')
+    await user.type(screen.getByLabelText('Amount'), '100')
+
+    expect(screen.getByLabelText('Fee')).toHaveValue('17.75')
+    expect(screen.getByLabelText('Profit')).toHaveValue('82.25')
+    expect(screen.getByLabelText('Owner Profit')).toHaveValue('20.56')
+
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Source' }),
+      'Store',
+    )
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith('/sales', {
+        amount: 100,
+        date: '2026-05-05',
+        fee: 17.75,
+        feeOverride: false,
+        idProduct: 101,
+        idProject: 501,
+        ownerProfit: 20.56,
+        profit: 82.25,
+        quantity: 2,
+        source: 'store',
+      })
+    })
+  })
+
   it('renders project product choices by product name and saves the selected product id', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockResolvedValue([

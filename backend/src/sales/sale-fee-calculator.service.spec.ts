@@ -69,7 +69,7 @@ describe('SaleFeeCalculatorService', () => {
         idProject: 51,
         quantity: 2,
       }),
-    ).resolves.toBe(15.75);
+    ).resolves.toBe(17.75);
   });
 
   it('rejects consigna fee calculation when product fee amount is missing', async () => {

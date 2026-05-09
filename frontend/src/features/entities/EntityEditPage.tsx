@@ -368,7 +368,7 @@ function calculateSaleFee(
   }
 
   if (modelCode === 'ladrillo') {
-    return roundCurrency(amount * 0.13 + getProjectTotalCost(project) * 0.025)
+    return roundCurrency(amount * 0.15 + getProjectTotalCost(project) * 0.025)
   }
 
   if (modelCode === 'interno') {

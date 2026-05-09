@@ -132,7 +132,7 @@ Rules:
 Sale fee calculation is centralized in the backend so each pricing model can own its business rule. Current model-code rules are:
 
 - `consigna256`: `25%` of sale amount.
-- `ladrillo`: `13%` of sale amount plus `2.5%` of the linked project total cost. Project total cost is `production_cost + admin_cost + cost_adjustment`.
+- `ladrillo`: `15%` of sale amount plus `2.5%` of the linked project total cost. Project total cost is `production_cost + admin_cost + cost_adjustment`.
 - `interno`: `10%` of sale amount.
 - `consigna`: `quantity * product.fee_amount`.
 
