@@ -259,6 +259,7 @@ Report resources:
 - `GET /api/reports/sales-summary/periods`: list years and months with available sales data.
 - `GET /api/reports/sales-summary?year=YYYY`: get a yearly sales summary grouped by product and project.
 - `GET /api/reports/sales-summary?year=YYYY&month=M`: get a monthly sales summary grouped by product and project.
+- `GET /api/reports/stakeholder-projects`: get the all-time stakeholder project report grouped by project, including product totals, source totals, project progress, and stakeholder investment, income, and balance lines.
 
 Import resources:
 
@@ -297,7 +298,7 @@ Main navigation is grouped into sections:
 
 - Admin: Models, Settings.
 - Catalog: Products, Projects, Stakeholders, Sales, Sales Imports.
-- Reports: Sales Report.
+- Reports: Sales Report, Stakeholder Projects.
 
 Entity pages:
 
@@ -342,6 +343,15 @@ Sales report page:
 - `Surface` source group hidden unless the selected period has surface sales.
 - Profit is read from the persisted sales profit values, calculated at sale write time as amount minus fee; total cost and income are not displayed in the sales report.
 - Money cells displayed with a dollar prefix, comma grouping, and two decimals.
+
+Stakeholder projects report page:
+
+- All-time report grouped by project, with the product name as the project section header and project ID displayed beside it.
+- Source totals show units sold and amount for each source; `Surface` remains hidden unless at least one project in the report has surface sales.
+- Project summary displays total units sold, units left, total sales, total fees, net sales total, calculated cost, profit, and project progress.
+- Project total cost is production cost plus administrative cost plus cost adjustment. Unit price is project total cost divided by project total units.
+- Calculated cost is units sold multiplied by unit price. Profit is net sales total minus calculated cost. Project progress is units sold divided by total project units.
+- Stakeholder balance lines display stakeholder name, stake percentage, investment, income, and balance. Investment is project total cost multiplied by stakeholder stake percentage. Income is calculated cost multiplied by stake percentage plus profit multiplied by stake percentage. Balance is income minus investment.
 
 Known intentional custom UI areas and UI debt:
 

@@ -33,6 +33,38 @@ type SalesSummaryResponse = {
   sources: ReportSource[];
 };
 
+type StakeholderProjectStakeholderRow = {
+  balance: number;
+  income: number;
+  investment: number;
+  stakePercentage: number;
+  stakeholderId: number;
+  stakeholderName: string;
+};
+
+type StakeholderProjectRow = Record<ReportSource, SourceTotals> & {
+  calculatedCost: number;
+  netSalesTotal: number;
+  productImage: string | null;
+  productName: string;
+  profit: number;
+  projectId: number;
+  projectProgress: number;
+  projectTotalCost: number;
+  stakeholders: StakeholderProjectStakeholderRow[];
+  totalFees: number;
+  totalSales: number;
+  totalUnits: number;
+  totalUnitsSold: number;
+  unitPrice: number;
+  unitsLeft: number;
+};
+
+type StakeholderProjectsResponse = {
+  rows: StakeholderProjectRow[];
+  sources: ReportSource[];
+};
+
 type SalesSummaryPeriod = {
   months: number[];
   year: number;
@@ -120,6 +152,93 @@ export class ReportsService {
 
     return { rows, sources };
   }
+
+  async getStakeholderProjectsReport(): Promise<StakeholderProjectsResponse> {
+    const projects = await this.prisma.project.findMany({
+      include: {
+        product: true,
+        sales: true,
+        stakeholders: { include: { stakeholder: true } },
+      },
+      orderBy: [{ product: { name: 'asc' } }, { idProject: 'asc' }],
+    });
+    let hasSurfaceSales = false;
+
+    const rows = projects.map((project) => {
+      const row = createEmptyStakeholderProjectRow({
+        productImage: normalizeImageUrl(project.product.image),
+        productName: project.product.name,
+        projectId: project.idProject,
+        totalUnits: project.units,
+      });
+
+      for (const sale of project.sales) {
+        const source = sale.source as ImportSource;
+        if (source === 'surface') {
+          hasSurfaceSales = true;
+        }
+
+        if (isReportSource(source)) {
+          row[source].quantity += sale.quantity;
+          row[source].amount += toNumber(sale.amount);
+        }
+
+        row.totalUnitsSold += sale.quantity;
+        row.totalSales += toNumber(sale.amount);
+        row.totalFees += toNumber(sale.fee);
+      }
+
+      row.projectTotalCost = roundCurrency(
+        sumNumbers(
+          project.productionCost,
+          project.adminCost,
+          project.costAdjustment,
+        ),
+      );
+      const rawUnitPrice =
+        project.units === 0 ? 0 : row.projectTotalCost / project.units;
+      row.unitPrice = roundCurrency(rawUnitPrice);
+      row.unitsLeft = project.units - row.totalUnitsSold;
+      row.netSalesTotal = roundCurrency(row.totalSales - row.totalFees);
+      row.calculatedCost = roundCurrency(row.totalUnitsSold * rawUnitPrice);
+      row.profit = roundCurrency(row.netSalesTotal - row.calculatedCost);
+      row.projectProgress =
+        project.units === 0
+          ? 0
+          : roundCurrency((row.totalUnitsSold / project.units) * 100);
+      row.totalSales = roundCurrency(row.totalSales);
+      row.totalFees = roundCurrency(row.totalFees);
+
+      for (const source of ALL_REPORT_SOURCES) {
+        row[source].amount = roundCurrency(row[source].amount);
+      }
+
+      row.stakeholders = project.stakeholders.map((stakeholderRow) => {
+        const stakePercentage = toNumber(stakeholderRow.stakePercentage);
+        const stakeRatio = stakePercentage / 100;
+        const investment = roundCurrency(row.projectTotalCost * stakeRatio);
+        const income = roundCurrency(
+          row.calculatedCost * stakeRatio + row.profit * stakeRatio,
+        );
+
+        return {
+          balance: roundCurrency(income - investment),
+          income,
+          investment,
+          stakePercentage,
+          stakeholderId: stakeholderRow.stakeholder.idStakeholder,
+          stakeholderName: stakeholderRow.stakeholder.name,
+        };
+      });
+
+      return row;
+    });
+
+    return {
+      rows,
+      sources: hasSurfaceSales ? [...ALL_REPORT_SOURCES] : [...BASE_REPORT_SOURCES],
+    };
+  }
 }
 
 function getDateRange(query: SalesSummaryQueryDto) {
@@ -165,6 +284,40 @@ function createEmptyRow({
   };
 }
 
+function createEmptyStakeholderProjectRow({
+  productImage,
+  productName,
+  projectId,
+  totalUnits,
+}: {
+  productImage: string | null;
+  productName: string;
+  projectId: number;
+  totalUnits: number;
+}): StakeholderProjectRow {
+  return {
+    calculatedCost: 0,
+    ecommerce: createEmptySourceTotals(),
+    event: createEmptySourceTotals(),
+    netSalesTotal: 0,
+    productImage,
+    productName,
+    profit: 0,
+    projectId,
+    projectProgress: 0,
+    projectTotalCost: 0,
+    stakeholders: [],
+    store: createEmptySourceTotals(),
+    surface: createEmptySourceTotals(),
+    totalFees: 0,
+    totalSales: 0,
+    totalUnits,
+    totalUnitsSold: 0,
+    unitPrice: 0,
+    unitsLeft: totalUnits,
+  };
+}
+
 function recomputeFinancials(row: SalesSummaryAccumulator) {
   row.totalAmount = roundCurrency(row.totalAmount);
   row.fee = roundCurrency(row.fee);
@@ -203,6 +356,10 @@ function toNumber(value: unknown): number {
 
 function normalizeImageUrl(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
+}
+
+function sumNumbers(...values: unknown[]): number {
+  return values.reduce<number>((sum, value) => sum + toNumber(value), 0);
 }
 
 function roundCurrency(value: number): number {

@@ -4,6 +4,7 @@ import { EntityEditPage } from './features/entities/EntityEditPage'
 import { EntityListPage } from './features/entities/EntityListPage'
 import { SalesImportPage } from './features/imports/SalesImportPage'
 import { SalesReportPage } from './features/reports/SalesReportPage'
+import { StakeholderProjectsReportPage } from './features/reports/StakeholderProjectsReportPage'
 
 function App() {
   return (
@@ -13,6 +14,10 @@ function App() {
         <Route path="imports" element={<SalesImportPage />} />
         <Route path="imports/:id" element={<SalesImportPage />} />
         <Route path="reports/sales" element={<SalesReportPage />} />
+        <Route
+          path="reports/stakeholder-projects"
+          element={<StakeholderProjectsReportPage />}
+        />
         <Route path=":entityName" element={<EntityListPage />} />
         <Route path=":entityName/new" element={<EntityEditPage />} />
         <Route path=":entityName/:id" element={<EntityEditPage />} />

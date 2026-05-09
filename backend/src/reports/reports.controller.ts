@@ -15,4 +15,9 @@ export class ReportsController {
   getSalesSummary(@Query() query: SalesSummaryQueryDto) {
     return this.reportsService.getSalesSummary(query);
   }
+
+  @Get('stakeholder-projects')
+  getStakeholderProjectsReport() {
+    return this.reportsService.getStakeholderProjectsReport();
+  }
 }

@@ -3,6 +3,9 @@ import { PrismaService } from '../prisma/prisma.service';
 
 describe('ReportsService', () => {
   const prisma = {
+    project: {
+      findMany: jest.fn(),
+    },
     sale: {
       findMany: jest.fn(),
     },
@@ -179,5 +182,141 @@ describe('ReportsService', () => {
 
     expect(result.sources).toEqual(['store', 'ecommerce', 'event', 'surface']);
     expect(result.rows[0].surface).toEqual({ amount: 80, quantity: 4 });
+  });
+
+  it('builds all-time stakeholder project report rows with project and stakeholder financials', async () => {
+    jest.spyOn(prisma.project, 'findMany').mockResolvedValue([
+      {
+        adminCost: '20.00',
+        costAdjustment: '-10.00',
+        idProject: 501,
+        product: {
+          image: 'https://example.test/maple-shelf.jpg',
+          name: 'Maple Shelf',
+        },
+        productionCost: '100.00',
+        sales: [
+          {
+            amount: '200.00',
+            fee: '5.00',
+            quantity: 2,
+            source: 'store',
+          },
+          {
+            amount: '150.00',
+            fee: '2.00',
+            quantity: 1,
+            source: 'ecommerce',
+          },
+        ],
+        stakeholders: [
+          {
+            idProjectStakeholder: 900,
+            stakePercentage: '60.00',
+            stakeholder: { idStakeholder: 10, name: 'Alicia' },
+          },
+          {
+            idProjectStakeholder: 901,
+            stakePercentage: '40.00',
+            stakeholder: { idStakeholder: 11, name: 'Bruno' },
+          },
+        ],
+        units: 10,
+      },
+      {
+        adminCost: '30.00',
+        costAdjustment: '0.00',
+        idProject: 502,
+        product: {
+          image: null,
+          name: 'Event Kit',
+        },
+        productionCost: '70.00',
+        sales: [
+          {
+            amount: '80.00',
+            fee: '0.00',
+            quantity: 4,
+            source: 'surface',
+          },
+        ],
+        stakeholders: [],
+        units: 12,
+      },
+    ]);
+
+    const service = new ReportsService(prisma as PrismaService);
+    const result = await service.getStakeholderProjectsReport();
+
+    expect(prisma.project.findMany).toHaveBeenCalledWith({
+      include: {
+        product: true,
+        sales: true,
+        stakeholders: { include: { stakeholder: true } },
+      },
+      orderBy: [{ product: { name: 'asc' } }, { idProject: 'asc' }],
+    });
+    expect(result.sources).toEqual(['store', 'ecommerce', 'event', 'surface']);
+    expect(result.rows).toEqual([
+      {
+        calculatedCost: 33,
+        ecommerce: { amount: 150, quantity: 1 },
+        event: { amount: 0, quantity: 0 },
+        netSalesTotal: 343,
+        productImage: 'https://example.test/maple-shelf.jpg',
+        productName: 'Maple Shelf',
+        profit: 310,
+        projectId: 501,
+        projectProgress: 30,
+        projectTotalCost: 110,
+        stakeholders: [
+          {
+            balance: 139.8,
+            income: 205.8,
+            investment: 66,
+            stakePercentage: 60,
+            stakeholderId: 10,
+            stakeholderName: 'Alicia',
+          },
+          {
+            balance: 93.2,
+            income: 137.2,
+            investment: 44,
+            stakePercentage: 40,
+            stakeholderId: 11,
+            stakeholderName: 'Bruno',
+          },
+        ],
+        store: { amount: 200, quantity: 2 },
+        surface: { amount: 0, quantity: 0 },
+        totalFees: 7,
+        totalSales: 350,
+        totalUnits: 10,
+        totalUnitsSold: 3,
+        unitPrice: 11,
+        unitsLeft: 7,
+      },
+      {
+        calculatedCost: 33.33,
+        ecommerce: { amount: 0, quantity: 0 },
+        event: { amount: 0, quantity: 0 },
+        netSalesTotal: 80,
+        productImage: null,
+        productName: 'Event Kit',
+        profit: 46.67,
+        projectId: 502,
+        projectProgress: 33.33,
+        projectTotalCost: 100,
+        stakeholders: [],
+        store: { amount: 0, quantity: 0 },
+        surface: { amount: 80, quantity: 4 },
+        totalFees: 0,
+        totalSales: 80,
+        totalUnits: 12,
+        totalUnitsSold: 4,
+        unitPrice: 8.33,
+        unitsLeft: 8,
+      },
+    ]);
   });
 });

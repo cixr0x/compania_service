@@ -453,6 +453,64 @@ button {
   text-align: center;
 }
 
+.report-loading {
+  display: flex;
+  justify-content: center;
+  padding: 32px;
+}
+
+.stakeholder-project-report-list {
+  display: grid;
+  gap: 20px;
+}
+
+.stakeholder-project-report-section {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding-top: 18px;
+}
+
+.stakeholder-project-report-section:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.stakeholder-project-header {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(160px, 260px) auto auto;
+  min-width: 0;
+}
+
+.stakeholder-project-metrics {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.stakeholder-project-metric {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.metric-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.metric-value {
+  color: var(--text);
+  font-weight: 700;
+}
+
 .product-name-cell {
   align-items: center;
   display: inline-flex;
@@ -623,6 +681,11 @@ button {
 
   .split-summary {
     align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .stakeholder-project-header {
+    align-items: start;
     grid-template-columns: 1fr;
   }
 }

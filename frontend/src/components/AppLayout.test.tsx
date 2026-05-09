@@ -51,6 +51,7 @@ describe('AppLayout', () => {
       'Sales',
       'Sales Imports',
       'Sales Report',
+      'Stakeholder Projects',
     ])
   })
 
@@ -95,9 +96,11 @@ describe('AppLayout', () => {
 
     const drawer = screen.getByRole('dialog', { name: 'Primary navigation' })
     expect(drawer).toBeVisible()
-    expect(within(drawer).getByRole('link', { name: 'Sales Report' })).toHaveAttribute(
-      'href',
-      '/reports/sales',
-    )
+    expect(
+      within(drawer).getByRole('link', { name: 'Sales Report' }),
+    ).toHaveAttribute('href', '/reports/sales')
+    expect(
+      within(drawer).getByRole('link', { name: 'Stakeholder Projects' }),
+    ).toHaveAttribute('href', '/reports/stakeholder-projects')
   })
 })

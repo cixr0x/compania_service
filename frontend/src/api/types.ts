@@ -151,3 +151,45 @@ export type SalesReportPeriod = {
   months: number[]
   year: number
 }
+
+export type StakeholderProjectsReportSource = ImportSource
+
+export type StakeholderProjectsReportSourceTotals = {
+  amount: number
+  quantity: number
+}
+
+export type StakeholderProjectStakeholderRow = {
+  balance: number
+  income: number
+  investment: number
+  stakePercentage: number
+  stakeholderId: number
+  stakeholderName: string
+}
+
+export type StakeholderProjectReportRow = Record<
+  StakeholderProjectsReportSource,
+  StakeholderProjectsReportSourceTotals
+> & {
+  calculatedCost: number
+  netSalesTotal: number
+  productImage: string | null
+  productName: string
+  profit: number
+  projectId: number
+  projectProgress: number
+  projectTotalCost: number
+  stakeholders: StakeholderProjectStakeholderRow[]
+  totalFees: number
+  totalSales: number
+  totalUnits: number
+  totalUnitsSold: number
+  unitPrice: number
+  unitsLeft: number
+}
+
+export type StakeholderProjectsReport = {
+  rows: StakeholderProjectReportRow[]
+  sources: StakeholderProjectsReportSource[]
+}
