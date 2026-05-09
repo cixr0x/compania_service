@@ -1,5 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { SalesSummaryQueryDto } from './dto/sales-summary-query.dto';
+import { StakeholderProjectReportQueryDto } from './dto/stakeholder-project-report-query.dto';
 import { ReportsService } from './reports.service';
 
 @Controller('reports')
@@ -17,7 +18,7 @@ export class ReportsController {
   }
 
   @Get('stakeholder-projects')
-  getStakeholderProjectsReport() {
-    return this.reportsService.getStakeholderProjectsReport();
+  getStakeholderProjectsReport(@Query() query: StakeholderProjectReportQueryDto) {
+    return this.reportsService.getStakeholderProjectsReport(query);
   }
 }

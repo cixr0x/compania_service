@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { ImportSource } from '../common/constants/import-sources';
 import { PrismaService } from '../prisma/prisma.service';
 import { SalesSummaryQueryDto } from './dto/sales-summary-query.dto';
+import { StakeholderProjectReportQueryDto } from './dto/stakeholder-project-report-query.dto';
 
 const BASE_REPORT_SOURCES = ['store', 'ecommerce', 'event'] as const;
 const ALL_REPORT_SOURCES = [...BASE_REPORT_SOURCES, 'surface'] as const;
@@ -51,17 +52,18 @@ type StakeholderProjectRow = Record<ReportSource, SourceTotals> & {
   projectId: number;
   projectProgress: number;
   projectTotalCost: number;
-  stakeholders: StakeholderProjectStakeholderRow[];
+  stakeholder: StakeholderProjectStakeholderRow;
   totalFees: number;
   totalSales: number;
   totalUnits: number;
   totalUnitsSold: number;
+  transactions: [];
   unitPrice: number;
   unitsLeft: number;
 };
 
 type StakeholderProjectsResponse = {
-  rows: StakeholderProjectRow[];
+  row: StakeholderProjectRow | null;
   sources: ReportSource[];
 };
 
@@ -153,89 +155,95 @@ export class ReportsService {
     return { rows, sources };
   }
 
-  async getStakeholderProjectsReport(): Promise<StakeholderProjectsResponse> {
-    const projects = await this.prisma.project.findMany({
+  async getStakeholderProjectsReport(
+    query: StakeholderProjectReportQueryDto,
+  ): Promise<StakeholderProjectsResponse> {
+    const project = await this.prisma.project.findFirst({
       include: {
         product: true,
         sales: true,
-        stakeholders: { include: { stakeholder: true } },
+        stakeholders: {
+          include: { stakeholder: true },
+          where: { idStakeholder: query.stakeholderId },
+        },
       },
-      orderBy: [{ product: { name: 'asc' } }, { idProject: 'asc' }],
+      where: {
+        idProject: query.projectId,
+        stakeholders: { some: { idStakeholder: query.stakeholderId } },
+      },
+    });
+
+    if (!project || project.stakeholders.length === 0) {
+      return { row: null, sources: [...BASE_REPORT_SOURCES] };
+    }
+
+    const row = createEmptyStakeholderProjectRow({
+      productImage: normalizeImageUrl(project.product.image),
+      productName: project.product.name,
+      projectId: project.idProject,
+      totalUnits: project.units,
     });
     let hasSurfaceSales = false;
 
-    const rows = projects.map((project) => {
-      const row = createEmptyStakeholderProjectRow({
-        productImage: normalizeImageUrl(project.product.image),
-        productName: project.product.name,
-        projectId: project.idProject,
-        totalUnits: project.units,
-      });
-
-      for (const sale of project.sales) {
-        const source = sale.source as ImportSource;
-        if (source === 'surface') {
-          hasSurfaceSales = true;
-        }
-
-        if (isReportSource(source)) {
-          row[source].quantity += sale.quantity;
-          row[source].amount += toNumber(sale.amount);
-        }
-
-        row.totalUnitsSold += sale.quantity;
-        row.totalSales += toNumber(sale.amount);
-        row.totalFees += toNumber(sale.fee);
+    for (const sale of project.sales) {
+      const source = sale.source as ImportSource;
+      if (source === 'surface') {
+        hasSurfaceSales = true;
       }
 
-      row.projectTotalCost = roundCurrency(
-        sumNumbers(
-          project.productionCost,
-          project.adminCost,
-          project.costAdjustment,
-        ),
-      );
-      const rawUnitPrice =
-        project.units === 0 ? 0 : row.projectTotalCost / project.units;
-      row.unitPrice = roundCurrency(rawUnitPrice);
-      row.unitsLeft = project.units - row.totalUnitsSold;
-      row.netSalesTotal = roundCurrency(row.totalSales - row.totalFees);
-      row.calculatedCost = roundCurrency(row.totalUnitsSold * rawUnitPrice);
-      row.profit = roundCurrency(row.netSalesTotal - row.calculatedCost);
-      row.projectProgress =
-        project.units === 0
-          ? 0
-          : roundCurrency((row.totalUnitsSold / project.units) * 100);
-      row.totalSales = roundCurrency(row.totalSales);
-      row.totalFees = roundCurrency(row.totalFees);
-
-      for (const source of ALL_REPORT_SOURCES) {
-        row[source].amount = roundCurrency(row[source].amount);
+      if (isReportSource(source)) {
+        row[source].quantity += sale.quantity;
+        row[source].amount += toNumber(sale.amount);
       }
 
-      row.stakeholders = project.stakeholders.map((stakeholderRow) => {
-        const stakePercentage = toNumber(stakeholderRow.stakePercentage);
-        const stakeRatio = stakePercentage / 100;
-        const investment = roundCurrency(row.projectTotalCost * stakeRatio);
-        const income = roundCurrency(
-          row.calculatedCost * stakeRatio + row.profit * stakeRatio,
-        );
+      row.totalUnitsSold += sale.quantity;
+      row.totalSales += toNumber(sale.amount);
+      row.totalFees += toNumber(sale.fee);
+    }
 
-        return {
-          balance: roundCurrency(income - investment),
-          income,
-          investment,
-          stakePercentage,
-          stakeholderId: stakeholderRow.stakeholder.idStakeholder,
-          stakeholderName: stakeholderRow.stakeholder.name,
-        };
-      });
+    row.projectTotalCost = roundCurrency(
+      sumNumbers(
+        project.productionCost,
+        project.adminCost,
+        project.costAdjustment,
+      ),
+    );
+    const rawUnitPrice =
+      project.units === 0 ? 0 : row.projectTotalCost / project.units;
+    row.unitPrice = roundCurrency(rawUnitPrice);
+    row.unitsLeft = project.units - row.totalUnitsSold;
+    row.netSalesTotal = roundCurrency(row.totalSales - row.totalFees);
+    row.calculatedCost = roundCurrency(row.totalUnitsSold * rawUnitPrice);
+    row.profit = roundCurrency(row.netSalesTotal - row.calculatedCost);
+    row.projectProgress =
+      project.units === 0
+        ? 0
+        : roundCurrency((row.totalUnitsSold / project.units) * 100);
+    row.totalSales = roundCurrency(row.totalSales);
+    row.totalFees = roundCurrency(row.totalFees);
 
-      return row;
-    });
+    for (const source of ALL_REPORT_SOURCES) {
+      row[source].amount = roundCurrency(row[source].amount);
+    }
+
+    const stakeholderRow = project.stakeholders[0];
+    const stakePercentage = toNumber(stakeholderRow.stakePercentage);
+    const stakeRatio = stakePercentage / 100;
+    const investment = roundCurrency(row.projectTotalCost * stakeRatio);
+    const income = roundCurrency(
+      row.calculatedCost * stakeRatio + row.profit * stakeRatio,
+    );
+    row.stakeholder = {
+      balance: roundCurrency(income - investment),
+      income,
+      investment,
+      stakePercentage,
+      stakeholderId: stakeholderRow.stakeholder.idStakeholder,
+      stakeholderName: stakeholderRow.stakeholder.name,
+    };
 
     return {
-      rows,
+      row,
       sources: hasSurfaceSales ? [...ALL_REPORT_SOURCES] : [...BASE_REPORT_SOURCES],
     };
   }
@@ -306,13 +314,21 @@ function createEmptyStakeholderProjectRow({
     projectId,
     projectProgress: 0,
     projectTotalCost: 0,
-    stakeholders: [],
+    stakeholder: {
+      balance: 0,
+      income: 0,
+      investment: 0,
+      stakePercentage: 0,
+      stakeholderId: 0,
+      stakeholderName: '',
+    },
     store: createEmptySourceTotals(),
     surface: createEmptySourceTotals(),
     totalFees: 0,
     totalSales: 0,
     totalUnits,
     totalUnitsSold: 0,
+    transactions: [],
     unitPrice: 0,
     unitsLeft: totalUnits,
   };

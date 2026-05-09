@@ -259,7 +259,7 @@ Report resources:
 - `GET /api/reports/sales-summary/periods`: list years and months with available sales data.
 - `GET /api/reports/sales-summary?year=YYYY`: get a yearly sales summary grouped by product and project.
 - `GET /api/reports/sales-summary?year=YYYY&month=M`: get a monthly sales summary grouped by product and project.
-- `GET /api/reports/stakeholder-projects`: get the all-time stakeholder project report grouped by project, including product totals, source totals, project progress, and stakeholder investment, income, and balance lines.
+- `GET /api/reports/stakeholder-projects?projectId=ID&stakeholderId=ID`: get the all-time stakeholder project report for one project and one stakeholder, including product totals, source totals, project progress, and that stakeholder's investment, income, and balance. The response must not include other stakeholders on the project.
 
 Import resources:
 
@@ -346,12 +346,16 @@ Sales report page:
 
 Stakeholder projects report page:
 
-- All-time report grouped by project, with the product name as the project section header and project ID displayed beside it.
+- All-time report scoped by required Project and Stakeholder selectors. The report does not load until both selectors have values.
+- Stakeholder options are constrained to stakeholders assigned to the selected project.
+- The report is intended to be presented to the selected stakeholder, so it must not render or receive data for any other stakeholder in the selected project.
+- The product name is the project section header and project ID is displayed beside it.
 - Source totals show units sold and amount for each source; `Surface` remains hidden unless at least one project in the report has surface sales.
 - Project summary displays total units sold, units left, total sales, total fees, net sales total, calculated cost, profit, and project progress.
 - Project total cost is production cost plus administrative cost plus cost adjustment. Unit price is project total cost divided by project total units.
 - Calculated cost is units sold multiplied by unit price. Profit is net sales total minus calculated cost. Project progress is units sold divided by total project units.
-- Stakeholder balance lines display stakeholder name, stake percentage, investment, income, and balance. Investment is project total cost multiplied by stakeholder stake percentage. Income is calculated cost multiplied by stake percentage plus profit multiplied by stake percentage. Balance is income minus investment.
+- Stakeholder information is presented as a header/detail section. The header displays stakeholder name, stake percentage, investment, income, and balance. Investment is project total cost multiplied by stakeholder stake percentage. Income is calculated cost multiplied by stake percentage plus profit multiplied by stake percentage. Balance is income minus investment.
+- The detail section is currently an empty transaction table placeholder. Future project/stakeholder transaction rows will be added there.
 
 Known intentional custom UI areas and UI debt:
 

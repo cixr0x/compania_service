@@ -168,6 +168,13 @@ export type StakeholderProjectStakeholderRow = {
   stakeholderName: string
 }
 
+export type StakeholderProjectTransactionRow = {
+  amount?: number
+  date?: string
+  description?: string
+  id: string
+}
+
 export type StakeholderProjectReportRow = Record<
   StakeholderProjectsReportSource,
   StakeholderProjectsReportSourceTotals
@@ -180,16 +187,17 @@ export type StakeholderProjectReportRow = Record<
   projectId: number
   projectProgress: number
   projectTotalCost: number
-  stakeholders: StakeholderProjectStakeholderRow[]
+  stakeholder: StakeholderProjectStakeholderRow
   totalFees: number
   totalSales: number
   totalUnits: number
   totalUnitsSold: number
+  transactions: StakeholderProjectTransactionRow[]
   unitPrice: number
   unitsLeft: number
 }
 
 export type StakeholderProjectsReport = {
-  rows: StakeholderProjectReportRow[]
+  row: StakeholderProjectReportRow | null
   sources: StakeholderProjectsReportSource[]
 }

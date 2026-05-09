@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from '../../App'
@@ -10,48 +11,65 @@ vi.mock('../../api/client', () => ({
 }))
 
 const stakeholderProjectsReport = {
-  rows: [
-    {
-      calculatedCost: 33,
-      ecommerce: { amount: 150, quantity: 1 },
-      event: { amount: 0, quantity: 0 },
-      netSalesTotal: 343,
-      productImage: 'https://example.test/maple-shelf.jpg',
-      productName: 'Maple Shelf',
-      profit: 310,
-      projectId: 501,
-      projectProgress: 30,
-      projectTotalCost: 110,
-      stakeholders: [
-        {
-          balance: 139.8,
-          income: 205.8,
-          investment: 66,
-          stakePercentage: 60,
-          stakeholderId: 10,
-          stakeholderName: 'Alicia',
-        },
-        {
-          balance: 93.2,
-          income: 137.2,
-          investment: 44,
-          stakePercentage: 40,
-          stakeholderId: 11,
-          stakeholderName: 'Bruno',
-        },
-      ],
-      store: { amount: 200, quantity: 2 },
-      surface: { amount: 0, quantity: 0 },
-      totalFees: 7,
-      totalSales: 350,
-      totalUnits: 10,
-      totalUnitsSold: 3,
-      unitPrice: 11,
-      unitsLeft: 7,
+  row: {
+    calculatedCost: 33,
+    ecommerce: { amount: 150, quantity: 1 },
+    event: { amount: 0, quantity: 0 },
+    netSalesTotal: 343,
+    productImage: 'https://example.test/maple-shelf.jpg',
+    productName: 'Maple Shelf',
+    profit: 310,
+    projectId: 501,
+    projectProgress: 30,
+    projectTotalCost: 110,
+    stakeholder: {
+      balance: 139.8,
+      income: 205.8,
+      investment: 66,
+      stakePercentage: 60,
+      stakeholderId: 10,
+      stakeholderName: 'Alicia',
     },
-  ],
+    store: { amount: 200, quantity: 2 },
+    surface: { amount: 0, quantity: 0 },
+    totalFees: 7,
+    totalSales: 350,
+    totalUnits: 10,
+    totalUnitsSold: 3,
+    transactions: [],
+    unitPrice: 11,
+    unitsLeft: 7,
+  },
   sources: ['store', 'ecommerce', 'event'],
 }
+
+const projects = [
+  {
+    idProject: 501,
+    idProduct: 42,
+    product: {
+      id: 42,
+      image: 'https://example.test/maple-shelf.jpg',
+      name: 'Maple Shelf',
+    },
+    stakeholders: [
+      {
+        idProjectStakeholder: 900,
+        idProject: 501,
+        idStakeholder: 10,
+        stakePercentage: '60.00',
+        stakeholder: { idStakeholder: 10, name: 'Alicia' },
+      },
+      {
+        idProjectStakeholder: 901,
+        idProject: 501,
+        idStakeholder: 11,
+        stakePercentage: '40.00',
+        stakeholder: { idStakeholder: 11, name: 'Bruno' },
+      },
+    ],
+  },
+]
 
 function renderStakeholderProjectsReportRoute() {
   const queryClient = new QueryClient({
@@ -69,15 +87,32 @@ function renderStakeholderProjectsReportRoute() {
   )
 }
 
+async function selectAntOption(
+  user: ReturnType<typeof userEvent.setup>,
+  combobox: HTMLElement,
+  optionName: string,
+) {
+  await user.click(combobox)
+  const options = await screen.findAllByTitle(optionName)
+  await user.click(options[options.length - 1])
+}
+
 describe('StakeholderProjectsReportPage', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
   })
 
-  it('renders all-time project totals and stakeholder balances', async () => {
+  it('loads a selected project and stakeholder as a header/detail report without other stakeholder data', async () => {
+    const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation((path: string) => {
-      if (path === '/reports/stakeholder-projects') {
+      if (path === '/projects?pageSize=100') {
+        return Promise.resolve(projects)
+      }
+
+      if (
+        path === '/reports/stakeholder-projects?projectId=501&stakeholderId=10'
+      ) {
         return Promise.resolve(stakeholderProjectsReport)
       }
 
@@ -94,6 +129,28 @@ describe('StakeholderProjectsReportPage', () => {
     expect(
       screen.getByRole('link', { name: 'Stakeholder Projects' }),
     ).toHaveAttribute('href', '/reports/stakeholder-projects')
+
+    const projectSelect = await screen.findByRole('combobox', {
+      name: 'Project',
+    })
+    const stakeholderSelect = screen.getByRole('combobox', {
+      name: 'Stakeholder',
+    })
+    expect(stakeholderSelect.closest('.ant-select')).toHaveClass(
+      'ant-select-disabled',
+    )
+    expect(
+      screen.getByText('Select a project and stakeholder to load the report.'),
+    ).toBeVisible()
+
+    await selectAntOption(user, projectSelect, 'Project #501 - Maple Shelf')
+    await selectAntOption(user, stakeholderSelect, 'Alicia')
+
+    await waitFor(() => {
+      expect(getJson).toHaveBeenCalledWith(
+        '/reports/stakeholder-projects?projectId=501&stakeholderId=10',
+      )
+    })
 
     const projectRegion = await screen.findByRole('region', {
       name: 'Maple Shelf project 501',
@@ -134,20 +191,44 @@ describe('StakeholderProjectsReportPage', () => {
     expect(within(projectRegion).getByText('Profit')).toBeVisible()
     expect(within(projectRegion).getByText('$310.00')).toBeVisible()
 
-    const stakeholderTable = within(projectRegion).getByRole('table', {
-      name: 'Maple Shelf stakeholder balances',
+    const stakeholderRegion = within(projectRegion).getByRole('region', {
+      name: 'Alicia stakeholder detail',
     })
-    const aliciaRow = within(stakeholderTable).getByText('Alicia').closest('tr')!
-    expect(within(aliciaRow).getByText('60.00%')).toBeVisible()
-    expect(within(aliciaRow).getByText('$66.00')).toBeVisible()
-    expect(within(aliciaRow).getByText('$205.80')).toBeVisible()
-    expect(within(aliciaRow).getByText('$139.80')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('Alicia')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('60.00%')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$66.00')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$205.80')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$139.80')).toBeVisible()
+    expect(
+      within(stakeholderRegion).getByRole('table', {
+        name: 'Alicia transaction details',
+      }),
+    ).toBeVisible()
+    expect(within(projectRegion).queryByText('Bruno')).not.toBeInTheDocument()
   })
 
   it('renders report load failures as an Ant Design alert', async () => {
-    vi.mocked(getJson).mockRejectedValue(new Error('Report failed'))
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation((path: string) => {
+      if (path === '/projects?pageSize=100') {
+        return Promise.resolve(projects)
+      }
+
+      return Promise.reject(new Error('Report failed'))
+    })
 
     renderStakeholderProjectsReportRoute()
+
+    await selectAntOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Project' }),
+      'Project #501 - Maple Shelf',
+    )
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Stakeholder' }),
+      'Alicia',
+    )
 
     const alert = await screen.findByRole('alert')
 
