@@ -98,6 +98,7 @@ Derived values:
 
 - `id_project_transaction`: primary key.
 - `project_id`: foreign key to `project`.
+- `date`: required transaction date.
 - `amount`: signed numeric transaction amount. Positive values increase project cost and negative values reduce it.
 - `description`: required text describing the cost transaction.
 
@@ -266,7 +267,7 @@ CRUD resources:
 - `GET /api/project-stakeholders/projects/:id`: list the complete stakeholder split for one project.
 - `PUT /api/project-stakeholders/projects/:id`: atomically replace a project's full stakeholder split with an array of `{ idStakeholder, stakePercentage }` rows totaling exactly `100`.
 - `GET /api/project-transactions/projects/:id`: list the complete project cost transaction set for one project.
-- `PUT /api/project-transactions/projects/:id`: atomically replace a project's full cost transaction set with an array of `{ amount, description }` rows.
+- `PUT /api/project-transactions/projects/:id`: atomically replace a project's full cost transaction set with an array of `{ date, amount, description }` rows.
 
 Report resources:
 
@@ -327,7 +328,7 @@ Entity pages:
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
 - Product create/edit forms show the Fee Amount money field only when the selected pricing model has code `consigna`.
 - Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
-- Project create/edit forms include an active flag plus unit cost. Project cost is managed in a Project Cost Transactions detail section with a compact static table. Rows become editable only after selecting the row Edit action; editable rows expose Save and Cancel actions for that row. New transaction rows are added in edit mode, and project-level saving is blocked until all transaction row edits are saved or canceled. The fixed production cost, administrative cost, cost adjustment, and adjustment description fields remain in the database for now but are not exposed in the form.
+- Project create/edit forms include an active flag plus unit cost. Project cost is managed in a Project Cost Transactions detail section with a compact static table. Rows display date, amount, and description. Rows become editable only after selecting the row Edit action; editable rows expose Save and Cancel actions for that row. New transaction rows are added in edit mode, and project-level saving is blocked until all transaction row edits are saved or canceled. The fixed production cost, administrative cost, cost adjustment, and adjustment description fields remain in the database for now but are not exposed in the form.
 - Project create/edit forms display a read-only total cost field derived from the sum of project cost transaction rows, updated immediately as transaction amounts change.
 - Project table views display the same transaction-derived total cost with money formatting. Legacy fixed production, admin, and adjustment cost columns are not shown in the table view.
 - Project create/edit forms include a Stakeholder Split detail section. The section loads stakeholders by name, allows adding/removing stakeholder percentage lines, requires complete rows totaling exactly `100` when lines are present, and saves the project header before saving the split lines.

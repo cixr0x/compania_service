@@ -785,18 +785,21 @@ describe('EntityEditPage', () => {
     vi.mocked(putJson).mockResolvedValue([
       {
         amount: 7500.25,
+        date: '2026-05-05',
         description: 'Production run',
         idProject: 501,
         idProjectTransaction: 10,
       },
       {
         amount: 2250.5,
+        date: '2026-05-06',
         description: 'Administration',
         idProject: 501,
         idProjectTransaction: 11,
       },
       {
         amount: -250.75,
+        date: '2026-05-07',
         description: 'Supplier credit',
         idProject: 501,
         idProjectTransaction: 12,
@@ -823,6 +826,9 @@ describe('EntityEditPage', () => {
     await user.click(
       within(costSection).getByRole('button', { name: 'Add transaction' }),
     )
+    fireEvent.change(within(costSection).getByLabelText('Date'), {
+      target: { value: '2026-05-05' },
+    })
     fireEvent.change(within(costSection).getByLabelText('Amount'), {
       target: { value: '7,500.25' },
     })
@@ -835,6 +841,9 @@ describe('EntityEditPage', () => {
     await user.click(
       within(costSection).getByRole('button', { name: 'Add transaction' }),
     )
+    fireEvent.change(within(costSection).getByLabelText('Date'), {
+      target: { value: '2026-05-06' },
+    })
     fireEvent.change(within(costSection).getByLabelText('Amount'), {
       target: { value: '2,250.50' },
     })
@@ -847,6 +856,9 @@ describe('EntityEditPage', () => {
     await user.click(
       within(costSection).getByRole('button', { name: 'Add transaction' }),
     )
+    fireEvent.change(within(costSection).getByLabelText('Date'), {
+      target: { value: '2026-05-07' },
+    })
     fireEvent.change(within(costSection).getByLabelText('Amount'), {
       target: { value: '-250.75' },
     })
@@ -869,9 +881,9 @@ describe('EntityEditPage', () => {
       expect(putJson).toHaveBeenCalledWith(
         '/project-transactions/projects/501',
         [
-          { amount: 7500.25, description: 'Production run' },
-          { amount: 2250.5, description: 'Administration' },
-          { amount: -250.75, description: 'Supplier credit' },
+          { amount: 7500.25, date: '2026-05-05', description: 'Production run' },
+          { amount: 2250.5, date: '2026-05-06', description: 'Administration' },
+          { amount: -250.75, date: '2026-05-07', description: 'Supplier credit' },
         ],
       )
     })
@@ -905,18 +917,21 @@ describe('EntityEditPage', () => {
         return [
           {
             amount: 7500,
+            date: '2026-05-05',
             description: 'Production run',
             idProject: 77,
             idProjectTransaction: 100,
           },
           {
             amount: 250,
+            date: '2026-05-06',
             description: 'Administration',
             idProject: 77,
             idProjectTransaction: 101,
           },
           {
             amount: -500,
+            date: '2026-05-07',
             description: 'Launch discount',
             idProject: 77,
             idProjectTransaction: 102,
@@ -942,6 +957,7 @@ describe('EntityEditPage', () => {
       name: 'Project Cost Transactions',
     })
     expect(within(costSection).getByText('Production run')).toBeVisible()
+    expect(within(costSection).getByText('2026-05-05')).toBeVisible()
     expect(within(costSection).getByText('Launch discount')).toBeVisible()
     expect(within(costSection).queryByLabelText('Amount')).not.toBeInTheDocument()
 

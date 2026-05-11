@@ -30,6 +30,7 @@ describe('ProjectTransactionsService', () => {
     jest.spyOn(prisma.projectTransaction, 'findMany').mockResolvedValue([
       {
         amount: '125.50',
+        date: new Date('2026-05-05T00:00:00.000Z'),
         description: 'Production run',
         idProject: 501,
         idProjectTransaction: 2,
@@ -60,12 +61,14 @@ describe('ProjectTransactionsService', () => {
       .mockResolvedValue([
         {
           amount: '100.00',
+          date: new Date('2026-05-05T00:00:00.000Z'),
           description: 'Production',
           idProject: 501,
           idProjectTransaction: 10,
         },
         {
           amount: '-15.00',
+          date: new Date('2026-05-06T00:00:00.000Z'),
           description: 'Supplier credit',
           idProject: 501,
           idProjectTransaction: 11,
@@ -74,8 +77,8 @@ describe('ProjectTransactionsService', () => {
 
     const service = new ProjectTransactionsService(prisma);
     const result = await service.replaceProjectTransactions(501, [
-      { amount: 100, description: 'Production' },
-      { amount: -15, description: 'Supplier credit' },
+      { amount: 100, date: '2026-05-05', description: 'Production' },
+      { amount: -15, date: '2026-05-06', description: 'Supplier credit' },
     ]);
 
     expect(prisma.$transaction).toHaveBeenCalled();
@@ -84,24 +87,40 @@ describe('ProjectTransactionsService', () => {
       select: { idProject: true },
       where: { idProject: 501 },
     });
-    expect(transactionPrisma.projectTransaction.deleteMany).toHaveBeenCalledWith({
+    expect(
+      transactionPrisma.projectTransaction.deleteMany,
+    ).toHaveBeenCalledWith({
       where: { idProject: 501 },
     });
-    expect(transactionPrisma.projectTransaction.createMany).toHaveBeenCalledWith({
+    expect(
+      transactionPrisma.projectTransaction.createMany,
+    ).toHaveBeenCalledWith({
       data: [
-        { amount: 100, description: 'Production', idProject: 501 },
-        { amount: -15, description: 'Supplier credit', idProject: 501 },
+        {
+          amount: 100,
+          date: new Date('2026-05-05T00:00:00.000Z'),
+          description: 'Production',
+          idProject: 501,
+        },
+        {
+          amount: -15,
+          date: new Date('2026-05-06T00:00:00.000Z'),
+          description: 'Supplier credit',
+          idProject: 501,
+        },
       ],
     });
     expect(result).toEqual([
       {
         amount: '100.00',
+        date: new Date('2026-05-05T00:00:00.000Z'),
         description: 'Production',
         idProject: 501,
         idProjectTransaction: 10,
       },
       {
         amount: '-15.00',
+        date: new Date('2026-05-06T00:00:00.000Z'),
         description: 'Supplier credit',
         idProject: 501,
         idProjectTransaction: 11,
@@ -123,7 +142,9 @@ describe('ProjectTransactionsService', () => {
     const service = new ProjectTransactionsService(prisma);
     await service.replaceProjectTransactions(501, []);
 
-    expect(transactionPrisma.projectTransaction.deleteMany).toHaveBeenCalledWith({
+    expect(
+      transactionPrisma.projectTransaction.deleteMany,
+    ).toHaveBeenCalledWith({
       where: { idProject: 501 },
     });
     expect(

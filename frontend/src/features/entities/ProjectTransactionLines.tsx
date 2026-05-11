@@ -7,12 +7,14 @@ import type { EntityRow } from './entityConfigs'
 
 const EMPTY_TRANSACTION_ROW = {
   amount: '',
+  date: '',
   description: '',
 }
 
 type TransactionDraftRow = {
   rowKey: string
   amount: string
+  date: string
   description: string
 }
 
@@ -22,6 +24,7 @@ type EditingTransactionRow = TransactionDraftRow & {
 
 export type ProjectTransactionPayloadRow = {
   amount: number
+  date: string
   description: string
 }
 
@@ -35,6 +38,7 @@ export type ProjectTransactionState = {
 
 type MaybeTransactionPayloadRow = {
   amount: number | null
+  date: string
   description: string
 }
 
@@ -48,10 +52,29 @@ function toInputValue(value: unknown): string {
   return value === null || value === undefined ? '' : String(value)
 }
 
+function normalizeDateValue(value: unknown): string {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? '' : value.toISOString().slice(0, 10)
+  }
+
+  if (typeof value !== 'string') {
+    return ''
+  }
+
+  const trimmedValue = value.trim()
+  const dateMatch = /^(\d{4}-\d{2}-\d{2})/.exec(trimmedValue)
+  return dateMatch?.[1] ?? ''
+}
+
+function getTodayDateValue() {
+  return new Date().toISOString().slice(0, 10)
+}
+
 function buildDraftRow(row: EntityRow, index: number): TransactionDraftRow {
   return {
     rowKey: `existing-${toInputValue(row.idProjectTransaction) || index}`,
     amount: formatMoney(row.amount),
+    date: normalizeDateValue(row.date),
     description: toInputValue(row.description),
   }
 }
@@ -59,7 +82,11 @@ function buildDraftRow(row: EntityRow, index: number): TransactionDraftRow {
 function isCompletePayloadRow(
   row: MaybeTransactionPayloadRow,
 ): row is ProjectTransactionPayloadRow {
-  return row.amount !== null && row.description.trim() !== ''
+  return (
+    row.amount !== null &&
+    row.date.trim() !== '' &&
+    row.description.trim() !== ''
+  )
 }
 
 function buildDraftState(
@@ -94,13 +121,14 @@ function buildDraftState(
 
   const payloadRows: MaybeTransactionPayloadRow[] = rows.map((row) => ({
     amount: parseMoneyNumber(row.amount),
+    date: row.date.trim(),
     description: row.description.trim(),
   }))
   const completeRows = payloadRows.filter(isCompletePayloadRow)
 
   if (!payloadRows.every(isCompletePayloadRow)) {
     return {
-      errorMessage: 'Every transaction row needs an amount and description.',
+      errorMessage: 'Every transaction row needs a date, amount, and description.',
       isDirty,
       isValid: false,
       rows: completeRows,
@@ -147,7 +175,8 @@ export function ProjectTransactionLines({
   const activeRows = draftRows ?? loadedRows
 
   const draftState = useMemo(
-    () => buildDraftState(activeRows, hasChanged, Object.keys(editingRows).length > 0),
+    () =>
+      buildDraftState(activeRows, hasChanged, Object.keys(editingRows).length > 0),
     [activeRows, editingRows, hasChanged],
   )
 
@@ -157,12 +186,13 @@ export function ProjectTransactionLines({
 
   function handleAddRow() {
     const rowKey = `new-${nextRowIndex}`
-    const nextRow = { rowKey, ...EMPTY_TRANSACTION_ROW }
+    const nextRow = {
+      rowKey,
+      ...EMPTY_TRANSACTION_ROW,
+      date: getTodayDateValue(),
+    }
 
-    setDraftRows([
-      ...activeRows,
-      nextRow,
-    ])
+    setDraftRows([...activeRows, nextRow])
     setEditingRows((currentRows) => ({
       ...currentRows,
       [rowKey]: { ...nextRow, isNew: true },
@@ -219,12 +249,13 @@ export function ProjectTransactionLines({
     }
 
     const amount = parseMoneyNumber(editedRow.amount)
+    const date = editedRow.date.trim()
     const description = editedRow.description.trim()
 
-    if (amount === null || description === '') {
+    if (amount === null || date === '' || description === '') {
       setRowErrors((currentErrors) => ({
         ...currentErrors,
-        [rowKey]: 'Amount and description are required.',
+        [rowKey]: 'Date, amount, and description are required.',
       }))
       return
     }
@@ -232,7 +263,7 @@ export function ProjectTransactionLines({
     setDraftRows(
       activeRows.map((row) =>
         row.rowKey === rowKey
-          ? { ...row, amount: formatMoney(amount), description }
+          ? { ...row, amount: formatMoney(amount), date, description }
           : row,
       ),
     )
@@ -251,7 +282,7 @@ export function ProjectTransactionLines({
 
   function handleRowChange(
     rowKey: string,
-    field: 'amount' | 'description',
+    field: 'amount' | 'date' | 'description',
     value: string,
   ) {
     setEditingRows((currentRows) => {
@@ -272,6 +303,31 @@ export function ProjectTransactionLines({
   }
 
   const tableColumns = [
+    {
+      dataIndex: 'date',
+      key: 'date',
+      render: (_value: string, row: TransactionDraftRow) => {
+        const editingRow = editingRows[row.rowKey]
+
+        return editingRow ? (
+          <Input
+            aria-label="Date"
+            id={`project-transaction-date-${row.rowKey}`}
+            onChange={(event) =>
+              handleRowChange(row.rowKey, 'date', event.target.value)
+            }
+            size="small"
+            status={rowErrors[row.rowKey] ? 'error' : undefined}
+            type="date"
+            value={editingRow.date}
+          />
+        ) : (
+          row.date || '-'
+        )
+      },
+      title: 'Date',
+      width: 150,
+    },
     {
       align: 'right' as const,
       dataIndex: 'amount',
@@ -297,7 +353,7 @@ export function ProjectTransactionLines({
         )
       },
       title: 'Amount',
-      width: 220,
+      width: 180,
     },
     {
       dataIndex: 'description',
@@ -417,7 +473,7 @@ export function ProjectTransactionLines({
             }}
             pagination={false}
             rowKey="rowKey"
-            scroll={{ x: 720 }}
+            scroll={{ x: 860 }}
             size="small"
           />
 

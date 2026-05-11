@@ -62,6 +62,7 @@ export type Project = {
 export type ProjectTransaction = {
   idProjectTransaction: number
   idProject: number
+  date: IsoDateTime
   amount: DecimalValue
   description: string
 }

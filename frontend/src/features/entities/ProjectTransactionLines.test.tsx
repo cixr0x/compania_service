@@ -54,6 +54,7 @@ describe('ProjectTransactionLines', () => {
     vi.mocked(getJson).mockResolvedValue([
       {
         amount: 7500,
+        date: '2026-05-05T00:00:00.000Z',
         description: 'Production run',
         idProject: 77,
         idProjectTransaction: 100,
@@ -66,8 +67,10 @@ describe('ProjectTransactionLines', () => {
       name: 'Project Cost Transactions',
     })
     await within(section).findByText('Production run')
+    expect(within(section).getByText('2026-05-05')).toBeVisible()
     expect(within(section).getByText('$7,500.00')).toBeVisible()
     expect(within(section).getByText('Production run')).toBeVisible()
+    expect(within(section).queryByLabelText('Date')).not.toBeInTheDocument()
     expect(within(section).queryByLabelText('Amount')).not.toBeInTheDocument()
     expect(within(section).queryByLabelText('Description')).not.toBeInTheDocument()
     expect(
@@ -87,10 +90,17 @@ describe('ProjectTransactionLines', () => {
       within(section).getByRole('button', { name: 'Add transaction' }),
     )
     expect(within(section).getByLabelText('Amount')).toHaveValue('')
+    expect(within(section).getByLabelText('Date')).toHaveAttribute(
+      'type',
+      'date',
+    )
     expect(
       within(section).getByRole('button', { name: 'Save row 1' }),
     ).toBeVisible()
 
+    fireEvent.change(within(section).getByLabelText('Date'), {
+      target: { value: '2026-05-05' },
+    })
     fireEvent.change(within(section).getByLabelText('Amount'), {
       target: { value: '7,500.25' },
     })
@@ -100,6 +110,7 @@ describe('ProjectTransactionLines', () => {
     await user.click(within(section).getByRole('button', { name: 'Save row 1' }))
 
     expect(within(section).queryByLabelText('Amount')).not.toBeInTheDocument()
+    expect(within(section).getByText('2026-05-05')).toBeVisible()
     expect(within(section).getByText('$7,500.25')).toBeVisible()
     expect(within(section).getByText('Production run')).toBeVisible()
 
@@ -108,7 +119,9 @@ describe('ProjectTransactionLines', () => {
         errorMessage: null,
         isDirty: true,
         isValid: true,
-        rows: [{ amount: 7500.25, description: 'Production run' }],
+        rows: [
+          { amount: 7500.25, date: '2026-05-05', description: 'Production run' },
+        ],
         totalCost: 7500.25,
       })
     })
@@ -119,6 +132,7 @@ describe('ProjectTransactionLines', () => {
     vi.mocked(getJson).mockResolvedValue([
       {
         amount: 7500,
+        date: '2026-05-05',
         description: 'Production run',
         idProject: 77,
         idProjectTransaction: 100,
@@ -132,6 +146,9 @@ describe('ProjectTransactionLines', () => {
     })
     await within(section).findByText('Production run')
     await user.click(within(section).getByRole('button', { name: 'Edit row 1' }))
+    fireEvent.change(within(section).getByLabelText('Date'), {
+      target: { value: '2026-05-07' },
+    })
     fireEvent.change(within(section).getByLabelText('Amount'), {
       target: { value: '9,000.00' },
     })
@@ -142,8 +159,10 @@ describe('ProjectTransactionLines', () => {
       within(section).getByRole('button', { name: 'Cancel row 1' }),
     )
 
+    expect(within(section).getByText('2026-05-05')).toBeVisible()
     expect(within(section).getByText('$7,500.00')).toBeVisible()
     expect(within(section).getByText('Production run')).toBeVisible()
+    expect(within(section).queryByText('2026-05-07')).not.toBeInTheDocument()
     expect(within(section).queryByText('$9,000.00')).not.toBeInTheDocument()
     expect(within(section).queryByText('Updated run')).not.toBeInTheDocument()
   })

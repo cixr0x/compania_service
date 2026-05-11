@@ -1,6 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { parseSaleDate } from '../sales/dto/sale-date-string.validator';
 import { ReplaceProjectTransactionDto } from './dto/replace-project-transaction.dto';
 
 const projectTransactionOrder = { idProjectTransaction: 'desc' as const };
@@ -31,6 +36,7 @@ export class ProjectTransactionsService {
   ) {
     const rows = dto.map((row) => ({
       amount: row.amount,
+      date: this.parseTransactionDate(row.date),
       description: row.description.trim(),
       idProject,
     }));
@@ -72,5 +78,17 @@ export class ProjectTransactionsService {
     await client.$queryRaw(
       Prisma.sql`SELECT id_project FROM project WHERE id_project = ${idProject} FOR UPDATE`,
     );
+  }
+
+  private parseTransactionDate(value: string) {
+    const parsedDate = parseSaleDate(value);
+
+    if (!parsedDate) {
+      throw new BadRequestException(
+        'Transaction date must be a valid calendar date in YYYY-MM-DD format',
+      );
+    }
+
+    return parsedDate;
   }
 }
