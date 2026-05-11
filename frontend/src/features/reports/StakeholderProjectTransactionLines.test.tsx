@@ -124,6 +124,29 @@ describe('StakeholderProjectTransactionLines', () => {
     expect(within(section).getByText('$250.00')).toBeVisible()
   })
 
+  it('keeps focus in the edited row input while typing', async () => {
+    const user = userEvent.setup()
+
+    renderStakeholderProjectTransactionLines()
+
+    const section = await screen.findByRole('group', {
+      name: 'Stakeholder Transactions',
+    })
+    await within(section).findByRole('button', { name: 'Add transaction' })
+    await user.click(
+      within(section).getByRole('button', { name: 'Add transaction' }),
+    )
+
+    const descriptionInput = within(section).getByLabelText('Description')
+    await user.click(descriptionInput)
+    await user.keyboard('Capital return')
+
+    expect(within(section).getByLabelText('Description')).toHaveFocus()
+    expect(within(section).getByLabelText('Description')).toHaveValue(
+      'Capital return',
+    )
+  })
+
   it('cancels row edits without persisting changes', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockResolvedValue([

@@ -104,6 +104,10 @@ export function StakeholderProjectTransactionLines({
   const [saveError, setSaveError] = useState<string | null>(null)
   const transactionsPath = getTransactionsPath(projectId, stakeholderId)
   const queryClient = useQueryClient()
+  const tableComponents = useMemo(
+    () => getNamedTableComponents(`${stakeholderName} transaction details`),
+    [stakeholderName],
+  )
 
   const transactionsQuery = useQuery({
     queryKey: [
@@ -424,9 +428,7 @@ export function StakeholderProjectTransactionLines({
           <Table<TransactionDraftRow>
             className="report-table stakeholder-project-transaction-table"
             columns={tableColumns}
-            components={getNamedTableComponents(
-              `${stakeholderName} transaction details`,
-            )}
+            components={tableComponents}
             dataSource={activeRows}
             locale={{
               emptyText: (
