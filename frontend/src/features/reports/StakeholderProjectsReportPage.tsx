@@ -8,12 +8,12 @@ import type {
   Project,
   StakeholderProjectReportRow,
   StakeholderProjectStakeholderRow,
-  StakeholderProjectTransactionRow,
   StakeholderProjectsReport,
   StakeholderProjectsReportSource,
 } from '../../api/types'
 import { ProductNameCell } from '../../components/ProductNameCell'
 import { formatCurrency } from '../../utils/money'
+import { StakeholderProjectTransactionLines } from './StakeholderProjectTransactionLines'
 
 const OPTION_LIST_PAGE_SIZE = 100
 const sourceLabels: Record<StakeholderProjectsReportSource, string> = {
@@ -123,39 +123,6 @@ export function StakeholderProjectsReportPage() {
       })),
     [sources],
   )
-  const transactionColumns = useMemo<
-    ColumnsType<StakeholderProjectTransactionRow>
-  >(
-    () => [
-      {
-        dataIndex: 'date',
-        key: 'date',
-        render: (value: StakeholderProjectTransactionRow['date']) =>
-          value || '-',
-        title: 'Date',
-        width: 140,
-      },
-      {
-        dataIndex: 'description',
-        key: 'description',
-        render: (value: StakeholderProjectTransactionRow['description']) =>
-          value || '-',
-        title: 'Description',
-        width: 260,
-      },
-      {
-        align: 'right',
-        dataIndex: 'amount',
-        key: 'amount',
-        render: (value: StakeholderProjectTransactionRow['amount']) =>
-          value === undefined ? '-' : formatCurrency(value),
-        title: 'Amount',
-        width: 140,
-      },
-    ],
-    [],
-  )
-
   return (
     <section
       className="page-panel report-page"
@@ -285,9 +252,8 @@ export function StakeholderProjectsReportPage() {
           </div>
 
           <StakeholderDetail
+            projectId={row.projectId}
             stakeholder={row.stakeholder}
-            transactionColumns={transactionColumns}
-            transactions={row.transactions}
           />
         </section>
       ) : null}
@@ -296,13 +262,11 @@ export function StakeholderProjectsReportPage() {
 }
 
 function StakeholderDetail({
+  projectId,
   stakeholder,
-  transactionColumns,
-  transactions,
 }: {
+  projectId: number
   stakeholder: StakeholderProjectStakeholderRow
-  transactionColumns: ColumnsType<StakeholderProjectTransactionRow>
-  transactions: StakeholderProjectTransactionRow[]
 }) {
   return (
     <section
@@ -326,22 +290,11 @@ function StakeholderDetail({
         <Metric label="Balance" value={formatCurrency(stakeholder.balance)} />
       </div>
 
-      <Table<StakeholderProjectTransactionRow>
-        className="report-table stakeholder-project-transaction-table"
-        columns={transactionColumns}
-        components={getNamedTableComponents(
-          `${stakeholder.stakeholderName} transaction details`,
-        )}
-        dataSource={transactions}
-        locale={{
-          emptyText: (
-            <Empty description="No stakeholder transactions have been recorded yet." />
-          ),
-        }}
-        pagination={false}
-        rowKey={(transaction) => transaction.id}
-        scroll={{ x: 540 }}
-        size="small"
+      <StakeholderProjectTransactionLines
+        key={`${projectId}-${stakeholder.stakeholderId}`}
+        projectId={projectId}
+        stakeholderId={stakeholder.stakeholderId}
+        stakeholderName={stakeholder.stakeholderName}
       />
     </section>
   )

@@ -76,6 +76,15 @@ export type ProjectStakeholder = {
   stakeholder?: Stakeholder
 }
 
+export type StakeholderProjectTransaction = {
+  idStakeholderProjectTransaction: number
+  idProject: number
+  idStakeholder: number
+  date: IsoDateTime
+  description: string
+  amount: DecimalValue
+}
+
 export type Sale = {
   idSale: number
   date: IsoDateTime

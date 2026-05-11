@@ -128,6 +128,21 @@ Rules:
 - The sum of all stakeholder percentages for one project must equal exactly `100`.
 - Row-by-row project stakeholder writes are accepted only when the resulting project split still totals exactly `100`; clients should use the batch replacement endpoint for multi-row split edits. The MVP frontend manages project stakeholder splits as detail lines inside the project create/edit form and saves through that replacement endpoint.
 
+### stakeholder_project_transaction
+
+- `id_stakeholder_project_transaction`: primary key.
+- `id_project`: part of a composite foreign key to `project_stakeholder`.
+- `id_stakeholder`: part of a composite foreign key to `project_stakeholder`.
+- `date`: required transaction date.
+- `description`: required text describing the stakeholder/project transaction.
+- `amount`: signed numeric transaction amount.
+
+Rules:
+
+- Transactions can only be recorded for a stakeholder assigned to the selected project.
+- The project/stakeholder transaction replacement endpoint atomically replaces all transaction lines for one project/stakeholder pair.
+- These rows are persisted and displayed in the stakeholder projects report detail section. They do not change investment, income, or balance calculations yet.
+
 ### sales
 
 - `id_sale`: primary key.
@@ -268,6 +283,8 @@ CRUD resources:
 - `PUT /api/project-stakeholders/projects/:id`: atomically replace a project's full stakeholder split with either an empty array or an array of `{ idStakeholder, stakePercentage }` rows totaling exactly `100`.
 - `GET /api/project-transactions/projects/:id`: list the complete project cost transaction set for one project.
 - `PUT /api/project-transactions/projects/:id`: atomically replace a project's full cost transaction set with an array of `{ date, amount, description }` rows.
+- `GET /api/stakeholder-project-transactions/projects/:projectId/stakeholders/:stakeholderId`: list transaction rows for one project/stakeholder pair.
+- `PUT /api/stakeholder-project-transactions/projects/:projectId/stakeholders/:stakeholderId`: atomically replace transaction rows for one project/stakeholder pair with an array of `{ date, amount, description }` rows.
 
 Report resources:
 
@@ -371,7 +388,7 @@ Stakeholder projects report page:
 - Project total cost is the sum of project cost transactions. Unit price is project total cost divided by project total units.
 - Calculated cost is units sold multiplied by unit price. Profit is net sales total minus calculated cost. Project progress is units sold divided by total project units.
 - Stakeholder information is presented as a header/detail section. The header displays stakeholder name, stake percentage, investment, income, and balance. Investment is project total cost multiplied by stakeholder stake percentage. Income is calculated cost multiplied by stake percentage plus profit multiplied by stake percentage. Balance is income minus investment.
-- The detail section is currently an empty transaction table placeholder. Future project/stakeholder transaction rows will be added there.
+- The detail section displays persisted stakeholder/project transaction rows from `stakeholder_project_transaction` in a compact static table. Rows become editable only after selecting the row Edit action; editable rows expose Save and Cancel actions for that row. New rows are added in edit mode, and row Save or Remove persists the full replacement list for the selected project/stakeholder pair.
 
 Known intentional custom UI areas and UI debt:
 
@@ -385,6 +402,7 @@ Expected validation rules:
 
 - Required names for products, models, and stakeholders.
 - Valid numeric values for units, project transaction amounts, costs, percentages, quantity, amount, and ownership.
+- Stakeholder/project transactions require a valid date, a description, and a numeric amount.
 - At most one project can be active for a given product at any time.
 - Project stakeholder totals must equal exactly `100` per project.
 - Import source is required.

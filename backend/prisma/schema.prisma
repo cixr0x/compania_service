@@ -87,15 +87,29 @@ model Setting {
 }
 
 model ProjectStakeholder {
-  idProjectStakeholder Int         @id @default(autoincrement()) @map("id_project_stakeholder")
-  idProject            Int         @map("id_project")
-  idStakeholder        Int         @map("id_stakeholder")
-  stakePercentage      Decimal     @map("stake_percentage") @db.Decimal(7, 2)
-  project              Project     @relation(fields: [idProject], references: [idProject], onDelete: Cascade)
-  stakeholder          Stakeholder @relation(fields: [idStakeholder], references: [idStakeholder], onDelete: Restrict)
+  idProjectStakeholder Int                             @id @default(autoincrement()) @map("id_project_stakeholder")
+  idProject            Int                             @map("id_project")
+  idStakeholder        Int                             @map("id_stakeholder")
+  stakePercentage      Decimal                         @map("stake_percentage") @db.Decimal(7, 2)
+  project              Project                         @relation(fields: [idProject], references: [idProject], onDelete: Cascade)
+  stakeholder          Stakeholder                     @relation(fields: [idStakeholder], references: [idStakeholder], onDelete: Restrict)
+  transactions         StakeholderProjectTransaction[]
 
   @@unique([idProject, idStakeholder])
   @@map("project_stakeholder")
+}
+
+model StakeholderProjectTransaction {
+  idStakeholderProjectTransaction Int                @id @default(autoincrement()) @map("id_stakeholder_project_transaction")
+  idProject                       Int                @map("id_project")
+  idStakeholder                   Int                @map("id_stakeholder")
+  date                            DateTime           @db.Date
+  description                     String             @db.Text
+  amount                          Decimal            @db.Decimal(12, 2)
+  projectStakeholder              ProjectStakeholder @relation(fields: [idProject, idStakeholder], references: [idProject, idStakeholder], onDelete: Cascade)
+
+  @@index([idProject, idStakeholder])
+  @@map("stakeholder_project_transaction")
 }
 
 model Sale {

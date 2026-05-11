@@ -4,10 +4,11 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from '../../App'
-import { getJson } from '../../api/client'
+import { getJson, putJson } from '../../api/client'
 
 vi.mock('../../api/client', () => ({
   getJson: vi.fn(),
+  putJson: vi.fn(),
 }))
 
 const stakeholderProjectsReport = {
@@ -116,8 +117,25 @@ describe('StakeholderProjectsReportPage', () => {
         return Promise.resolve(stakeholderProjectsReport)
       }
 
+      if (
+        path ===
+        '/stakeholder-project-transactions/projects/501/stakeholders/10'
+      ) {
+        return Promise.resolve([
+          {
+            amount: 125.5,
+            date: '2026-05-05',
+            description: 'Distribution',
+            idProject: 501,
+            idStakeholder: 10,
+            idStakeholderProjectTransaction: 99,
+          },
+        ])
+      }
+
       return Promise.reject(new Error(`Unexpected GET ${path}`))
     })
+    vi.mocked(putJson).mockImplementation(async (_path, body) => body)
 
     renderStakeholderProjectsReportRoute()
 
@@ -204,6 +222,13 @@ describe('StakeholderProjectsReportPage', () => {
         name: 'Alicia transaction details',
       }),
     ).toBeVisible()
+    expect(within(stakeholderRegion).getByText('Distribution')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$125.50')).toBeVisible()
+    expect(
+      within(stakeholderRegion).getByRole('button', {
+        name: 'Add transaction',
+      }),
+    ).toBeVisible()
     expect(within(projectRegion).queryByText('Bruno')).not.toBeInTheDocument()
   })
 
@@ -212,6 +237,13 @@ describe('StakeholderProjectsReportPage', () => {
     vi.mocked(getJson).mockImplementation((path: string) => {
       if (path === '/projects?pageSize=100') {
         return Promise.resolve(projects)
+      }
+
+      if (
+        path ===
+        '/stakeholder-project-transactions/projects/501/stakeholders/10'
+      ) {
+        return Promise.resolve([])
       }
 
       return Promise.reject(new Error('Report failed'))
