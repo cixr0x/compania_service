@@ -235,7 +235,7 @@ export class ReportsService {
       row.calculatedCost * stakeRatio + row.profit * stakeRatio,
     );
     row.stakeholder = {
-      balance: roundCurrency(income - investment),
+      balance: roundCurrency(investment + income),
       income,
       investment,
       stakePercentage,
