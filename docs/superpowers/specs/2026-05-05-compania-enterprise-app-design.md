@@ -283,8 +283,8 @@ CRUD resources:
 - `PUT /api/project-stakeholders/projects/:id`: atomically replace a project's full stakeholder split with either an empty array or an array of `{ idStakeholder, stakePercentage }` rows totaling exactly `100`.
 - `GET /api/project-transactions/projects/:id`: list the complete project cost transaction set for one project.
 - `PUT /api/project-transactions/projects/:id`: atomically replace a project's full cost transaction set with an array of `{ date, amount, description }` rows.
-- `GET /api/stakeholder-project-transactions/projects/:projectId/stakeholders/:stakeholderId`: list transaction rows for one project/stakeholder pair.
-- `PUT /api/stakeholder-project-transactions/projects/:projectId/stakeholders/:stakeholderId`: atomically replace transaction rows for one project/stakeholder pair with an array of `{ date, amount, description }` rows.
+- `GET /api/stakeholder-project-transactions/projects/:projectId/stakeholders/:stakeholderId`: list transaction rows for one project/stakeholder pair ordered by date ascending.
+- `PUT /api/stakeholder-project-transactions/projects/:projectId/stakeholders/:stakeholderId`: atomically replace transaction rows for one project/stakeholder pair with an array of `{ date, amount, description }` rows and return the rows ordered by date ascending.
 
 Report resources:
 
@@ -388,7 +388,7 @@ Stakeholder projects report page:
 - Project total cost is the sum of project cost transactions. Unit price is project total cost divided by project total units.
 - Calculated cost is units sold multiplied by unit price. Profit is net sales total minus calculated cost. Project progress is units sold divided by total project units.
 - Stakeholder information is presented as a header/detail section. The header displays stakeholder name, stake percentage, recorded investment, entitled income, and balance. Recorded investment is the signed sum of the selected project/stakeholder transaction rows. Entitled income is calculated cost multiplied by stake percentage plus profit multiplied by stake percentage. Balance is recorded investment plus entitled income.
-- The detail section displays persisted stakeholder/project transaction rows from `stakeholder_project_transaction` in a compact static table. Rows become editable only after selecting the row Edit action; editable rows expose Save and Cancel actions for that row. New rows are added in edit mode, and row Save or Remove persists the full replacement list for the selected project/stakeholder pair.
+- The detail section displays persisted stakeholder/project transaction rows from `stakeholder_project_transaction` in a compact static table ordered by date ascending. Rows become editable only after selecting the row Edit action; editable rows expose Save and Cancel actions for that row. New rows are added in edit mode, and row Save or Remove persists the full replacement list for the selected project/stakeholder pair.
 
 Known intentional custom UI areas and UI debt:
 

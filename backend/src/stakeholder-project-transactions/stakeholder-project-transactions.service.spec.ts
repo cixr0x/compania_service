@@ -27,7 +27,7 @@ describe('StakeholderProjectTransactionsService', () => {
     );
   });
 
-  it('lists stakeholder project transactions ordered newest first', async () => {
+  it('lists stakeholder project transactions ordered by date ascending', async () => {
     jest
       .spyOn(prisma.stakeholderProjectTransaction, 'findMany')
       .mockResolvedValue([
@@ -47,7 +47,10 @@ describe('StakeholderProjectTransactionsService', () => {
     expect(
       prisma.stakeholderProjectTransaction.findMany,
     ).toHaveBeenCalledWith({
-      orderBy: { idStakeholderProjectTransaction: 'desc' },
+      orderBy: [
+        { date: 'asc' },
+        { idStakeholderProjectTransaction: 'asc' },
+      ],
       where: { idProject: 501, idStakeholder: 10 },
     });
   });
@@ -119,6 +122,15 @@ describe('StakeholderProjectTransactionsService', () => {
           idStakeholder: 10,
         },
       ],
+    });
+    expect(
+      transactionPrisma.stakeholderProjectTransaction.findMany,
+    ).toHaveBeenCalledWith({
+      orderBy: [
+        { date: 'asc' },
+        { idStakeholderProjectTransaction: 'asc' },
+      ],
+      where: { idProject: 501, idStakeholder: 10 },
     });
     expect(result).toEqual([
       {

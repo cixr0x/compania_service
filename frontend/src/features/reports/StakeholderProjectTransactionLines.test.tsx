@@ -35,6 +35,13 @@ function renderStakeholderProjectTransactionLines() {
   )
 }
 
+function getTableBodyDescriptions(table: HTMLElement) {
+  return within(table)
+    .getAllByRole('row')
+    .slice(1)
+    .map((row) => within(row).getAllByRole('cell')[1].textContent)
+}
+
 describe('StakeholderProjectTransactionLines', () => {
   beforeEach(() => {
     vi.mocked(getJson).mockResolvedValue([])
@@ -122,6 +129,50 @@ describe('StakeholderProjectTransactionLines', () => {
     expect(within(section).queryByLabelText('Amount')).not.toBeInTheDocument()
     expect(await within(section).findByText('Capital return')).toBeVisible()
     expect(within(section).getByText('$250.00')).toBeVisible()
+  })
+
+  it('keeps transactions ordered by date ascending after a row is saved', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        amount: 125.5,
+        date: '2026-05-10',
+        description: 'Later transaction',
+        idProject: 501,
+        idStakeholder: 10,
+        idStakeholderProjectTransaction: 99,
+      },
+    ])
+
+    renderStakeholderProjectTransactionLines()
+
+    const section = await screen.findByRole('group', {
+      name: 'Stakeholder Transactions',
+    })
+    const table = await within(section).findByRole('table', {
+      name: 'Alicia transaction details',
+    })
+    await within(section).findByText('Later transaction')
+    await user.click(
+      within(section).getByRole('button', { name: 'Add transaction' }),
+    )
+    fireEvent.change(within(section).getByLabelText('Date'), {
+      target: { value: '2026-05-01' },
+    })
+    fireEvent.change(within(section).getByLabelText('Amount'), {
+      target: { value: '50.00' },
+    })
+    fireEvent.change(within(section).getByLabelText('Description'), {
+      target: { value: 'Earlier transaction' },
+    })
+    await user.click(within(section).getByRole('button', { name: 'Save row 2' }))
+
+    await waitFor(() => {
+      expect(getTableBodyDescriptions(table)).toEqual([
+        'Earlier transaction',
+        'Later transaction',
+      ])
+    })
   })
 
   it('keeps focus in the edited row input while typing', async () => {

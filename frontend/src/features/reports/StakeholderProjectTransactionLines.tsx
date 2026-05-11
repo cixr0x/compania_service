@@ -90,6 +90,19 @@ function buildPayload(rows: TransactionDraftRow[]): TransactionPayloadRow[] {
   }))
 }
 
+function compareTransactionRows(
+  left: TransactionDraftRow,
+  right: TransactionDraftRow,
+) {
+  const dateOrder = left.date.localeCompare(right.date)
+
+  return dateOrder === 0 ? left.rowKey.localeCompare(right.rowKey) : dateOrder
+}
+
+function sortTransactionRows(rows: TransactionDraftRow[]) {
+  return [...rows].sort(compareTransactionRows)
+}
+
 export function StakeholderProjectTransactionLines({
   projectId,
   stakeholderId,
@@ -119,7 +132,7 @@ export function StakeholderProjectTransactionLines({
   })
 
   const loadedRows = useMemo(
-    () => (transactionsQuery.data ?? []).map(buildDraftRow),
+    () => sortTransactionRows((transactionsQuery.data ?? []).map(buildDraftRow)),
     [transactionsQuery.data],
   )
   const activeRows = draftRows ?? loadedRows
@@ -133,7 +146,7 @@ export function StakeholderProjectTransactionLines({
     onError: () =>
       setSaveError('Unable to save stakeholder project transactions.'),
     onSuccess: (rows) => {
-      setDraftRows(rows.map(buildDraftRow))
+      setDraftRows(sortTransactionRows(rows.map(buildDraftRow)))
       setSaveError(null)
       void queryClient.invalidateQueries({
         queryKey: [
@@ -229,10 +242,12 @@ export function StakeholderProjectTransactionLines({
       return
     }
 
-    const nextRows = activeRows.map((row) =>
-      row.rowKey === rowKey
-        ? { ...row, amount: formatMoney(amount), date, description }
-        : row,
+    const nextRows = sortTransactionRows(
+      activeRows.map((row) =>
+        row.rowKey === rowKey
+          ? { ...row, amount: formatMoney(amount), date, description }
+          : row,
+      ),
     )
 
     setDraftRows(nextRows)

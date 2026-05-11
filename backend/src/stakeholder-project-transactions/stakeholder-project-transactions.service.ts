@@ -9,8 +9,13 @@ import { parseSaleDate } from '../sales/dto/sale-date-string.validator';
 import { ReplaceStakeholderProjectTransactionDto } from './dto/replace-stakeholder-project-transaction.dto';
 
 const stakeholderProjectTransactionOrder = {
-  idStakeholderProjectTransaction: 'desc' as const,
+  date: 'asc' as const,
 };
+
+const stakeholderProjectTransactionOrderBy = [
+  stakeholderProjectTransactionOrder,
+  { idStakeholderProjectTransaction: 'asc' as const },
+];
 
 type StakeholderProjectTransactionWriteClient = {
   $queryRaw: PrismaService['$queryRaw'];
@@ -27,7 +32,7 @@ export class StakeholderProjectTransactionsService {
 
   findByProjectStakeholder(idProject: number, idStakeholder: number) {
     return this.prisma.stakeholderProjectTransaction.findMany({
-      orderBy: stakeholderProjectTransactionOrder,
+      orderBy: stakeholderProjectTransactionOrderBy,
       where: { idProject, idStakeholder },
     });
   }
@@ -57,7 +62,7 @@ export class StakeholderProjectTransactionsService {
       }
 
       return tx.stakeholderProjectTransaction.findMany({
-        orderBy: stakeholderProjectTransactionOrder,
+        orderBy: stakeholderProjectTransactionOrderBy,
         where: { idProject, idStakeholder },
       });
     });
