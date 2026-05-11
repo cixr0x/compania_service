@@ -166,6 +166,7 @@ export class ReportsService {
           include: { stakeholder: true },
           where: { idStakeholder: query.stakeholderId },
         },
+        transactions: true,
       },
       where: {
         idProject: query.projectId,
@@ -202,11 +203,7 @@ export class ReportsService {
     }
 
     row.projectTotalCost = roundCurrency(
-      sumNumbers(
-        project.productionCost,
-        project.adminCost,
-        project.costAdjustment,
-      ),
+      sumNumbers(...project.transactions.map((transaction) => transaction.amount)),
     );
     const rawUnitPrice =
       project.units === 0 ? 0 : row.projectTotalCost / project.units;

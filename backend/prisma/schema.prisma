@@ -45,14 +45,26 @@ model Project {
   units                 Int
   unitCost              Decimal              @map("unit_cost") @db.Decimal(12, 2)
   productionCost        Decimal              @default(0) @map("production_cost") @db.Decimal(12, 2)
-  adminCost             Decimal              @map("admin_cost") @db.Decimal(12, 2)
+  adminCost             Decimal              @default(0) @map("admin_cost") @db.Decimal(12, 2)
   costAdjustment        Decimal              @default(0) @map("cost_adjustment") @db.Decimal(12, 2)
   adjustmentDescription String?              @map("adjustment_description") @db.Text
   product               Product              @relation(fields: [idProduct], references: [id], onDelete: Restrict)
   stakeholders          ProjectStakeholder[]
   sales                 Sale[]
+  transactions          ProjectTransaction[]
 
   @@map("project")
+}
+
+model ProjectTransaction {
+  idProjectTransaction Int     @id @default(autoincrement()) @map("id_project_transaction")
+  idProject            Int     @map("project_id")
+  amount               Decimal @db.Decimal(12, 2)
+  description          String  @db.Text
+  project              Project @relation(fields: [idProject], references: [idProject], onDelete: Cascade)
+
+  @@index([idProject])
+  @@map("project_transactions")
 }
 
 model Stakeholder {

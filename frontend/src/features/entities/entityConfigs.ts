@@ -204,12 +204,21 @@ function roundCurrency(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
-function getProjectTotalCost(row: EntityRow) {
-  return sumMoneyValues(row.productionCost, row.adminCost, row.costAdjustment)
+function getProjectTransactions(row: EntityRow) {
+  return Array.isArray(row.transactions) ? (row.transactions as EntityRow[]) : []
 }
 
-function hasProjectCostAdjustment(row: EntityRow) {
-  return (parseMoneyNumber(row.costAdjustment) ?? 0) !== 0
+function getProjectTotalCost(row: EntityRow) {
+  const explicitTotal = parseMoneyNumber(row.transactionTotal)
+
+  if (explicitTotal !== null) {
+    return explicitTotal
+  }
+
+  return getProjectTransactions(row).reduce(
+    (total, transaction) => total + (parseMoneyNumber(transaction.amount) ?? 0),
+    0,
+  )
 }
 
 function getSaleProfit(row: EntityRow) {
@@ -419,27 +428,6 @@ export const entityConfigs = {
         prefix: '$',
         step: 0.01,
         valueFormat: 'money',
-      }),
-      number('productionCost', 'Production Cost', {
-        min: 0,
-        prefix: '$',
-        step: 0.01,
-        valueFormat: 'money',
-      }),
-      number('adminCost', 'Admin Cost', {
-        min: 0,
-        prefix: '$',
-        step: 0.01,
-        valueFormat: 'money',
-      }),
-      number('costAdjustment', 'Cost Adjustment', {
-        prefix: '$',
-        step: 0.01,
-        valueFormat: 'money',
-      }),
-      textarea('adjustmentDescription', 'Adjustment Description', {
-        span: 'full',
-        visibleWhen: hasProjectCostAdjustment,
       }),
       computed('totalCost', 'Total Cost', getProjectTotalCost, {
         prefix: '$',

@@ -31,12 +31,14 @@ export class CreateProjectDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  productionCost!: number;
+  @IsOptional()
+  productionCost?: number;
 
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  adminCost!: number;
+  @IsOptional()
+  adminCost?: number;
 
   @IsOptional()
   @Type(() => Number)

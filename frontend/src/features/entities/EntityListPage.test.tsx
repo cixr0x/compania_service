@@ -128,6 +128,11 @@ describe('EntityListPage', () => {
         idProject: 501,
         isActive: true,
         productionCost: 7500.25,
+        transactions: [
+          { amount: 7500.25 },
+          { amount: 2250.5 },
+          { amount: -250.75 },
+        ],
         unitCost: 1000000,
         units: 10,
       },

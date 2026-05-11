@@ -56,6 +56,14 @@ export type Project = {
   adjustmentDescription: string | null
   product?: Product
   stakeholders?: ProjectStakeholder[]
+  transactions?: ProjectTransaction[]
+}
+
+export type ProjectTransaction = {
+  idProjectTransaction: number
+  idProject: number
+  amount: DecimalValue
+  description: string
 }
 
 export type ProjectStakeholder = {

@@ -32,8 +32,7 @@ Deferred:
 
 - Authentication and roles.
 - Additional reports and dashboards.
-- Fee calculation logic.
-- Profit allocation logic.
+- Additional profit allocation workflows.
 - Source-specific scheduled or automated imports.
 
 ## Business Concepts
@@ -42,7 +41,7 @@ A product is the item being purchased and sold. Products have multiple external 
 
 A model is a pricing model assigned to products.
 
-A project is a batch purchase of one product. It stores the purchased units and costs, including unit, production, and administrative costs. The total project cost is derived as `production_cost + admin_cost`; it is displayed in project screens but is not stored as a separate database field. Several stakeholders can participate in a project. A project can be active or inactive; at most one project can be active for the same product at any time.
+A project is a batch purchase of one product. It stores the purchased units and unit cost. Project cost is tracked through project transaction rows, and the total project cost is derived as the sum of those transaction amounts; it is displayed in project screens but is not stored as a separate database field. Several stakeholders can participate in a project. A project can be active or inactive; at most one project can be active for the same product at any time.
 
 A stakeholder is a person or organization participating in one or more projects.
 
@@ -84,16 +83,29 @@ Application settings store configurable values by unique code. Settings are expo
 - `id_product`: foreign key to `product`.
 - `units`: numeric quantity.
 - `unit_cost`: numeric cost per unit.
-- `production_cost`: numeric production cost for the project.
-- `admin_cost`: numeric administrative cost.
-- `cost_adjustment`: signed numeric adjustment added to the derived total project cost. Positive values increase project cost and negative values reduce it.
-- `adjustment_description`: optional text describing the cost adjustment.
+- `production_cost`: legacy numeric production cost retained in the table for now but no longer edited by the UI or used for total project cost calculations.
+- `admin_cost`: legacy numeric administrative cost retained in the table for now but no longer edited by the UI or used for total project cost calculations.
+- `cost_adjustment`: legacy signed numeric adjustment retained in the table for now but no longer edited by the UI or used for total project cost calculations.
+- `adjustment_description`: legacy optional adjustment text retained in the table for now.
 - `is_active`: boolean flag indicating whether this is the current active project for the product.
 - `active_product_id`: internal nullable unique key maintained by the backend to enforce that only one active project can exist for a product.
 
 Derived values:
 
-- `total_project_cost`: displayed-only value calculated as `production_cost + admin_cost + cost_adjustment`.
+- `total_project_cost`: displayed-only value calculated as the sum of the project's `project_transactions.amount` rows.
+
+### project_transactions
+
+- `id_project_transaction`: primary key.
+- `project_id`: foreign key to `project`.
+- `amount`: signed numeric transaction amount. Positive values increase project cost and negative values reduce it.
+- `description`: required text describing the cost transaction.
+
+Rules:
+
+- Project transactions are managed as detail lines inside the project create/edit form.
+- The project transaction replacement endpoint atomically replaces all cost transaction lines for one project.
+- Existing project total cost calculations, including sale fee and stakeholder project reporting, use only the sum of project transactions.
 
 ### stakeholder
 
@@ -132,7 +144,7 @@ Rules:
 Sale fee calculation is centralized in the backend so each pricing model can own its business rule. Current model-code rules are:
 
 - `consigna256`: `25%` of sale amount.
-- `ladrillo`: `15%` of sale amount plus `2.5%` of the linked project total cost. Project total cost is `production_cost + admin_cost + cost_adjustment`.
+- `ladrillo`: `15%` of sale amount plus `2.5%` of the linked project total cost. Project total cost is the sum of linked project transaction amounts.
 - `interno`: `10%` of sale amount.
 - `consigna`: `quantity * product.fee_amount`.
 
@@ -253,6 +265,8 @@ CRUD resources:
 - `GET /api/stakeholders/:id` includes the stakeholder's project participation with project and product details for the stakeholder edit form.
 - `GET /api/project-stakeholders/projects/:id`: list the complete stakeholder split for one project.
 - `PUT /api/project-stakeholders/projects/:id`: atomically replace a project's full stakeholder split with an array of `{ idStakeholder, stakePercentage }` rows totaling exactly `100`.
+- `GET /api/project-transactions/projects/:id`: list the complete project cost transaction set for one project.
+- `PUT /api/project-transactions/projects/:id`: atomically replace a project's full cost transaction set with an array of `{ amount, description }` rows.
 
 Report resources:
 
@@ -313,8 +327,9 @@ Entity pages:
 - Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
 - Product create/edit forms show the Fee Amount money field only when the selected pricing model has code `consigna`.
 - Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
-- Project create/edit forms include an active flag plus unit cost, production cost, administrative cost, and cost adjustment fields. They also display a read-only total cost field derived from production cost plus administrative cost plus cost adjustment, updated immediately as any cost field changes. The Adjustment Description field appears only when cost adjustment is non-zero.
-- Project table views display the same derived total cost with money formatting.
+- Project create/edit forms include an active flag plus unit cost. Project cost is managed in a Project Cost Transactions detail section with add/remove rows for amount and description. The fixed production cost, administrative cost, cost adjustment, and adjustment description fields remain in the database for now but are not exposed in the form.
+- Project create/edit forms display a read-only total cost field derived from the sum of project cost transaction rows, updated immediately as transaction amounts change.
+- Project table views display the same transaction-derived total cost with money formatting. Legacy fixed cost columns remain visible for historical inspection while the total cost column uses transaction totals.
 - Project create/edit forms include a Stakeholder Split detail section. The section loads stakeholders by name, allows adding/removing stakeholder percentage lines, requires complete rows totaling exactly `100` when lines are present, and saves the project header before saving the split lines.
 - Project stakeholder splits are not exposed as a standalone primary navigation item in the MVP UI.
 - Stakeholder edit forms show the projects where the stakeholder participates, including the project label and stake percentage.
@@ -352,7 +367,7 @@ Stakeholder projects report page:
 - The product name is the project section header and project ID is displayed beside it.
 - Source totals show units sold and amount for each source; `Surface` remains hidden unless at least one project in the report has surface sales.
 - Project summary displays total units sold, units left, total sales, total fees, net sales total, calculated cost, profit, and project progress.
-- Project total cost is production cost plus administrative cost plus cost adjustment. Unit price is project total cost divided by project total units.
+- Project total cost is the sum of project cost transactions. Unit price is project total cost divided by project total units.
 - Calculated cost is units sold multiplied by unit price. Profit is net sales total minus calculated cost. Project progress is units sold divided by total project units.
 - Stakeholder information is presented as a header/detail section. The header displays stakeholder name, stake percentage, investment, income, and balance. Investment is project total cost multiplied by stakeholder stake percentage. Income is calculated cost multiplied by stake percentage plus profit multiplied by stake percentage. Balance is income minus investment.
 - The detail section is currently an empty transaction table placeholder. Future project/stakeholder transaction rows will be added there.
@@ -368,7 +383,7 @@ Backend validation is the source of truth. The frontend mirrors obvious required
 Expected validation rules:
 
 - Required names for products, models, and stakeholders.
-- Valid numeric values for units, costs, percentages, quantity, amount, and ownership.
+- Valid numeric values for units, project transaction amounts, costs, percentages, quantity, amount, and ownership.
 - At most one project can be active for a given product at any time.
 - Project stakeholder totals must equal exactly `100` per project.
 - Import source is required.
@@ -398,6 +413,7 @@ Frontend tests:
 - Import page tests for displaying matched product name beside imported product description.
 - Import page tests for disabled commit button when metadata or validation is incomplete.
 - Sales report page tests for period selectors, grouped source headers, project ID column, and dynamic surface source visibility.
+- Project form tests for transaction-line cost editing and transaction-derived total cost updates.
 
 End-to-end tests should be added once the MVP screens are stable enough to avoid brittle early tests.
 

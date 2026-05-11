@@ -195,7 +195,6 @@ describe('ReportsService', () => {
           image: 'https://example.test/maple-shelf.jpg',
           name: 'Maple Shelf',
         },
-        productionCost: '100.00',
         sales: [
           {
             amount: '200.00',
@@ -217,6 +216,11 @@ describe('ReportsService', () => {
             stakeholder: { idStakeholder: 10, name: 'Alicia' },
           },
         ],
+        transactions: [
+          { amount: '100.00' },
+          { amount: '20.00' },
+          { amount: '-10.00' },
+        ],
         units: 10,
       },
     );
@@ -235,6 +239,7 @@ describe('ReportsService', () => {
           include: { stakeholder: true },
           where: { idStakeholder: 10 },
         },
+        transactions: true,
       },
       where: {
         idProject: 501,

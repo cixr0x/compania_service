@@ -66,9 +66,7 @@ export class SaleFeeCalculatorService {
         where: { idProject: input.idProject },
         select: {
           idProject: true,
-          productionCost: true,
-          adminCost: true,
-          costAdjustment: true,
+          transactions: { select: { amount: true } },
         },
       });
 
@@ -78,10 +76,11 @@ export class SaleFeeCalculatorService {
         );
       }
 
-      const projectTotalCost =
-        (toFiniteNumber(project.productionCost) ?? 0) +
-        (toFiniteNumber(project.adminCost) ?? 0) +
-        (toFiniteNumber(project.costAdjustment) ?? 0);
+      const projectTotalCost = project.transactions.reduce(
+        (sum, transaction) =>
+          sum + (toFiniteNumber(transaction.amount) ?? 0),
+        0,
+      );
 
       return roundCurrency(amount * 0.15 + projectTotalCost * 0.025);
     }

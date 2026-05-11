@@ -29,9 +29,11 @@ describe('SaleFeeCalculatorService', () => {
       });
       jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
         idProject: 51,
-        productionCost: '100.00',
-        adminCost: '20.00',
-        costAdjustment: '5.00',
+        transactions: [
+          { amount: '100.00' },
+          { amount: '20.00' },
+          { amount: '5.00' },
+        ],
       });
 
       const calculator = new SaleFeeCalculatorService(prisma);
@@ -55,9 +57,11 @@ describe('SaleFeeCalculatorService', () => {
     });
     jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
       idProject: 51,
-      productionCost: '100.00',
-      adminCost: '20.00',
-      costAdjustment: '-10.00',
+      transactions: [
+        { amount: '100.00' },
+        { amount: '20.00' },
+        { amount: '-10.00' },
+      ],
     });
 
     const calculator = new SaleFeeCalculatorService(prisma);
@@ -80,9 +84,10 @@ describe('SaleFeeCalculatorService', () => {
     });
     jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
       idProject: 51,
-      productionCost: '100.00',
-      adminCost: '20.00',
-      costAdjustment: '0.00',
+      transactions: [
+        { amount: '100.00' },
+        { amount: '20.00' },
+      ],
     });
 
     const calculator = new SaleFeeCalculatorService(prisma);

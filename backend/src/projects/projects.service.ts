@@ -12,6 +12,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 const projectInclude = {
   product: true,
   stakeholders: { include: { stakeholder: true } },
+  transactions: true,
 };
 type ProjectWriteClient = Pick<Prisma.TransactionClient, 'project'>;
 
@@ -121,6 +122,8 @@ export class ProjectsService {
     return {
       ...dto,
       isActive: dto.isActive ?? false,
+      productionCost: dto.productionCost ?? 0,
+      adminCost: dto.adminCost ?? 0,
       costAdjustment: dto.costAdjustment ?? 0,
       activeProductId: dto.isActive ? dto.idProduct : null,
     };

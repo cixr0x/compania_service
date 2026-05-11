@@ -28,12 +28,25 @@ import {
   type ProjectStakeholderSplitPayloadRow,
   type ProjectStakeholderSplitState,
 } from './ProjectStakeholderLines'
+import {
+  ProjectTransactionLines,
+  type ProjectTransactionPayloadRow,
+  type ProjectTransactionState,
+} from './ProjectTransactionLines'
 
 const EMPTY_PROJECT_SPLIT_STATE: ProjectStakeholderSplitState = {
   errorMessage: null,
   hasRows: false,
   isValid: true,
   rows: [],
+}
+
+const EMPTY_PROJECT_TRANSACTION_STATE: ProjectTransactionState = {
+  errorMessage: null,
+  isDirty: false,
+  isValid: true,
+  rows: [],
+  totalCost: 0,
 }
 
 type BuildEntityPayloadOptions = {
@@ -347,10 +360,14 @@ function getProjectTotalCost(project: EntityRow | null) {
     return 0
   }
 
-  return (
-    (parseMoneyNumber(project.productionCost) ?? 0) +
-    (parseMoneyNumber(project.adminCost) ?? 0) +
-    (parseMoneyNumber(project.costAdjustment) ?? 0)
+  const transactions = Array.isArray(project.transactions)
+    ? (project.transactions as EntityRow[])
+    : []
+
+  return transactions.reduce(
+    (total, transaction) =>
+      total + (parseMoneyNumber(transaction.amount) ?? 0),
+    0,
   )
 }
 
@@ -516,6 +533,8 @@ export function EntityEditPage() {
   )
   const [projectSplitState, setProjectSplitState] =
     useState<ProjectStakeholderSplitState>(EMPTY_PROJECT_SPLIT_STATE)
+  const [projectTransactionState, setProjectTransactionState] =
+    useState<ProjectTransactionState>(EMPTY_PROJECT_TRANSACTION_STATE)
   const optionSources = useMemo(() => getOptionSources(config), [config])
   const optionSourceQueries = useQueries({
     queries: optionSources.map((path) => ({
@@ -562,9 +581,29 @@ export function EntityEditPage() {
         )
       }
 
+      if (!projectTransactionState.isValid) {
+        throw new Error(
+          projectTransactionState.errorMessage ??
+            'Project cost transactions are not ready to save.',
+        )
+      }
+
       const savedProject = isCreate
         ? await postJson<EntityRow, EntityRow>('/projects', body)
         : await patchJson<EntityRow, EntityRow>(`/projects/${id}`, body)
+
+      if (projectTransactionState.isDirty) {
+        const projectId = getProjectId(savedProject, id)
+
+        if (projectId === null) {
+          throw new Error('Project ID is required to save cost transactions.')
+        }
+
+        await putJson<EntityRow[], ProjectTransactionPayloadRow[]>(
+          `/project-transactions/projects/${projectId}`,
+          projectTransactionState.rows,
+        )
+      }
 
       if (projectSplitState.hasRows) {
         const projectId = getProjectId(savedProject, id)
@@ -610,6 +649,11 @@ export function EntityEditPage() {
         )
       : config?.path === 'products'
         ? withProductDerivedValues(formValues, optionRowsByPath.models)
+      : config?.path === 'projects'
+        ? {
+            ...formValues,
+            transactionTotal: projectTransactionState.totalCost,
+          }
       : formValues
 
   if (!config || !formConfig) {
@@ -709,11 +753,18 @@ export function EntityEditPage() {
             values={displayedFormValues}
           >
             {config.path === 'projects' ? (
-              <ProjectStakeholderLines
-                isCreate={isCreate}
-                onDraftChange={setProjectSplitState}
-                projectId={isCreate ? null : id}
-              />
+              <>
+                <ProjectTransactionLines
+                  isCreate={isCreate}
+                  onDraftChange={setProjectTransactionState}
+                  projectId={isCreate ? null : id}
+                />
+                <ProjectStakeholderLines
+                  isCreate={isCreate}
+                  onDraftChange={setProjectSplitState}
+                  projectId={isCreate ? null : id}
+                />
+              </>
             ) : null}
           </EntityForm>
         </>

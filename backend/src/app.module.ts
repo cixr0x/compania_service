@@ -4,6 +4,7 @@ import { ImportBatchesModule } from './import-batches/import-batches.module';
 import { ModelsModule } from './models/models.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProjectStakeholdersModule } from './project-stakeholders/project-stakeholders.module';
+import { ProjectTransactionsModule } from './project-transactions/project-transactions.module';
 import { ProjectsModule } from './projects/projects.module';
 import { ProductsModule } from './products/products.module';
 import { ReportsModule } from './reports/reports.module';
@@ -20,6 +21,7 @@ import { StakeholdersModule } from './stakeholders/stakeholders.module';
     StakeholdersModule,
     ProjectsModule,
     ProjectStakeholdersModule,
+    ProjectTransactionsModule,
     SalesModule,
     SettingsModule,
     ImportBatchesModule,

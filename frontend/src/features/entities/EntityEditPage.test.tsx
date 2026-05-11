@@ -682,13 +682,15 @@ describe('EntityEditPage', () => {
       if (path === '/projects') {
         return [
           {
-            adminCost: 20,
-            costAdjustment: -10,
             idProject: 501,
             idProduct: 101,
             isActive: true,
             product: { id: 101, name: 'Brick Shelf' },
-            productionCost: 100,
+            transactions: [
+              { amount: 100 },
+              { amount: 20 },
+              { amount: -10 },
+            ],
           },
         ]
       }
@@ -758,28 +760,47 @@ describe('EntityEditPage', () => {
     await user.click(screen.getByLabelText('Active'))
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '1,000,000.00')
-    await user.type(screen.getByLabelText('Production Cost'), '7,500.25')
-    await user.type(screen.getByLabelText('Admin Cost'), '2,250.50')
+    expect(screen.queryByLabelText('Production Cost')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Admin Cost')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Cost Adjustment')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
-        adminCost: 2250.5,
         idProduct: 42,
         isActive: true,
-        productionCost: 7500.25,
         unitCost: 1000000,
         units: 10,
       })
     })
   })
 
-  it('shows a read-only project total cost and excludes it from create payloads', async () => {
+  it('saves project cost transactions after creating the project and sums them for total cost', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockResolvedValue([
       { id: 42, name: 'Maple Shelf', idModel: 7 },
     ])
     vi.mocked(postJson).mockResolvedValue({ idProject: 501 })
+    vi.mocked(putJson).mockResolvedValue([
+      {
+        amount: 7500.25,
+        description: 'Production run',
+        idProject: 501,
+        idProjectTransaction: 10,
+      },
+      {
+        amount: 2250.5,
+        description: 'Administration',
+        idProject: 501,
+        idProjectTransaction: 11,
+      },
+      {
+        amount: -250.75,
+        description: 'Supplier credit',
+        idProject: 501,
+        idProjectTransaction: 12,
+      },
+    ])
 
     renderEntityEditPage('/projects/new', '/:entityName/:id')
 
@@ -790,24 +811,55 @@ describe('EntityEditPage', () => {
     const totalCostInput = screen.getByLabelText('Total Cost')
     expect(totalCostInput).toHaveValue('0.00')
     expect(totalCostInput).toHaveAttribute('readonly')
+    expect(screen.queryByLabelText('Production Cost')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Admin Cost')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Cost Adjustment')).not.toBeInTheDocument()
 
     await selectAntOption(user, productSelect, 'Maple Shelf')
-    await user.type(screen.getByLabelText('Production Cost'), '7,500.25')
-    await user.type(screen.getByLabelText('Admin Cost'), '2,250.50')
+    const costSection = screen.getByRole('group', {
+      name: 'Project Cost Transactions',
+    })
+    await user.click(
+      within(costSection).getByRole('button', { name: 'Add transaction' }),
+    )
+    await user.type(within(costSection).getByLabelText('Amount'), '7,500.25')
+    await user.type(
+      within(costSection).getByLabelText('Description'),
+      'Production run',
+    )
+    await user.click(
+      within(costSection).getByRole('button', { name: 'Add transaction' }),
+    )
+    await user.type(within(costSection).getAllByLabelText('Amount')[1], '2,250.50')
+    await user.type(
+      within(costSection).getAllByLabelText('Description')[1],
+      'Administration',
+    )
+    await user.click(
+      within(costSection).getByRole('button', { name: 'Add transaction' }),
+    )
+    await user.type(within(costSection).getAllByLabelText('Amount')[2], '-250.75')
+    await user.type(
+      within(costSection).getAllByLabelText('Description')[2],
+      'Supplier credit',
+    )
 
-    expect(totalCostInput).toHaveValue('9,750.75')
+    expect(totalCostInput).toHaveValue('9,500.00')
 
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
-      expect(postJson).toHaveBeenCalledWith(
-        '/projects',
-        expect.objectContaining({
-          adminCost: 2250.5,
-          idProduct: 42,
-          isActive: false,
-          productionCost: 7500.25,
-        }),
+      expect(postJson).toHaveBeenCalledWith('/projects', {
+        idProduct: 42,
+        isActive: false,
+      })
+      expect(putJson).toHaveBeenCalledWith(
+        '/project-transactions/projects/501',
+        [
+          { amount: 7500.25, description: 'Production run' },
+          { amount: 2250.5, description: 'Administration' },
+          { amount: -250.75, description: 'Supplier credit' },
+        ],
       )
     })
     expect(vi.mocked(postJson).mock.calls[0]?.[1]).not.toHaveProperty(
@@ -815,50 +867,7 @@ describe('EntityEditPage', () => {
     )
   })
 
-  it('shows project adjustment description only for non-zero cost adjustments', async () => {
-    const user = userEvent.setup()
-    vi.mocked(getJson).mockResolvedValue([
-      { id: 42, name: 'Maple Shelf', idModel: 7 },
-    ])
-    vi.mocked(postJson).mockResolvedValue({ idProject: 501 })
-
-    renderEntityEditPage('/projects/new', '/:entityName/:id')
-
-    await selectAntOption(
-      user,
-      await screen.findByRole('combobox', { name: 'Product' }),
-      'Maple Shelf',
-    )
-
-    const totalCostInput = screen.getByLabelText('Total Cost')
-    expect(screen.getByLabelText('Cost Adjustment')).toHaveValue('')
-    expect(
-      screen.queryByLabelText('Adjustment Description'),
-    ).not.toBeInTheDocument()
-
-    await user.type(screen.getByLabelText('Production Cost'), '7,500.25')
-    await user.type(screen.getByLabelText('Admin Cost'), '2,250.50')
-    await user.type(screen.getByLabelText('Cost Adjustment'), '-250.75')
-
-    expect(totalCostInput).toHaveValue('9,500.00')
-    const adjustmentDescription = await screen.findByLabelText(
-      'Adjustment Description',
-    )
-    await user.type(adjustmentDescription, 'Damaged packaging discount')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
-
-    await waitFor(() => {
-      expect(postJson).toHaveBeenCalledWith(
-        '/projects',
-        expect.objectContaining({
-          adjustmentDescription: 'Damaged packaging discount',
-          costAdjustment: -250.75,
-        }),
-      )
-    })
-  })
-
-  it('recalculates project total cost while replacing existing cost values', async () => {
+  it('preloads project cost transactions and recalculates total cost while editing lines', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
       if (path === '/products') {
@@ -871,16 +880,35 @@ describe('EntityEditPage', () => {
 
       if (path === '/projects/77') {
         return {
-          adminCost: 250,
           idProduct: 42,
           idProject: 77,
           isActive: true,
-          costAdjustment: -500,
-          adjustmentDescription: 'Launch discount',
-          productionCost: 7500,
           unitCost: 10,
           units: 100,
         }
+      }
+
+      if (path === '/project-transactions/projects/77') {
+        return [
+          {
+            amount: 7500,
+            description: 'Production run',
+            idProject: 77,
+            idProjectTransaction: 100,
+          },
+          {
+            amount: 250,
+            description: 'Administration',
+            idProject: 77,
+            idProjectTransaction: 101,
+          },
+          {
+            amount: -500,
+            description: 'Launch discount',
+            idProject: 77,
+            idProjectTransaction: 102,
+          },
+        ]
       }
 
       if (path === '/project-stakeholders/projects/77') {
@@ -893,34 +921,27 @@ describe('EntityEditPage', () => {
     renderEntityEditPage('/projects/77', '/:entityName/:id')
 
     const totalCostInput = await screen.findByLabelText('Total Cost')
-    expect(totalCostInput).toHaveValue('7,250.00')
-    expect(screen.getByLabelText('Adjustment Description')).toHaveValue(
-      'Launch discount',
+    await waitFor(() => {
+      expect(totalCostInput).toHaveValue('7,250.00')
+    })
+    expect(screen.queryByLabelText('Adjustment Description')).not.toBeInTheDocument()
+    const costSection = await screen.findByRole('group', {
+      name: 'Project Cost Transactions',
+    })
+    expect(within(costSection).getByDisplayValue('Production run')).toBeVisible()
+    expect(within(costSection).getByDisplayValue('Launch discount')).toBeVisible()
+
+    await user.click(
+      within(costSection).getByRole('button', { name: 'Remove row 3' }),
     )
 
-    await user.click(screen.getByLabelText('Production Cost'))
-    await user.keyboard('1000')
-    expect(totalCostInput).toHaveValue('750.00')
-
-    await user.click(screen.getByLabelText('Admin Cost'))
-    await user.keyboard('500')
-    expect(totalCostInput).toHaveValue('1,000.00')
-
-    await user.click(screen.getByLabelText('Cost Adjustment'))
-    await user.keyboard('0')
-    expect(totalCostInput).toHaveValue('1,500.00')
-    expect(
-      screen.queryByLabelText('Adjustment Description'),
-    ).not.toBeInTheDocument()
+    expect(totalCostInput).toHaveValue('7,750.00')
   })
 
   it('configures every money field and money table column for currency formatting', () => {
     const moneyFields: Array<[EntityName, string]> = [
       ['products', 'feeAmount'],
       ['projects', 'unitCost'],
-      ['projects', 'productionCost'],
-      ['projects', 'adminCost'],
-      ['projects', 'costAdjustment'],
       ['projects', 'totalCost'],
       ['sales', 'amount'],
       ['sales', 'fee'],
@@ -943,6 +964,23 @@ describe('EntityEditPage', () => {
       expect(column, `${entityName}.${fieldName}`).toMatchObject({
         valueFormat: 'money',
       })
+    }
+
+    for (const deprecatedField of [
+      'productionCost',
+      'adminCost',
+      'costAdjustment',
+    ]) {
+      expect(
+        entityConfigs.projects.fields.find(
+          (candidate) => candidate.name === deprecatedField,
+        ),
+      ).toBeUndefined()
+      expect(
+        entityConfigs.projects.columns.find(
+          (candidate) => candidate.key === deprecatedField,
+        ),
+      ).toMatchObject({ valueFormat: 'money' })
     }
   })
 
@@ -1081,8 +1119,6 @@ describe('EntityEditPage', () => {
     await user.click(screen.getByLabelText('Active'))
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '1,000,000.00')
-    await user.type(screen.getByLabelText('Production Cost'), '7,500.25')
-    await user.type(screen.getByLabelText('Admin Cost'), '2,250.50')
 
     const splitSection = await screen.findByRole('group', {
       name: 'Stakeholder Split',
@@ -1143,10 +1179,8 @@ describe('EntityEditPage', () => {
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
-        adminCost: 2250.5,
         idProduct: 42,
         isActive: true,
-        productionCost: 7500.25,
         unitCost: 1000000,
         units: 10,
       })
@@ -1176,11 +1210,9 @@ describe('EntityEditPage', () => {
 
       if (path === '/projects/77') {
         return {
-          adminCost: 2250.5,
           idProduct: 42,
           idProject: 77,
           isActive: true,
-          productionCost: 7500.25,
           unitCost: 1000000,
           units: 10,
         }
@@ -1201,6 +1233,10 @@ describe('EntityEditPage', () => {
             stakePercentage: 40,
           },
         ]
+      }
+
+      if (path === '/project-transactions/projects/77') {
+        return []
       }
 
       throw new Error(`Unexpected path: ${path}`)
@@ -1239,10 +1275,8 @@ describe('EntityEditPage', () => {
 
     await waitFor(() => {
       expect(patchJson).toHaveBeenCalledWith('/projects/77', {
-        adminCost: 2250.5,
         idProduct: 42,
         isActive: true,
-        productionCost: 7500.25,
         unitCost: 1000000,
         units: 10,
       })
