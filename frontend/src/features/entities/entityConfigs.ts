@@ -400,9 +400,6 @@ export const entityConfigs = {
       column('isActive', 'Active'),
       column('units', 'Units'),
       column('unitCost', 'Unit Cost', { valueFormat: 'money' }),
-      column('productionCost', 'Production Cost', { valueFormat: 'money' }),
-      column('adminCost', 'Admin Cost', { valueFormat: 'money' }),
-      column('costAdjustment', 'Cost Adjustment', { valueFormat: 'money' }),
       column('totalCost', 'Total Cost', {
         valueFormat: 'money',
         valueGetter: getProjectTotalCost,

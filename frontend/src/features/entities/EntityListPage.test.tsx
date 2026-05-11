@@ -141,9 +141,10 @@ describe('EntityListPage', () => {
     renderEntityList('/projects')
 
     expect(await screen.findByRole('heading', { name: 'Projects' })).toBeVisible()
-    expect(screen.getAllByText('Cost Adjustment')).not.toHaveLength(0)
+    expect(screen.queryByText('Production Cost')).not.toBeInTheDocument()
+    expect(screen.queryByText('Admin Cost')).not.toBeInTheDocument()
+    expect(screen.queryByText('Cost Adjustment')).not.toBeInTheDocument()
     expect(screen.getAllByText('Total Cost')).not.toHaveLength(0)
-    expect(await screen.findByText('$-250.75')).toBeVisible()
     expect(await screen.findByText('$9,500.00')).toBeVisible()
   })
 

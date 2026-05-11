@@ -980,7 +980,7 @@ describe('EntityEditPage', () => {
         entityConfigs.projects.columns.find(
           (candidate) => candidate.key === deprecatedField,
         ),
-      ).toMatchObject({ valueFormat: 'money' })
+      ).toBeUndefined()
     }
   })
 

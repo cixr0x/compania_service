@@ -329,7 +329,7 @@ Entity pages:
 - Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
 - Project create/edit forms include an active flag plus unit cost. Project cost is managed in a Project Cost Transactions detail section with add/remove rows for amount and description. The fixed production cost, administrative cost, cost adjustment, and adjustment description fields remain in the database for now but are not exposed in the form.
 - Project create/edit forms display a read-only total cost field derived from the sum of project cost transaction rows, updated immediately as transaction amounts change.
-- Project table views display the same transaction-derived total cost with money formatting. Legacy fixed cost columns remain visible for historical inspection while the total cost column uses transaction totals.
+- Project table views display the same transaction-derived total cost with money formatting. Legacy fixed production, admin, and adjustment cost columns are not shown in the table view.
 - Project create/edit forms include a Stakeholder Split detail section. The section loads stakeholders by name, allows adding/removing stakeholder percentage lines, requires complete rows totaling exactly `100` when lines are present, and saves the project header before saving the split lines.
 - Project stakeholder splits are not exposed as a standalone primary navigation item in the MVP UI.
 - Stakeholder edit forms show the projects where the stakeholder participates, including the project label and stake percentage.
