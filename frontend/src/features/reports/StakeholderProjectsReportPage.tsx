@@ -283,10 +283,13 @@ function StakeholderDetail({
           value={formatPercentage(stakeholder.stakePercentage)}
         />
         <Metric
-          label="Investment"
+          label="Recorded Investment"
           value={formatCurrency(stakeholder.investment)}
         />
-        <Metric label="Income" value={formatCurrency(stakeholder.income)} />
+        <Metric
+          label="Entitled Income"
+          value={formatCurrency(stakeholder.income)}
+        />
         <Metric label="Balance" value={formatCurrency(stakeholder.balance)} />
       </div>
 

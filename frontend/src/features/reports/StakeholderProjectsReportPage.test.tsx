@@ -24,9 +24,9 @@ const stakeholderProjectsReport = {
     projectProgress: 30,
     projectTotalCost: 110,
     stakeholder: {
-      balance: 139.8,
+      balance: 105.8,
       income: 205.8,
-      investment: 66,
+      investment: 100,
       stakePercentage: 60,
       stakeholderId: 10,
       stakeholderName: 'Alicia',
@@ -214,9 +214,11 @@ describe('StakeholderProjectsReportPage', () => {
     })
     expect(within(stakeholderRegion).getByText('Alicia')).toBeVisible()
     expect(within(stakeholderRegion).getByText('60.00%')).toBeVisible()
-    expect(within(stakeholderRegion).getByText('$66.00')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('Recorded Investment')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$100.00')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('Entitled Income')).toBeVisible()
     expect(within(stakeholderRegion).getByText('$205.80')).toBeVisible()
-    expect(within(stakeholderRegion).getByText('$139.80')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$105.80')).toBeVisible()
     expect(
       within(stakeholderRegion).getByRole('table', {
         name: 'Alicia transaction details',

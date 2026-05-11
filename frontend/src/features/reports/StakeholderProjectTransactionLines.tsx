@@ -1,6 +1,6 @@
 import type { TableHTMLAttributes } from 'react'
 import { useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Empty, Form, Input, Space, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { getJson, putJson } from '../../api/client'
@@ -103,6 +103,7 @@ export function StakeholderProjectTransactionLines({
   const [nextRowIndex, setNextRowIndex] = useState(0)
   const [saveError, setSaveError] = useState<string | null>(null)
   const transactionsPath = getTransactionsPath(projectId, stakeholderId)
+  const queryClient = useQueryClient()
 
   const transactionsQuery = useQuery({
     queryKey: [
@@ -130,6 +131,14 @@ export function StakeholderProjectTransactionLines({
     onSuccess: (rows) => {
       setDraftRows(rows.map(buildDraftRow))
       setSaveError(null)
+      void queryClient.invalidateQueries({
+        queryKey: [
+          'reports',
+          'stakeholder-projects',
+          projectId,
+          stakeholderId,
+        ],
+      })
     },
   })
 

@@ -163,7 +163,7 @@ export class ReportsService {
         product: true,
         sales: true,
         stakeholders: {
-          include: { stakeholder: true },
+          include: { stakeholder: true, transactions: true },
           where: { idStakeholder: query.stakeholderId },
         },
         transactions: true,
@@ -226,7 +226,11 @@ export class ReportsService {
     const stakeholderRow = project.stakeholders[0];
     const stakePercentage = toNumber(stakeholderRow.stakePercentage);
     const stakeRatio = stakePercentage / 100;
-    const investment = roundCurrency(row.projectTotalCost * stakeRatio);
+    const investment = roundCurrency(
+      sumNumbers(
+        ...stakeholderRow.transactions.map((transaction) => transaction.amount),
+      ),
+    );
     const income = roundCurrency(
       row.calculatedCost * stakeRatio + row.profit * stakeRatio,
     );

@@ -214,6 +214,10 @@ describe('ReportsService', () => {
             idProjectStakeholder: 900,
             stakePercentage: '60.00',
             stakeholder: { idStakeholder: 10, name: 'Alicia' },
+            transactions: [
+              { amount: '125.50' },
+              { amount: '-25.50' },
+            ],
           },
         ],
         transactions: [
@@ -236,7 +240,7 @@ describe('ReportsService', () => {
         product: true,
         sales: true,
         stakeholders: {
-          include: { stakeholder: true },
+          include: { stakeholder: true, transactions: true },
           where: { idStakeholder: 10 },
         },
         transactions: true,
@@ -259,9 +263,9 @@ describe('ReportsService', () => {
       projectProgress: 30,
       projectTotalCost: 110,
       stakeholder: {
-        balance: 139.8,
+        balance: 105.8,
         income: 205.8,
-        investment: 66,
+        investment: 100,
         stakePercentage: 60,
         stakeholderId: 10,
         stakeholderName: 'Alicia',
