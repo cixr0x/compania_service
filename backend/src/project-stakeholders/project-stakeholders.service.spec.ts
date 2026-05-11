@@ -400,6 +400,29 @@ describe('ProjectStakeholdersService', () => {
     });
   });
 
+  it('allows replacing a project split with no stakeholder rows', async () => {
+    jest
+      .spyOn(transactionPrisma.projectStakeholder, 'deleteMany')
+      .mockResolvedValue({ count: 2 });
+    jest
+      .spyOn(transactionPrisma.projectStakeholder, 'findMany')
+      .mockResolvedValue([]);
+
+    const service = new ProjectStakeholdersService(prisma);
+    const result = await service.replaceProjectSplit(10, []);
+
+    expect(result).toEqual([]);
+    expect(transactionPrisma.$queryRaw).toHaveBeenCalled();
+    expect(
+      transactionPrisma.projectStakeholder.deleteMany,
+    ).toHaveBeenCalledWith({
+      where: { idProject: 10 },
+    });
+    expect(
+      transactionPrisma.projectStakeholder.createMany,
+    ).not.toHaveBeenCalled();
+  });
+
   it('rejects replacing a project split when submitted stakeholder total is not exactly 100', async () => {
     const service = new ProjectStakeholdersService(prisma);
 

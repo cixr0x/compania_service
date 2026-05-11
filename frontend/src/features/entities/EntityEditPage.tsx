@@ -37,6 +37,7 @@ import {
 const EMPTY_PROJECT_SPLIT_STATE: ProjectStakeholderSplitState = {
   errorMessage: null,
   hasRows: false,
+  isDirty: false,
   isValid: true,
   rows: [],
 }
@@ -574,7 +575,10 @@ export function EntityEditPage() {
           : patchJson<EntityRow, EntityRow>(`/${config!.path}/${id}`, body)
       }
 
-      if (projectSplitState.hasRows && !projectSplitState.isValid) {
+      const shouldSaveProjectSplit =
+        projectSplitState.hasRows || projectSplitState.isDirty
+
+      if (shouldSaveProjectSplit && !projectSplitState.isValid) {
         throw new Error(
           projectSplitState.errorMessage ??
             'Project stakeholder split is not ready to save.',
@@ -605,7 +609,7 @@ export function EntityEditPage() {
         )
       }
 
-      if (projectSplitState.hasRows) {
+      if (shouldSaveProjectSplit) {
         const projectId = getProjectId(savedProject, id)
 
         if (projectId === null) {

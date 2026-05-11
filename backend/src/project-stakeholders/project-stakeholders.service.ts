@@ -128,13 +128,15 @@ export class ProjectStakeholdersService {
     return this.prisma.$transaction(async (tx) => {
       await this.lockProjects(tx, [idProject]);
       await tx.projectStakeholder.deleteMany({ where: { idProject } });
-      await tx.projectStakeholder.createMany({
-        data: dto.map((row) => ({
-          idProject,
-          idStakeholder: row.idStakeholder,
-          stakePercentage: row.stakePercentage,
-        })),
-      });
+      if (dto.length > 0) {
+        await tx.projectStakeholder.createMany({
+          data: dto.map((row) => ({
+            idProject,
+            idStakeholder: row.idStakeholder,
+            stakePercentage: row.stakePercentage,
+          })),
+        });
+      }
 
       return tx.projectStakeholder.findMany({
         where: { idProject },
@@ -170,6 +172,10 @@ export class ProjectStakeholdersService {
   private assertSubmittedProjectTotalEquals100(
     dto: ReplaceProjectStakeholderDto[],
   ) {
+    if (dto.length === 0) {
+      return;
+    }
+
     const totalCents = dto.reduce(
       (sum, row) => sum + toPercentageCents(row.stakePercentage),
       0,

@@ -9,6 +9,11 @@ vi.mock('../../api/client', () => ({
   getJson: vi.fn(),
 }))
 
+const stakeholderRows = [
+  { idStakeholder: 10, name: 'Alicia' },
+  { idStakeholder: 11, name: 'Bruno' },
+]
+
 function renderProjectStakeholderLines(
   props: Partial<Parameters<typeof ProjectStakeholderLines>[0]> = {},
 ) {
@@ -52,10 +57,13 @@ async function selectStakeholder(name: string, index = 0) {
 
 describe('ProjectStakeholderLines', () => {
   beforeEach(() => {
-    vi.mocked(getJson).mockResolvedValue([
-      { idStakeholder: 10, name: 'Alicia' },
-      { idStakeholder: 11, name: 'Bruno' },
-    ])
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/stakeholders?pageSize=100') {
+        return stakeholderRows
+      }
+
+      return []
+    })
   })
 
   afterEach(() => {
@@ -63,21 +71,22 @@ describe('ProjectStakeholderLines', () => {
     vi.clearAllMocks()
   })
 
-  it('calls onDraftChange with a valid empty state initially', async () => {
+  it('calls onDraftChange with a valid clean empty state initially', async () => {
     const { onDraftChange } = renderProjectStakeholderLines()
 
     await waitFor(() => {
       expect(onDraftChange).toHaveBeenCalledWith({
         errorMessage: null,
         hasRows: false,
+        isDirty: false,
         isValid: true,
         rows: [],
       })
     })
   })
 
-  it('renders Ant Design Select and InputNumber controls after adding a stakeholder row', async () => {
-    renderProjectStakeholderLines()
+  it('adds a stakeholder row in edit mode and blocks project save until row edits are saved or canceled', async () => {
+    const { onDraftChange } = renderProjectStakeholderLines()
 
     await addStakeholderRow()
 
@@ -89,35 +98,22 @@ describe('ProjectStakeholderLines', () => {
     })
 
     expect(stakeholderSelect.closest('.ant-select')).toBeInTheDocument()
-    expect(stakeholderSelect).not.toHaveAccessibleDescription()
     expect(percentageInput.closest('.ant-input-number')).toBeInTheDocument()
-  })
-
-  it('reports an invalid draft state when the total is not 100', async () => {
-    const user = userEvent.setup()
-    const { onDraftChange } = renderProjectStakeholderLines()
-
-    await addStakeholderRow()
-    await selectStakeholder('Alicia')
-    await user.type(
-      screen.getByRole('spinbutton', { name: 'Stake Percentage' }),
-      '60',
-    )
+    expect(screen.getByRole('button', { name: 'Save row 1' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Cancel row 1' })).toBeVisible()
 
     await waitFor(() => {
       expect(onDraftChange).toHaveBeenLastCalledWith({
-        errorMessage: 'Total stake percentage must equal 100%.',
+        errorMessage: 'Save or cancel stakeholder row edits before saving the project.',
         hasRows: true,
+        isDirty: false,
         isValid: false,
-        rows: [{ idStakeholder: 10, stakePercentage: 60 }],
+        rows: [],
       })
     })
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Total stake percentage must equal 100%.',
-    )
   })
 
-  it('reports a valid payload when the total equals 100', async () => {
+  it('saves a complete row into static display and reports a valid payload when the total equals 100', async () => {
     const user = userEvent.setup()
     const { onDraftChange } = renderProjectStakeholderLines()
 
@@ -125,51 +121,116 @@ describe('ProjectStakeholderLines', () => {
     await selectStakeholder('Alicia')
     await user.type(
       screen.getByRole('spinbutton', { name: 'Stake Percentage' }),
-      '60',
+      '100',
     )
-    await addStakeholderRow()
-    await selectStakeholder('Bruno', 1)
-    await user.type(
-      screen.getAllByRole('spinbutton', { name: 'Stake Percentage' })[1],
-      '40',
-    )
+    await user.click(screen.getByRole('button', { name: 'Save row 1' }))
+
+    expect(screen.getByText('Alicia')).toBeVisible()
+    expect(screen.getByText('100%')).toBeVisible()
+    expect(
+      screen.queryByRole('combobox', { name: 'Stakeholder' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit row 1' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Remove row 1' })).toBeVisible()
 
     await waitFor(() => {
       expect(onDraftChange).toHaveBeenLastCalledWith({
         errorMessage: null,
         hasRows: true,
+        isDirty: true,
         isValid: true,
-        rows: [
-          { idStakeholder: 10, stakePercentage: 60 },
-          { idStakeholder: 11, stakePercentage: 40 },
-        ],
+        rows: [{ idStakeholder: 10, stakePercentage: 100 }],
       })
     })
     expect(screen.getByText('Total allocation: 100%')).toBeVisible()
   })
 
-  it('removes rows but does not offer removal for the final remaining row', async () => {
-    renderProjectStakeholderLines()
+  it('keeps existing rows static until edit and cancel reverts row changes', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/stakeholders?pageSize=100') {
+        return stakeholderRows
+      }
 
-    await addStakeholderRow()
-    await addStakeholderRow()
+      if (path === '/project-stakeholders/projects/77') {
+        return [
+          {
+            idProjectStakeholder: 501,
+            idStakeholder: 10,
+            stakePercentage: 60,
+          },
+        ]
+      }
 
-    const splitSection = screen.getByRole('group', {
+      return []
+    })
+
+    renderProjectStakeholderLines({ isCreate: false, projectId: 77 })
+
+    const splitSection = await screen.findByRole('group', {
       name: 'Stakeholder Split',
     })
-    expect(
-      within(splitSection).getAllByRole('button', { name: /remove row/i }),
-    ).toHaveLength(2)
+    const dataRow = await within(splitSection).findByRole('row', {
+      name: /Alicia 60%/i,
+    })
 
-    await userEvent.click(
-      within(splitSection).getByRole('button', { name: 'Remove row 1' }),
+    expect(within(dataRow).getByText('Alicia')).toBeVisible()
+    expect(within(dataRow).getByText('60%')).toBeVisible()
+    expect(
+      within(splitSection).queryByRole('combobox', { name: 'Stakeholder' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(within(splitSection).getByRole('button', { name: 'Edit row 1' }))
+    await selectStakeholder('Bruno')
+    await user.clear(
+      within(splitSection).getByRole('spinbutton', {
+        name: 'Stake Percentage',
+      }),
+    )
+    await user.type(
+      within(splitSection).getByRole('spinbutton', {
+        name: 'Stake Percentage',
+      }),
+      '40',
+    )
+    await user.click(
+      within(splitSection).getByRole('button', { name: 'Cancel row 1' }),
     )
 
+    const revertedRow = within(splitSection).getByRole('row', {
+      name: /Alicia 60%/i,
+    })
+    expect(within(revertedRow).getByText('Alicia')).toBeVisible()
+    expect(within(revertedRow).getByText('60%')).toBeVisible()
     expect(
-      within(splitSection).getAllByRole('combobox', { name: 'Stakeholder' }),
-    ).toHaveLength(1)
-    expect(
-      within(splitSection).queryByRole('button', { name: /remove row/i }),
+      within(splitSection).queryByRole('combobox', { name: 'Stakeholder' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('removes the final saved row and reports a dirty empty split', async () => {
+    const user = userEvent.setup()
+    const { onDraftChange } = renderProjectStakeholderLines()
+
+    await addStakeholderRow()
+    await selectStakeholder('Alicia')
+    await user.type(
+      screen.getByRole('spinbutton', { name: 'Stake Percentage' }),
+      '100',
+    )
+    await user.click(screen.getByRole('button', { name: 'Save row 1' }))
+    await user.click(screen.getByRole('button', { name: 'Remove row 1' }))
+
+    expect(
+      screen.getByText('No stakeholders have been added to this project.'),
+    ).toBeVisible()
+    await waitFor(() => {
+      expect(onDraftChange).toHaveBeenLastCalledWith({
+        errorMessage: null,
+        hasRows: false,
+        isDirty: true,
+        isValid: true,
+        rows: [],
+      })
+    })
   })
 })

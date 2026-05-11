@@ -26,6 +26,15 @@ type SplitDraftRow = {
   stakePercentage: string
 }
 
+type EditingSplitRow = SplitDraftRow & {
+  isNew: boolean
+}
+
+type StakeholderOption = {
+  label: string
+  value: string
+}
+
 export type ProjectStakeholderSplitPayloadRow = {
   idStakeholder: number
   stakePercentage: number
@@ -34,6 +43,7 @@ export type ProjectStakeholderSplitPayloadRow = {
 export type ProjectStakeholderSplitState = {
   errorMessage: string | null
   hasRows: boolean
+  isDirty: boolean
   isValid: boolean
   rows: ProjectStakeholderSplitPayloadRow[]
 }
@@ -67,7 +77,12 @@ function formatTotal(total: number): string {
   return Number.isInteger(total) ? String(total) : total.toFixed(2)
 }
 
-function buildStakeholderOption(row: EntityRow) {
+function formatPercentage(value: string): string {
+  const numericValue = parseNumericInput(value)
+  return numericValue === null ? '-' : `${formatTotal(numericValue)}%`
+}
+
+function buildStakeholderOption(row: EntityRow): StakeholderOption {
   const value = toInputValue(row.idStakeholder)
   const stakeholderName =
     typeof row.name === 'string' && row.name.trim() !== ''
@@ -91,17 +106,34 @@ function buildDraftRow(row: EntityRow, index: number): SplitDraftRow {
 function isCompletePayloadRow(
   row: MaybeSplitPayloadRow,
 ): row is ProjectStakeholderSplitPayloadRow {
-  return row.idStakeholder !== null && row.stakePercentage !== null
+  return (
+    row.idStakeholder !== null &&
+    row.stakePercentage !== null &&
+    row.stakePercentage > 0
+  )
 }
 
 function buildDraftState(
   rows: SplitDraftRow[],
   totalPercentage: number,
+  isDirty: boolean,
+  hasEditingRows: boolean,
 ): ProjectStakeholderSplitState {
+  if (hasEditingRows) {
+    return {
+      errorMessage: 'Save or cancel stakeholder row edits before saving the project.',
+      hasRows: rows.length > 0,
+      isDirty,
+      isValid: false,
+      rows: [],
+    }
+  }
+
   if (rows.length === 0) {
     return {
       errorMessage: null,
       hasRows: false,
+      isDirty,
       isValid: true,
       rows: [],
     }
@@ -111,13 +143,15 @@ function buildDraftState(
     idStakeholder: parseNumericInput(row.idStakeholder),
     stakePercentage: parseNumericInput(row.stakePercentage),
   }))
+  const completeRows = payloadRows.filter(isCompletePayloadRow)
 
   if (!payloadRows.every(isCompletePayloadRow)) {
     return {
       errorMessage: 'Every split row needs a stakeholder and percentage.',
       hasRows: true,
+      isDirty,
       isValid: false,
-      rows: [],
+      rows: completeRows,
     }
   }
 
@@ -125,17 +159,46 @@ function buildDraftState(
     return {
       errorMessage: 'Total stake percentage must equal 100%.',
       hasRows: true,
+      isDirty,
       isValid: false,
-      rows: payloadRows.filter(isCompletePayloadRow),
+      rows: completeRows,
     }
   }
 
   return {
     errorMessage: null,
     hasRows: true,
+    isDirty,
     isValid: true,
-    rows: payloadRows.filter(isCompletePayloadRow),
+    rows: completeRows,
   }
+}
+
+function getStakeholderLabel(
+  row: SplitDraftRow,
+  stakeholderOptions: StakeholderOption[],
+) {
+  const option = stakeholderOptions.find(
+    (candidate) => candidate.value === row.idStakeholder,
+  )
+
+  return option?.label ?? `Stakeholder #${row.idStakeholder || '-'}`
+}
+
+function getRowStakeholderOptions(
+  row: SplitDraftRow,
+  stakeholderOptions: StakeholderOption[],
+) {
+  return stakeholderOptions.some((option) => option.value === row.idStakeholder) ||
+    !row.idStakeholder
+    ? stakeholderOptions
+    : [
+        {
+          label: `Stakeholder #${row.idStakeholder}`,
+          value: row.idStakeholder,
+        },
+        ...stakeholderOptions,
+      ]
 }
 
 export function ProjectStakeholderLines({
@@ -147,7 +210,12 @@ export function ProjectStakeholderLines({
   const [draftRows, setDraftRows] = useState<SplitDraftRow[] | null>(() =>
     isCreate ? [] : null,
   )
+  const [editingRows, setEditingRows] = useState<
+    Record<string, EditingSplitRow>
+  >({})
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({})
   const [nextRowIndex, setNextRowIndex] = useState(0)
+  const [hasChanged, setHasChanged] = useState(false)
 
   const stakeholdersQuery = useQuery({
     queryKey: ['project-stakeholder-options', 'stakeholders'],
@@ -183,8 +251,14 @@ export function ProjectStakeholderLines({
   )
 
   const draftState = useMemo(
-    () => buildDraftState(activeRows, totalPercentage),
-    [activeRows, totalPercentage],
+    () =>
+      buildDraftState(
+        activeRows,
+        totalPercentage,
+        hasChanged,
+        Object.keys(editingRows).length > 0,
+      ),
+    [activeRows, editingRows, hasChanged, totalPercentage],
   )
 
   useEffect(() => {
@@ -192,19 +266,103 @@ export function ProjectStakeholderLines({
   }, [draftState, onDraftChange])
 
   function handleAddRow() {
-    setDraftRows([
-      ...activeRows,
-      { rowKey: `new-${nextRowIndex}`, ...EMPTY_SPLIT_ROW },
-    ])
+    const rowKey = `new-${nextRowIndex}`
+    const nextRow = { rowKey, ...EMPTY_SPLIT_ROW }
+
+    setDraftRows([...activeRows, nextRow])
+    setEditingRows((currentRows) => ({
+      ...currentRows,
+      [rowKey]: { ...nextRow, isNew: true },
+    }))
     setNextRowIndex((currentIndex) => currentIndex + 1)
   }
 
   function handleRemoveRow(rowKey: string) {
+    setDraftRows(activeRows.filter((row) => row.rowKey !== rowKey))
+    setEditingRows((currentRows) => {
+      const nextRows = { ...currentRows }
+      delete nextRows[rowKey]
+      return nextRows
+    })
+    setRowErrors((currentErrors) => {
+      const nextErrors = { ...currentErrors }
+      delete nextErrors[rowKey]
+      return nextErrors
+    })
+    setHasChanged(true)
+  }
+
+  function handleEditRow(row: SplitDraftRow) {
+    setEditingRows((currentRows) => ({
+      ...currentRows,
+      [row.rowKey]: { ...row, isNew: false },
+    }))
+  }
+
+  function handleCancelRow(rowKey: string) {
+    const editedRow = editingRows[rowKey]
+
+    if (editedRow?.isNew) {
+      setDraftRows(activeRows.filter((row) => row.rowKey !== rowKey))
+    }
+
+    setEditingRows((currentRows) => {
+      const nextRows = { ...currentRows }
+      delete nextRows[rowKey]
+      return nextRows
+    })
+    setRowErrors((currentErrors) => {
+      const nextErrors = { ...currentErrors }
+      delete nextErrors[rowKey]
+      return nextErrors
+    })
+  }
+
+  function handleSaveRow(rowKey: string) {
+    const editedRow = editingRows[rowKey]
+
+    if (!editedRow) {
+      return
+    }
+
+    const idStakeholder = parseNumericInput(editedRow.idStakeholder)
+    const stakePercentage = parseNumericInput(editedRow.stakePercentage)
+
+    if (
+      idStakeholder === null ||
+      stakePercentage === null ||
+      stakePercentage <= 0 ||
+      stakePercentage > 100
+    ) {
+      setRowErrors((currentErrors) => ({
+        ...currentErrors,
+        [rowKey]: 'Stakeholder and percentage are required.',
+      }))
+      return
+    }
+
     setDraftRows(
-      activeRows.length === 1
-        ? activeRows
-        : activeRows.filter((row) => row.rowKey !== rowKey),
+      activeRows.map((row) =>
+        row.rowKey === rowKey
+          ? {
+              ...row,
+              idStakeholder: String(idStakeholder),
+              stakePercentage: String(stakePercentage),
+            }
+          : row,
+      ),
     )
+    setEditingRows((currentRows) => {
+      const nextRows = { ...currentRows }
+      delete nextRows[rowKey]
+      return nextRows
+    })
+    setRowErrors((currentErrors) => {
+      const nextErrors = { ...currentErrors }
+      delete nextErrors[rowKey]
+      return nextErrors
+    })
+    setHasChanged(true)
   }
 
   function handleRowChange(
@@ -212,51 +370,49 @@ export function ProjectStakeholderLines({
     field: 'idStakeholder' | 'stakePercentage',
     value: string,
   ) {
-    setDraftRows(
-      activeRows.map((row) =>
-        row.rowKey === rowKey ? { ...row, [field]: value } : row,
-      ),
-    )
+    setEditingRows((currentRows) => {
+      const currentRow = currentRows[rowKey]
+
+      return currentRow
+        ? {
+            ...currentRows,
+            [rowKey]: { ...currentRow, [field]: value },
+          }
+        : currentRows
+    })
+    setRowErrors((currentErrors) => {
+      const nextErrors = { ...currentErrors }
+      delete nextErrors[rowKey]
+      return nextErrors
+    })
   }
 
   const isLoading = stakeholdersQuery.isLoading || projectRowsQuery.isLoading
   const isTotalComplete =
     activeRows.length === 0 || Math.abs(totalPercentage - 100) <= 0.000001
-  const totalStatusColor = isTotalComplete ? 'success' : 'error'
+  const totalStatusColor = draftState.isValid ? 'success' : 'error'
   const tableColumns = [
     {
       dataIndex: 'idStakeholder',
       key: 'idStakeholder',
       render: (_value: string, row: SplitDraftRow) => {
-        const rowOptions =
-          stakeholderOptions.some((option) => option.value === row.idStakeholder) ||
-          !row.idStakeholder
-            ? stakeholderOptions
-            : [
-                {
-                  label: `Stakeholder #${row.idStakeholder}`,
-                  value: row.idStakeholder,
-                },
-                ...stakeholderOptions,
-              ]
+        const editingRow = editingRows[row.rowKey]
 
-        return (
-          <Form.Item
-            htmlFor={`project-split-stakeholder-${row.rowKey}`}
-            label="Stakeholder"
-            required
-          >
-            <Select
-              aria-label="Stakeholder"
-              id={`project-split-stakeholder-${row.rowKey}`}
-              onChange={(value) =>
-                handleRowChange(row.rowKey, 'idStakeholder', value)
-              }
-              options={rowOptions}
-              placeholder="Select stakeholder..."
-              value={row.idStakeholder || undefined}
-            />
-          </Form.Item>
+        return editingRow ? (
+          <Select
+            aria-label="Stakeholder"
+            id={`project-split-stakeholder-${row.rowKey}`}
+            onChange={(value) =>
+              handleRowChange(row.rowKey, 'idStakeholder', value)
+            }
+            options={getRowStakeholderOptions(editingRow, stakeholderOptions)}
+            placeholder="Select stakeholder..."
+            size="small"
+            status={rowErrors[row.rowKey] ? 'error' : undefined}
+            value={editingRow.idStakeholder || undefined}
+          />
+        ) : (
+          getStakeholderLabel(row, stakeholderOptions)
         )
       },
       title: 'Stakeholder',
@@ -265,53 +421,96 @@ export function ProjectStakeholderLines({
       align: 'right' as const,
       dataIndex: 'stakePercentage',
       key: 'stakePercentage',
-      render: (_value: string, row: SplitDraftRow) => (
-        <Form.Item
-          htmlFor={`project-split-percentage-${row.rowKey}`}
-          label="Stake Percentage"
-          required
-        >
-          <InputNumber
-            aria-label="Stake Percentage"
-            id={`project-split-percentage-${row.rowKey}`}
-            max={100}
-            min={0}
-            onChange={(value) =>
-              handleRowChange(
-                row.rowKey,
-                'stakePercentage',
-                value === null ? '' : String(value),
-              )
-            }
-            precision={2}
-            step={0.01}
-            suffix="%"
-            value={
-              row.stakePercentage === ''
-                ? null
-                : Number(row.stakePercentage)
-            }
-          />
-        </Form.Item>
-      ),
+      render: (_value: string, row: SplitDraftRow) => {
+        const editingRow = editingRows[row.rowKey]
+
+        return editingRow ? (
+          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
+            <InputNumber
+              aria-label="Stake Percentage"
+              id={`project-split-percentage-${row.rowKey}`}
+              max={100}
+              min={0}
+              onChange={(value) =>
+                handleRowChange(
+                  row.rowKey,
+                  'stakePercentage',
+                  value === null ? '' : String(value),
+                )
+              }
+              precision={2}
+              size="small"
+              status={rowErrors[row.rowKey] ? 'error' : undefined}
+              step={0.01}
+              suffix="%"
+              value={
+                editingRow.stakePercentage === ''
+                  ? null
+                  : Number(editingRow.stakePercentage)
+              }
+            />
+            {rowErrors[row.rowKey] ? (
+              <Typography.Text type="danger">
+                {rowErrors[row.rowKey]}
+              </Typography.Text>
+            ) : null}
+          </Space>
+        ) : (
+          formatPercentage(row.stakePercentage)
+        )
+      },
       title: 'Stake Percentage',
       width: 180,
     },
     {
       align: 'right' as const,
       key: 'actions',
-      render: (_value: string, row: SplitDraftRow, index: number) =>
-        activeRows.length > 1 ? (
-          <Button
-            aria-label={`Remove row ${index + 1}`}
-            onClick={() => handleRemoveRow(row.rowKey)}
-            type="default"
-          >
-            Remove
-          </Button>
-        ) : null,
+      render: (_value: string, row: SplitDraftRow, index: number) => {
+        const isEditing = Boolean(editingRows[row.rowKey])
+        const rowNumber = index + 1
+
+        return isEditing ? (
+          <Space size="small">
+            <Button
+              aria-label={`Save row ${rowNumber}`}
+              onClick={() => handleSaveRow(row.rowKey)}
+              size="small"
+              type="primary"
+            >
+              Save
+            </Button>
+            <Button
+              aria-label={`Cancel row ${rowNumber}`}
+              onClick={() => handleCancelRow(row.rowKey)}
+              size="small"
+              type="default"
+            >
+              Cancel
+            </Button>
+          </Space>
+        ) : (
+          <Space size="small">
+            <Button
+              aria-label={`Edit row ${rowNumber}`}
+              onClick={() => handleEditRow(row)}
+              size="small"
+              type="default"
+            >
+              Edit
+            </Button>
+            <Button
+              aria-label={`Remove row ${rowNumber}`}
+              onClick={() => handleRemoveRow(row.rowKey)}
+              size="small"
+              type="default"
+            >
+              Remove
+            </Button>
+          </Space>
+        )
+      },
       title: 'Actions',
-      width: 120,
+      width: 180,
     },
   ]
 

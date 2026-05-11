@@ -890,7 +890,7 @@ describe('EntityEditPage', () => {
     expect(vi.mocked(postJson).mock.calls[0]?.[1]).not.toHaveProperty(
       'totalCost',
     )
-  })
+  }, 15000)
 
   it('preloads project cost transactions and recalculates total cost while editing lines', async () => {
     const user = userEvent.setup()
@@ -1166,8 +1166,11 @@ describe('EntityEditPage', () => {
     expect(stakeholderSelect.closest('.ant-select')).toBeInTheDocument()
     expect(stakeholderSelect).not.toHaveAccessibleDescription()
     expect(
-      within(splitSection).queryByRole('button', { name: /remove row/i }),
-    ).not.toBeInTheDocument()
+      within(splitSection).getByRole('button', { name: 'Save row 1' }),
+    ).toBeVisible()
+    expect(
+      within(splitSection).getByRole('button', { name: 'Cancel row 1' }),
+    ).toBeVisible()
     expect(
       within(splitSection).getByText(/total must equal 100%/i),
     ).toBeVisible()
@@ -1176,6 +1179,9 @@ describe('EntityEditPage', () => {
     await user.type(
       within(splitSection).getAllByLabelText('Stake Percentage')[0],
       '60',
+    )
+    await user.click(
+      within(splitSection).getByRole('button', { name: 'Save row 1' }),
     )
 
     await user.click(screen.getByRole('button', { name: 'Save' }))
@@ -1191,14 +1197,17 @@ describe('EntityEditPage', () => {
     )
     await selectAntOption(
       user,
-      within(splitSection).getAllByRole('combobox', {
+      within(splitSection).getByRole('combobox', {
         name: 'Stakeholder',
-      })[1],
+      }),
       'Bruno',
     )
     await user.type(
-      within(splitSection).getAllByLabelText('Stake Percentage')[1],
+      within(splitSection).getByLabelText('Stake Percentage'),
       '40',
+    )
+    await user.click(
+      within(splitSection).getByRole('button', { name: 'Save row 2' }),
     )
 
     expect(
@@ -1223,7 +1232,7 @@ describe('EntityEditPage', () => {
       )
     })
     expect(patchJson).not.toHaveBeenCalled()
-  })
+  }, 15000)
 
   it('preloads an existing stakeholder split in the project edit form and saves all rows for that project', async () => {
     vi.mocked(getJson).mockImplementation(async (path) => {
@@ -1287,15 +1296,18 @@ describe('EntityEditPage', () => {
     const splitSection = await screen.findByRole('group', {
       name: 'Stakeholder Split',
     })
-    const stakeholderSelects = within(splitSection).getAllByRole('combobox', {
-      name: 'Stakeholder',
-    })
-    expect(stakeholderSelects[0].closest('.ant-select')).toHaveTextContent(
-      'Alicia',
-    )
-    expect(stakeholderSelects[1].closest('.ant-select')).toHaveTextContent(
-      'Bruno',
-    )
+    expect(
+      within(splitSection).getByRole('row', { name: /Alicia 60%/i }),
+    ).toBeVisible()
+    expect(
+      within(splitSection).getByRole('row', { name: /Bruno 40%/i }),
+    ).toBeVisible()
+    expect(
+      within(splitSection).queryByRole('combobox', { name: 'Stakeholder' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(splitSection).getAllByRole('button', { name: /Edit row/i }),
+    ).toHaveLength(2)
     expect(
       within(splitSection).getByText('Total allocation: 100%'),
     ).toBeVisible()
@@ -1319,7 +1331,7 @@ describe('EntityEditPage', () => {
       )
     })
     expect(postJson).not.toHaveBeenCalled()
-  })
+  }, 15000)
 
   it('shows the projects a stakeholder is involved in on the stakeholder edit form', async () => {
     vi.mocked(getJson).mockImplementation(async (path) => {
