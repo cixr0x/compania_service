@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -822,26 +823,38 @@ describe('EntityEditPage', () => {
     await user.click(
       within(costSection).getByRole('button', { name: 'Add transaction' }),
     )
-    await user.type(within(costSection).getByLabelText('Amount'), '7,500.25')
-    await user.type(
-      within(costSection).getByLabelText('Description'),
-      'Production run',
+    fireEvent.change(within(costSection).getByLabelText('Amount'), {
+      target: { value: '7,500.25' },
+    })
+    fireEvent.change(within(costSection).getByLabelText('Description'), {
+      target: { value: 'Production run' },
+    })
+    await user.click(
+      within(costSection).getByRole('button', { name: 'Save row 1' }),
     )
     await user.click(
       within(costSection).getByRole('button', { name: 'Add transaction' }),
     )
-    await user.type(within(costSection).getAllByLabelText('Amount')[1], '2,250.50')
-    await user.type(
-      within(costSection).getAllByLabelText('Description')[1],
-      'Administration',
+    fireEvent.change(within(costSection).getByLabelText('Amount'), {
+      target: { value: '2,250.50' },
+    })
+    fireEvent.change(within(costSection).getByLabelText('Description'), {
+      target: { value: 'Administration' },
+    })
+    await user.click(
+      within(costSection).getByRole('button', { name: 'Save row 2' }),
     )
     await user.click(
       within(costSection).getByRole('button', { name: 'Add transaction' }),
     )
-    await user.type(within(costSection).getAllByLabelText('Amount')[2], '-250.75')
-    await user.type(
-      within(costSection).getAllByLabelText('Description')[2],
-      'Supplier credit',
+    fireEvent.change(within(costSection).getByLabelText('Amount'), {
+      target: { value: '-250.75' },
+    })
+    fireEvent.change(within(costSection).getByLabelText('Description'), {
+      target: { value: 'Supplier credit' },
+    })
+    await user.click(
+      within(costSection).getByRole('button', { name: 'Save row 3' }),
     )
 
     expect(totalCostInput).toHaveValue('9,500.00')
@@ -928,8 +941,9 @@ describe('EntityEditPage', () => {
     const costSection = await screen.findByRole('group', {
       name: 'Project Cost Transactions',
     })
-    expect(within(costSection).getByDisplayValue('Production run')).toBeVisible()
-    expect(within(costSection).getByDisplayValue('Launch discount')).toBeVisible()
+    expect(within(costSection).getByText('Production run')).toBeVisible()
+    expect(within(costSection).getByText('Launch discount')).toBeVisible()
+    expect(within(costSection).queryByLabelText('Amount')).not.toBeInTheDocument()
 
     await user.click(
       within(costSection).getByRole('button', { name: 'Remove row 3' }),

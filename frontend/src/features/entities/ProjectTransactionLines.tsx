@@ -16,6 +16,10 @@ type TransactionDraftRow = {
   description: string
 }
 
+type EditingTransactionRow = TransactionDraftRow & {
+  isNew: boolean
+}
+
 export type ProjectTransactionPayloadRow = {
   amount: number
   description: string
@@ -61,7 +65,23 @@ function isCompletePayloadRow(
 function buildDraftState(
   rows: TransactionDraftRow[],
   isDirty: boolean,
+  hasEditingRows: boolean,
 ): ProjectTransactionState {
+  const totalCost = rows.reduce(
+    (total, row) => total + (parseMoneyNumber(row.amount) ?? 0),
+    0,
+  )
+
+  if (hasEditingRows) {
+    return {
+      errorMessage: 'Save or cancel transaction row edits before saving the project.',
+      isDirty,
+      isValid: false,
+      rows: [],
+      totalCost,
+    }
+  }
+
   if (rows.length === 0) {
     return {
       errorMessage: null,
@@ -77,7 +97,6 @@ function buildDraftState(
     description: row.description.trim(),
   }))
   const completeRows = payloadRows.filter(isCompletePayloadRow)
-  const totalCost = completeRows.reduce((total, row) => total + row.amount, 0)
 
   if (!payloadRows.every(isCompletePayloadRow)) {
     return {
@@ -107,6 +126,10 @@ export function ProjectTransactionLines({
   const [draftRows, setDraftRows] = useState<TransactionDraftRow[] | null>(() =>
     isCreate ? [] : null,
   )
+  const [editingRows, setEditingRows] = useState<
+    Record<string, EditingTransactionRow>
+  >({})
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({})
   const [nextRowIndex, setNextRowIndex] = useState(0)
   const [hasChanged, setHasChanged] = useState(false)
 
@@ -124,8 +147,8 @@ export function ProjectTransactionLines({
   const activeRows = draftRows ?? loadedRows
 
   const draftState = useMemo(
-    () => buildDraftState(activeRows, hasChanged),
-    [activeRows, hasChanged],
+    () => buildDraftState(activeRows, hasChanged, Object.keys(editingRows).length > 0),
+    [activeRows, editingRows, hasChanged],
   )
 
   useEffect(() => {
@@ -133,16 +156,96 @@ export function ProjectTransactionLines({
   }, [draftState, onDraftChange])
 
   function handleAddRow() {
+    const rowKey = `new-${nextRowIndex}`
+    const nextRow = { rowKey, ...EMPTY_TRANSACTION_ROW }
+
     setDraftRows([
       ...activeRows,
-      { rowKey: `new-${nextRowIndex}`, ...EMPTY_TRANSACTION_ROW },
+      nextRow,
     ])
+    setEditingRows((currentRows) => ({
+      ...currentRows,
+      [rowKey]: { ...nextRow, isNew: true },
+    }))
     setNextRowIndex((currentIndex) => currentIndex + 1)
-    setHasChanged(true)
   }
 
   function handleRemoveRow(rowKey: string) {
     setDraftRows(activeRows.filter((row) => row.rowKey !== rowKey))
+    setEditingRows((currentRows) => {
+      const nextRows = { ...currentRows }
+      delete nextRows[rowKey]
+      return nextRows
+    })
+    setRowErrors((currentErrors) => {
+      const nextErrors = { ...currentErrors }
+      delete nextErrors[rowKey]
+      return nextErrors
+    })
+    setHasChanged(true)
+  }
+
+  function handleEditRow(row: TransactionDraftRow) {
+    setEditingRows((currentRows) => ({
+      ...currentRows,
+      [row.rowKey]: { ...row, isNew: false },
+    }))
+  }
+
+  function handleCancelRow(rowKey: string) {
+    const editedRow = editingRows[rowKey]
+
+    if (editedRow?.isNew) {
+      setDraftRows(activeRows.filter((row) => row.rowKey !== rowKey))
+    }
+
+    setEditingRows((currentRows) => {
+      const nextRows = { ...currentRows }
+      delete nextRows[rowKey]
+      return nextRows
+    })
+    setRowErrors((currentErrors) => {
+      const nextErrors = { ...currentErrors }
+      delete nextErrors[rowKey]
+      return nextErrors
+    })
+  }
+
+  function handleSaveRow(rowKey: string) {
+    const editedRow = editingRows[rowKey]
+
+    if (!editedRow) {
+      return
+    }
+
+    const amount = parseMoneyNumber(editedRow.amount)
+    const description = editedRow.description.trim()
+
+    if (amount === null || description === '') {
+      setRowErrors((currentErrors) => ({
+        ...currentErrors,
+        [rowKey]: 'Amount and description are required.',
+      }))
+      return
+    }
+
+    setDraftRows(
+      activeRows.map((row) =>
+        row.rowKey === rowKey
+          ? { ...row, amount: formatMoney(amount), description }
+          : row,
+      ),
+    )
+    setEditingRows((currentRows) => {
+      const nextRows = { ...currentRows }
+      delete nextRows[rowKey]
+      return nextRows
+    })
+    setRowErrors((currentErrors) => {
+      const nextErrors = { ...currentErrors }
+      delete nextErrors[rowKey]
+      return nextErrors
+    })
     setHasChanged(true)
   }
 
@@ -151,12 +254,21 @@ export function ProjectTransactionLines({
     field: 'amount' | 'description',
     value: string,
   ) {
-    setDraftRows(
-      activeRows.map((row) =>
-        row.rowKey === rowKey ? { ...row, [field]: value } : row,
-      ),
-    )
-    setHasChanged(true)
+    setEditingRows((currentRows) => {
+      const currentRow = currentRows[rowKey]
+
+      return currentRow
+        ? {
+            ...currentRows,
+            [rowKey]: { ...currentRow, [field]: value },
+          }
+        : currentRows
+    })
+    setRowErrors((currentErrors) => {
+      const nextErrors = { ...currentErrors }
+      delete nextErrors[rowKey]
+      return nextErrors
+    })
   }
 
   const tableColumns = [
@@ -164,12 +276,10 @@ export function ProjectTransactionLines({
       align: 'right' as const,
       dataIndex: 'amount',
       key: 'amount',
-      render: (_value: string, row: TransactionDraftRow) => (
-        <Form.Item
-          htmlFor={`project-transaction-amount-${row.rowKey}`}
-          label="Amount"
-          required
-        >
+      render: (_value: string, row: TransactionDraftRow) => {
+        const editingRow = editingRows[row.rowKey]
+
+        return editingRow ? (
           <Input
             aria-label="Amount"
             id={`project-transaction-amount-${row.rowKey}`}
@@ -178,48 +288,96 @@ export function ProjectTransactionLines({
               handleRowChange(row.rowKey, 'amount', event.target.value)
             }
             prefix="$"
-            value={row.amount}
+            size="small"
+            status={rowErrors[row.rowKey] ? 'error' : undefined}
+            value={editingRow.amount}
           />
-        </Form.Item>
-      ),
+        ) : (
+          `$${formatMoney(row.amount)}`
+        )
+      },
       title: 'Amount',
       width: 220,
     },
     {
       dataIndex: 'description',
       key: 'description',
-      render: (_value: string, row: TransactionDraftRow) => (
-        <Form.Item
-          htmlFor={`project-transaction-description-${row.rowKey}`}
-          label="Description"
-          required
-        >
-          <Input
-            aria-label="Description"
-            id={`project-transaction-description-${row.rowKey}`}
-            onChange={(event) =>
-              handleRowChange(row.rowKey, 'description', event.target.value)
-            }
-            value={row.description}
-          />
-        </Form.Item>
-      ),
+      render: (_value: string, row: TransactionDraftRow) => {
+        const editingRow = editingRows[row.rowKey]
+
+        return editingRow ? (
+          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
+            <Input
+              aria-label="Description"
+              id={`project-transaction-description-${row.rowKey}`}
+              onChange={(event) =>
+                handleRowChange(row.rowKey, 'description', event.target.value)
+              }
+              size="small"
+              status={rowErrors[row.rowKey] ? 'error' : undefined}
+              value={editingRow.description}
+            />
+            {rowErrors[row.rowKey] ? (
+              <Typography.Text type="danger">
+                {rowErrors[row.rowKey]}
+              </Typography.Text>
+            ) : null}
+          </Space>
+        ) : (
+          row.description || '-'
+        )
+      },
       title: 'Description',
     },
     {
       align: 'right' as const,
       key: 'actions',
-      render: (_value: string, row: TransactionDraftRow, index: number) => (
-        <Button
-          aria-label={`Remove row ${index + 1}`}
-          onClick={() => handleRemoveRow(row.rowKey)}
-          type="default"
-        >
-          Remove
-        </Button>
-      ),
+      render: (_value: string, row: TransactionDraftRow, index: number) => {
+        const isEditing = Boolean(editingRows[row.rowKey])
+        const rowNumber = index + 1
+
+        return isEditing ? (
+          <Space size="small">
+            <Button
+              aria-label={`Save row ${rowNumber}`}
+              onClick={() => handleSaveRow(row.rowKey)}
+              size="small"
+              type="primary"
+            >
+              Save
+            </Button>
+            <Button
+              aria-label={`Cancel row ${rowNumber}`}
+              onClick={() => handleCancelRow(row.rowKey)}
+              size="small"
+              type="default"
+            >
+              Cancel
+            </Button>
+          </Space>
+        ) : (
+          <Space size="small">
+            <Button
+              aria-label={`Edit row ${rowNumber}`}
+              onClick={() => handleEditRow(row)}
+              size="small"
+              type="default"
+            >
+              Edit
+            </Button>
+            <Button
+              aria-label={`Remove row ${rowNumber}`}
+              onClick={() => handleRemoveRow(row.rowKey)}
+              size="small"
+              type="default"
+            >
+              Remove
+            </Button>
+          </Space>
+        )
+      },
       title: 'Actions',
-      width: 120,
+      width: 180,
     },
   ]
 
@@ -229,7 +387,7 @@ export function ProjectTransactionLines({
 
       {projectRowsQuery.isError ? (
         <Alert
-          message="Unable to load project cost transactions."
+          title="Unable to load project cost transactions."
           role="alert"
           showIcon
           type="error"
@@ -247,7 +405,7 @@ export function ProjectTransactionLines({
               Total cost: ${formatMoney(draftState.totalCost)}
             </Tag>
             {draftState.errorMessage ? (
-              <Alert message={draftState.errorMessage} showIcon type="error" />
+              <Alert title={draftState.errorMessage} showIcon type="error" />
             ) : null}
           </Space>
 
