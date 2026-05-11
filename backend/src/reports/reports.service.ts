@@ -38,6 +38,7 @@ type StakeholderProjectStakeholderRow = {
   balance: number;
   income: number;
   investment: number;
+  payments: number;
   stakePercentage: number;
   stakeholderId: number;
   stakeholderName: string;
@@ -231,13 +232,22 @@ export class ReportsService {
         ...stakeholderRow.transactions.map((transaction) => transaction.amount),
       ),
     );
+    const payments = roundCurrency(
+      sumNumbers(
+        ...stakeholderRow.transactions.map((transaction) => {
+          const amount = toNumber(transaction.amount);
+          return amount > 0 ? amount : 0;
+        }),
+      ),
+    );
     const income = roundCurrency(
       row.calculatedCost * stakeRatio + row.profit * stakeRatio,
     );
     row.stakeholder = {
-      balance: roundCurrency(investment + income),
+      balance: roundCurrency(income - payments),
       income,
       investment,
+      payments,
       stakePercentage,
       stakeholderId: stakeholderRow.stakeholder.idStakeholder,
       stakeholderName: stakeholderRow.stakeholder.name,
@@ -319,6 +329,7 @@ function createEmptyStakeholderProjectRow({
       balance: 0,
       income: 0,
       investment: 0,
+      payments: 0,
       stakePercentage: 0,
       stakeholderId: 0,
       stakeholderName: '',

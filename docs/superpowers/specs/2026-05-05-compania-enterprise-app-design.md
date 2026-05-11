@@ -141,7 +141,7 @@ Rules:
 
 - Transactions can only be recorded for a stakeholder assigned to the selected project.
 - The project/stakeholder transaction replacement endpoint atomically replaces all transaction lines for one project/stakeholder pair.
-- These rows are persisted and displayed in the stakeholder projects report detail section. Their signed amount sum is the stakeholder's recorded investment for the selected project.
+- These rows are persisted and displayed in the stakeholder projects report detail section. Their signed amount sum is the stakeholder's investment balance for the selected project, and the sum of positive transaction amounts is displayed as payments.
 
 ### sales
 
@@ -291,7 +291,7 @@ Report resources:
 - `GET /api/reports/sales-summary/periods`: list years and months with available sales data.
 - `GET /api/reports/sales-summary?year=YYYY`: get a yearly sales summary grouped by product and project.
 - `GET /api/reports/sales-summary?year=YYYY&month=M`: get a monthly sales summary grouped by product and project.
-- `GET /api/reports/stakeholder-projects?projectId=ID&stakeholderId=ID`: get the all-time stakeholder project report for one project and one stakeholder, including product totals, source totals, project progress, and that stakeholder's recorded investment, entitled income, and balance. The response must not include other stakeholders on the project.
+- `GET /api/reports/stakeholder-projects?projectId=ID&stakeholderId=ID`: get the all-time stakeholder project report for one project and one stakeholder, including product totals, source totals, project progress, and that stakeholder's investment balance, payments, entitled income, and balance. The response must not include other stakeholders on the project.
 
 Import resources:
 
@@ -387,7 +387,7 @@ Stakeholder projects report page:
 - Project summary displays total units sold, units left, total sales, total fees, net sales total, calculated cost, profit, and project progress.
 - Project total cost is the sum of project cost transactions. Unit price is project total cost divided by project total units.
 - Calculated cost is units sold multiplied by unit price. Profit is net sales total minus calculated cost. Project progress is units sold divided by total project units.
-- Stakeholder information is presented as a header/detail section. The header displays stakeholder name, stake percentage, recorded investment, entitled income, and balance. Recorded investment is the signed sum of the selected project/stakeholder transaction rows. Entitled income is calculated cost multiplied by stake percentage plus profit multiplied by stake percentage. Balance is recorded investment plus entitled income.
+- Stakeholder information is presented as a header/detail section. The header displays stakeholder name, stake percentage, investment balance, payments, entitled income, and balance. Investment balance is the signed sum of the selected project/stakeholder transaction rows. Payments is the sum of positive transaction rows. Entitled income is calculated cost multiplied by stake percentage plus profit multiplied by stake percentage. Balance is entitled income minus payments.
 - The detail section displays persisted stakeholder/project transaction rows from `stakeholder_project_transaction` in a compact static table ordered by date ascending. Rows become editable only after selecting the row Edit action; editable rows expose Save and Cancel actions for that row. New rows are added in edit mode, and row Save or Remove persists the full replacement list for the selected project/stakeholder pair.
 
 Known intentional custom UI areas and UI debt:

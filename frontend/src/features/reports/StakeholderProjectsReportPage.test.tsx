@@ -24,9 +24,10 @@ const stakeholderProjectsReport = {
     projectProgress: 30,
     projectTotalCost: 110,
     stakeholder: {
-      balance: 305.8,
+      balance: 80.3,
       income: 205.8,
       investment: 100,
+      payments: 125.5,
       stakePercentage: 60,
       stakeholderId: 10,
       stakeholderName: 'Alicia',
@@ -214,18 +215,20 @@ describe('StakeholderProjectsReportPage', () => {
     })
     expect(within(stakeholderRegion).getByText('Alicia')).toBeVisible()
     expect(within(stakeholderRegion).getByText('60.00%')).toBeVisible()
-    expect(within(stakeholderRegion).getByText('Recorded Investment')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('Investment Balance')).toBeVisible()
     expect(within(stakeholderRegion).getByText('$100.00')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('Payments')).toBeVisible()
+    expect(within(stakeholderRegion).getAllByText('$125.50').length).toBeGreaterThan(0)
     expect(within(stakeholderRegion).getByText('Entitled Income')).toBeVisible()
     expect(within(stakeholderRegion).getByText('$205.80')).toBeVisible()
-    expect(within(stakeholderRegion).getByText('$305.80')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$80.30')).toBeVisible()
     expect(
       within(stakeholderRegion).getByRole('table', {
         name: 'Alicia transaction details',
       }),
     ).toBeVisible()
     expect(within(stakeholderRegion).getByText('Distribution')).toBeVisible()
-    expect(within(stakeholderRegion).getByText('$125.50')).toBeVisible()
+    expect(within(stakeholderRegion).getAllByText('$125.50').length).toBeGreaterThan(0)
     expect(
       within(stakeholderRegion).getByRole('button', {
         name: 'Add transaction',

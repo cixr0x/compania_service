@@ -263,9 +263,10 @@ describe('ReportsService', () => {
       projectProgress: 30,
       projectTotalCost: 110,
       stakeholder: {
-        balance: 305.8,
+        balance: 80.3,
         income: 205.8,
         investment: 100,
+        payments: 125.5,
         stakePercentage: 60,
         stakeholderId: 10,
         stakeholderName: 'Alicia',

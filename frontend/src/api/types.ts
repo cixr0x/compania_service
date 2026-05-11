@@ -181,6 +181,7 @@ export type StakeholderProjectStakeholderRow = {
   balance: number
   income: number
   investment: number
+  payments: number
   stakePercentage: number
   stakeholderId: number
   stakeholderName: string
