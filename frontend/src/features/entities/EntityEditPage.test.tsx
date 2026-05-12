@@ -666,7 +666,7 @@ describe('EntityEditPage', () => {
     })
   })
 
-  it('calculates ladrillo sale fees with 15 percent of sale amount plus project cost share', async () => {
+  it('calculates ladrillo sale fees as 18 percent of sale amount', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
       if (path === '/products') {
@@ -711,9 +711,9 @@ describe('EntityEditPage', () => {
     await user.type(screen.getByLabelText('Quantity'), '2')
     await user.type(screen.getByLabelText('Amount'), '100')
 
-    expect(screen.getByLabelText('Fee')).toHaveValue('17.75')
-    expect(screen.getByLabelText('Profit')).toHaveValue('82.25')
-    expect(screen.getByLabelText('Owner Profit')).toHaveValue('20.56')
+    expect(screen.getByLabelText('Fee')).toHaveValue('18.00')
+    expect(screen.getByLabelText('Profit')).toHaveValue('82.00')
+    expect(screen.getByLabelText('Owner Profit')).toHaveValue('20.50')
 
     await selectAntOption(
       user,
@@ -726,12 +726,12 @@ describe('EntityEditPage', () => {
       expect(postJson).toHaveBeenCalledWith('/sales', {
         amount: 100,
         date: '2026-05-05',
-        fee: 17.75,
+        fee: 18,
         feeOverride: false,
         idProduct: 101,
         idProject: 501,
-        ownerProfit: 20.56,
-        profit: 82.25,
+        ownerProfit: 20.5,
+        profit: 82,
         quantity: 2,
         source: 'store',
       })

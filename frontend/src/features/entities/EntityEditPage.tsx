@@ -356,26 +356,9 @@ function getBooleanValue(value: unknown) {
   return value === true || value === 'true' || value === 1 || value === '1'
 }
 
-function getProjectTotalCost(project: EntityRow | null) {
-  if (!project) {
-    return 0
-  }
-
-  const transactions = Array.isArray(project.transactions)
-    ? (project.transactions as EntityRow[])
-    : []
-
-  return transactions.reduce(
-    (total, transaction) =>
-      total + (parseMoneyNumber(transaction.amount) ?? 0),
-    0,
-  )
-}
-
 function calculateSaleFee(
   values: EntityRow,
   product: EntityRow | null,
-  project: EntityRow | null,
 ) {
   const amount = parseMoneyNumber(values.amount) ?? 0
   const quantity = parseMoneyNumber(values.quantity) ?? 0
@@ -386,7 +369,7 @@ function calculateSaleFee(
   }
 
   if (modelCode === 'ladrillo') {
-    return roundCurrency(amount * 0.15 + getProjectTotalCost(project) * 0.025)
+    return roundCurrency(amount * 0.18)
   }
 
   if (modelCode === 'interno') {
@@ -435,7 +418,7 @@ function withSalesCalculatedValues(
   const amount = parseMoneyNumber(values.amount) ?? 0
   const product = getSelectedProduct(values, products)
   const project = getSelectedProject(values, projects)
-  const calculatedFee = calculateSaleFee(values, product, project)
+  const calculatedFee = calculateSaleFee(values, product)
   const feeOverride = getBooleanValue(values.feeOverride)
   const fee =
     feeOverride && values.fee !== null && values.fee !== undefined

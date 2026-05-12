@@ -49,19 +49,11 @@ describe('SaleFeeCalculatorService', () => {
     },
   );
 
-  it('calculates ladrillo fee from sale amount plus project total cost', async () => {
+  it('calculates ladrillo fee as 18 percent of the sale amount', async () => {
     jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
       id: 7,
       feeAmount: null,
       model: { code: 'ladrillo' },
-    });
-    jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
-      idProject: 51,
-      transactions: [
-        { amount: '100.00' },
-        { amount: '20.00' },
-        { amount: '-10.00' },
-      ],
     });
 
     const calculator = new SaleFeeCalculatorService(prisma);
@@ -73,7 +65,8 @@ describe('SaleFeeCalculatorService', () => {
         idProject: 51,
         quantity: 2,
       }),
-    ).resolves.toBe(17.75);
+    ).resolves.toBe(18);
+    expect(prisma.project.findUnique).not.toHaveBeenCalled();
   });
 
   it('rejects consigna fee calculation when product fee amount is missing', async () => {

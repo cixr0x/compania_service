@@ -62,27 +62,7 @@ export class SaleFeeCalculatorService {
     }
 
     if (modelCode === 'ladrillo') {
-      const project = await client.project.findUnique({
-        where: { idProject: input.idProject },
-        select: {
-          idProject: true,
-          transactions: { select: { amount: true } },
-        },
-      });
-
-      if (!project) {
-        throw new BadRequestException(
-          `Project ${input.idProject} was not found`,
-        );
-      }
-
-      const projectTotalCost = project.transactions.reduce(
-        (sum, transaction) =>
-          sum + (toFiniteNumber(transaction.amount) ?? 0),
-        0,
-      );
-
-      return roundCurrency(amount * 0.15 + projectTotalCost * 0.025);
+      return roundCurrency(amount * 0.18);
     }
 
     throw new BadRequestException(
