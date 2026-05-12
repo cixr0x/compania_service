@@ -12,6 +12,7 @@ import {
   Typography,
 } from 'antd'
 import { getJson } from '../../api/client'
+import { formatCurrency } from '../../utils/money'
 import type { EntityRow } from './entityConfigs'
 
 const EMPTY_SPLIT_ROW = {
@@ -57,6 +58,7 @@ type ProjectStakeholderLinesProps = {
   isCreate: boolean
   onDraftChange: (state: ProjectStakeholderSplitState) => void
   projectId: string | number | null | undefined
+  totalProjectCost: number
 }
 
 function toInputValue(value: unknown): string {
@@ -80,6 +82,20 @@ function formatTotal(total: number): string {
 function formatPercentage(value: string): string {
   const numericValue = parseNumericInput(value)
   return numericValue === null ? '-' : `${formatTotal(numericValue)}%`
+}
+
+function roundCurrency(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+function getStakeAmount(totalProjectCost: number, row: SplitDraftRow) {
+  const stakePercentage = parseNumericInput(row.stakePercentage)
+
+  if (stakePercentage === null) {
+    return 0
+  }
+
+  return roundCurrency(totalProjectCost * (stakePercentage / 100))
 }
 
 function buildStakeholderOption(row: EntityRow): StakeholderOption {
@@ -205,6 +221,7 @@ export function ProjectStakeholderLines({
   isCreate,
   onDraftChange,
   projectId,
+  totalProjectCost,
 }: ProjectStakeholderLinesProps) {
   const projectIdValue = toInputValue(projectId)
   const [draftRows, setDraftRows] = useState<SplitDraftRow[] | null>(() =>
@@ -464,6 +481,21 @@ export function ProjectStakeholderLines({
     },
     {
       align: 'right' as const,
+      key: 'stakeAmount',
+      render: (_value: string, row: SplitDraftRow) => {
+        const displayRow = editingRows[row.rowKey] ?? row
+
+        return (
+          <Typography.Text aria-label="Stake Amount">
+            {formatCurrency(getStakeAmount(totalProjectCost, displayRow))}
+          </Typography.Text>
+        )
+      },
+      title: 'Stake Amount',
+      width: 180,
+    },
+    {
+      align: 'right' as const,
       key: 'actions',
       render: (_value: string, row: SplitDraftRow, index: number) => {
         const isEditing = Boolean(editingRows[row.rowKey])
@@ -555,7 +587,7 @@ export function ProjectStakeholderLines({
             }}
             pagination={false}
             rowKey="rowKey"
-            scroll={{ x: 720 }}
+            scroll={{ x: 900 }}
             size="small"
           />
 

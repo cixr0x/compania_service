@@ -750,6 +750,7 @@ export function EntityEditPage() {
                   isCreate={isCreate}
                   onDraftChange={setProjectSplitState}
                   projectId={isCreate ? null : id}
+                  totalProjectCost={projectTransactionState.totalCost}
                 />
               </>
             ) : null}

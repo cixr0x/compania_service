@@ -30,6 +30,7 @@ function renderProjectStakeholderLines(
         isCreate
         onDraftChange={onDraftChange}
         projectId={null}
+        totalProjectCost={0}
         {...props}
       />
     </QueryClientProvider>,
@@ -145,6 +146,27 @@ describe('ProjectStakeholderLines', () => {
     expect(screen.getByText('Total allocation: 100%')).toBeVisible()
   })
 
+  it('shows the proportional stake amount as a read-only calculated column', async () => {
+    const user = userEvent.setup()
+
+    renderProjectStakeholderLines({ totalProjectCost: 1000 })
+
+    await addStakeholderRow()
+    await selectStakeholder('Alicia')
+    await user.type(
+      screen.getByRole('spinbutton', { name: 'Stake Percentage' }),
+      '60',
+    )
+
+    expect(
+      screen.getByRole('columnheader', { name: 'Stake Amount' }),
+    ).toBeVisible()
+    expect(screen.getByLabelText('Stake Amount')).toHaveTextContent('$600.00')
+    expect(
+      screen.queryByRole('spinbutton', { name: 'Stake Amount' }),
+    ).not.toBeInTheDocument()
+  })
+
   it('keeps existing rows static until edit and cancel reverts row changes', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
@@ -165,7 +187,11 @@ describe('ProjectStakeholderLines', () => {
       return []
     })
 
-    renderProjectStakeholderLines({ isCreate: false, projectId: 77 })
+    renderProjectStakeholderLines({
+      isCreate: false,
+      projectId: 77,
+      totalProjectCost: 7250,
+    })
 
     const splitSection = await screen.findByRole('group', {
       name: 'Stakeholder Split',
@@ -176,6 +202,7 @@ describe('ProjectStakeholderLines', () => {
 
     expect(within(dataRow).getByText('Alicia')).toBeVisible()
     expect(within(dataRow).getByText('60%')).toBeVisible()
+    expect(within(dataRow).getByText('$4,350.00')).toBeVisible()
     expect(
       within(splitSection).queryByRole('combobox', { name: 'Stakeholder' }),
     ).not.toBeInTheDocument()

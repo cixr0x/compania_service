@@ -949,8 +949,10 @@ describe('EntityEditPage', () => {
     renderEntityEditPage('/projects/77', '/:entityName/:id')
 
     const totalCostInput = await screen.findByLabelText('Total Cost')
+    const realUnitCostInput = await screen.findByLabelText('Real Unit Cost')
     await waitFor(() => {
       expect(totalCostInput).toHaveValue('7,250.00')
+      expect(realUnitCostInput).toHaveValue('72.50')
     })
     expect(screen.queryByLabelText('Adjustment Description')).not.toBeInTheDocument()
     const costSection = await screen.findByRole('group', {
@@ -966,6 +968,7 @@ describe('EntityEditPage', () => {
     )
 
     expect(totalCostInput).toHaveValue('7,750.00')
+    expect(realUnitCostInput).toHaveValue('77.50')
   })
 
   it('configures every money field and money table column for currency formatting', () => {

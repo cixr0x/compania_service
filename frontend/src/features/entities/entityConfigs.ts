@@ -221,6 +221,13 @@ function getProjectTotalCost(row: EntityRow) {
   )
 }
 
+function getProjectRealUnitCost(row: EntityRow) {
+  const totalCost = getProjectTotalCost(row)
+  const units = parseMoneyNumber(row.units) ?? 0
+
+  return units > 0 ? roundCurrency(totalCost / units) : 0
+}
+
 function getSaleProfit(row: EntityRow) {
   return roundCurrency(
     sumMoneyValues(
@@ -404,6 +411,10 @@ export const entityConfigs = {
         valueFormat: 'money',
         valueGetter: getProjectTotalCost,
       }),
+      column('realUnitCost', 'Real Unit Cost', {
+        valueFormat: 'money',
+        valueGetter: getProjectRealUnitCost,
+      }),
     ],
     fields: [
       select('idProduct', 'Product', undefined, {
@@ -427,6 +438,10 @@ export const entityConfigs = {
         valueFormat: 'money',
       }),
       computed('totalCost', 'Total Cost', getProjectTotalCost, {
+        prefix: '$',
+        valueFormat: 'money',
+      }),
+      computed('realUnitCost', 'Real Unit Cost', getProjectRealUnitCost, {
         prefix: '$',
         valueFormat: 'money',
       }),
