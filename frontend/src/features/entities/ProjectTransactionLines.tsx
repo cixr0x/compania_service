@@ -329,33 +329,6 @@ export function ProjectTransactionLines({
       width: 150,
     },
     {
-      align: 'right' as const,
-      dataIndex: 'amount',
-      key: 'amount',
-      render: (_value: string, row: TransactionDraftRow) => {
-        const editingRow = editingRows[row.rowKey]
-
-        return editingRow ? (
-          <Input
-            aria-label="Amount"
-            id={`project-transaction-amount-${row.rowKey}`}
-            inputMode="decimal"
-            onChange={(event) =>
-              handleRowChange(row.rowKey, 'amount', event.target.value)
-            }
-            prefix="$"
-            size="small"
-            status={rowErrors[row.rowKey] ? 'error' : undefined}
-            value={editingRow.amount}
-          />
-        ) : (
-          `$${formatMoney(row.amount)}`
-        )
-      },
-      title: 'Amount',
-      width: 180,
-    },
-    {
       dataIndex: 'description',
       key: 'description',
       render: (_value: string, row: TransactionDraftRow) => {
@@ -384,6 +357,33 @@ export function ProjectTransactionLines({
         )
       },
       title: 'Description',
+    },
+    {
+      align: 'right' as const,
+      dataIndex: 'amount',
+      key: 'amount',
+      render: (_value: string, row: TransactionDraftRow) => {
+        const editingRow = editingRows[row.rowKey]
+
+        return editingRow ? (
+          <Input
+            aria-label="Amount"
+            id={`project-transaction-amount-${row.rowKey}`}
+            inputMode="decimal"
+            onChange={(event) =>
+              handleRowChange(row.rowKey, 'amount', event.target.value)
+            }
+            prefix="$"
+            size="small"
+            status={rowErrors[row.rowKey] ? 'error' : undefined}
+            value={editingRow.amount}
+          />
+        ) : (
+          `$${formatMoney(row.amount)}`
+        )
+      },
+      title: 'Amount',
+      width: 180,
     },
     {
       align: 'right' as const,

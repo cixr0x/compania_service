@@ -78,6 +78,20 @@ describe('ProjectTransactionLines', () => {
     ).toBeVisible()
   })
 
+  it('orders project cost transaction columns as date, description, amount, and actions', async () => {
+    renderProjectTransactionLines()
+
+    const section = await screen.findByRole('group', {
+      name: 'Project Cost Transactions',
+    })
+
+    expect(
+      within(section)
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent?.trim()),
+    ).toEqual(['Date', 'Description', 'Amount', 'Actions'])
+  })
+
   it('adds a transaction in edit mode and commits it to the draft after saving the row', async () => {
     const user = userEvent.setup()
     const { onDraftChange } = renderProjectTransactionLines()
