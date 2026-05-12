@@ -107,6 +107,17 @@ describe('DataTable', () => {
     expect(within(toolbar as HTMLElement).getByRole('button', { name: 'Create' })).toBeVisible()
   })
 
+  it('wraps the table in a labeled scroll region for narrow viewports', () => {
+    render(<DataTableHarness />)
+
+    const scrollRegion = screen.getByRole('region', {
+      name: 'Scrollable records table',
+    })
+
+    expect(scrollRegion).toHaveClass('responsive-table-frame')
+    expect(within(scrollRegion).getByRole('table')).toBeVisible()
+  })
+
   it('formats money columns with a dollar prefix, commas, and two decimal places', () => {
     render(
       <DataTable

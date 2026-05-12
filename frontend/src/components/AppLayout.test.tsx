@@ -92,10 +92,21 @@ describe('AppLayout', () => {
       </MemoryRouter>,
     )
 
-    await user.click(screen.getByRole('button', { name: 'Open navigation' }))
+    const mobileMenuButton = screen.getByRole('button', {
+      name: 'Open navigation',
+    })
+
+    expect(mobileMenuButton).toHaveAttribute('aria-expanded', 'false')
+    expect(mobileMenuButton).toHaveAttribute(
+      'aria-controls',
+      'mobile-primary-navigation',
+    )
+
+    await user.click(mobileMenuButton)
 
     const drawer = screen.getByRole('dialog', { name: 'Primary navigation' })
     expect(drawer).toBeVisible()
+    expect(mobileMenuButton).toHaveAttribute('aria-expanded', 'true')
     expect(
       within(drawer).getByRole('link', { name: 'Sales Report' }),
     ).toHaveAttribute('href', '/reports/sales')

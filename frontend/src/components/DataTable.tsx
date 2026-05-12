@@ -350,37 +350,44 @@ export function DataTable<Row extends Record<string, unknown>>({
         ) : null}
       </div>
 
-      <Table<Row>
-        className="entity-data-table"
-        columns={tableColumns}
-        dataSource={visibleRows}
-        loading={isLoading}
-        locale={{
-          emptyText: isLoading ? 'Loading records...' : emptyMessage,
-        }}
-        onRow={(row) => ({
-          onDoubleClick: () => onRowDoubleClick(row),
-          onKeyDown: (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault()
-              onRowDoubleClick(row)
-            }
-          },
-          tabIndex: 0,
-        })}
-        pagination={
-          visibleRows.length > DEFAULT_PAGE_SIZE
-            ? {
-                pageSize: DEFAULT_PAGE_SIZE,
-                showSizeChanger: false,
-                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
+      <div
+        aria-label="Scrollable records table"
+        className="responsive-table-frame"
+        role="region"
+        tabIndex={0}
+      >
+        <Table<Row>
+          className="entity-data-table"
+          columns={tableColumns}
+          dataSource={visibleRows}
+          loading={isLoading}
+          locale={{
+            emptyText: isLoading ? 'Loading records...' : emptyMessage,
+          }}
+          onRow={(row) => ({
+            onDoubleClick: () => onRowDoubleClick(row),
+            onKeyDown: (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onRowDoubleClick(row)
               }
-            : false
-        }
-        rowKey={(row) => String(getRowId(row))}
-        scroll={{ x: 'max-content' }}
-        size="middle"
-      />
+            },
+            tabIndex: 0,
+          })}
+          pagination={
+            visibleRows.length > DEFAULT_PAGE_SIZE
+              ? {
+                  pageSize: DEFAULT_PAGE_SIZE,
+                  showSizeChanger: false,
+                  showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
+                }
+              : false
+          }
+          rowKey={(row) => String(getRowId(row))}
+          scroll={{ x: 'max-content' }}
+          size="middle"
+        />
+      </div>
     </div>
   )
 }

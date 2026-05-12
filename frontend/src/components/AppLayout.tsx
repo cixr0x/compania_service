@@ -61,6 +61,7 @@ const navigationSections: NavigationSection[] = [
   },
 ]
 const navigationItems = navigationSections.flatMap((section) => section.items)
+const mobileNavigationId = 'mobile-primary-navigation'
 
 export function AppLayout() {
   const location = useLocation()
@@ -113,6 +114,8 @@ export function AppLayout() {
         <Layout.Header className="topbar">
           <div className="topbar-title-group">
             <Button
+              aria-controls={mobileNavigationId}
+              aria-expanded={isMobileMenuOpen}
               aria-label="Open navigation"
               className="mobile-menu-button"
               icon={<MenuOutlined />}
@@ -134,11 +137,12 @@ export function AppLayout() {
 
       <Drawer
         className="mobile-navigation-drawer"
+        id={mobileNavigationId}
         onClose={() => setIsMobileMenuOpen(false)}
         open={isMobileMenuOpen}
         placement="left"
+        size={280}
         title="Primary navigation"
-        width={280}
       >
         <div className="drawer-brand-block" aria-label="Compania Service">
           <div className="brand-mark" aria-hidden="true">CS</div>
