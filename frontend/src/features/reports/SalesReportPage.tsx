@@ -26,16 +26,16 @@ const DEFAULT_REPORT_SOURCES: SalesReportSource[] = [
 ]
 const EMPTY_PERIODS: SalesReportPeriod[] = []
 const REPORT_COLUMN_WIDTHS = {
-  fee: 96,
-  model: 76,
-  ownerProfit: 102,
-  product: 150,
-  profit: 96,
-  projectId: 60,
-  sourceAmount: 96,
-  sourceQuantity: 48,
-  totalAmount: 100,
-  totalQuantity: 68,
+  fee: 90,
+  model: 90,
+  ownerProfit: 120,
+  product: 160,
+  profit: 88,
+  projectId: 80,
+  sourceAmount: 104,
+  sourceQuantity: 64,
+  totalAmount: 120,
+  totalQuantity: 100,
 }
 const REPORT_SOURCE_GROUP_WIDTH =
   REPORT_COLUMN_WIDTHS.sourceQuantity + REPORT_COLUMN_WIDTHS.sourceAmount

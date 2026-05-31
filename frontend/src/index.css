@@ -510,7 +510,7 @@ button {
 
 .sales-report-table .ant-table-thead > tr > th {
   line-height: 1.2;
-  white-space: normal;
+  white-space: nowrap;
 }
 
 .sales-report-table .ant-table-tbody > tr > td {

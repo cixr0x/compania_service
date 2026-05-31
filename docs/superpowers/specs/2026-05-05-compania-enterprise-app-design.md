@@ -359,6 +359,7 @@ Entity pages:
 - Money fields in tables and import review screens should display with a dollar prefix, comma grouping, and two decimals, for example `$1,000,000.00`. Editable money fields may accept comma separators and submit numeric values to the API.
 - Optional text fields preserve empty strings on update. A cleared optional text field must be submitted and saved as `""`; fields that are truly omitted from a PATCH payload remain unchanged.
 - The sales CRUD table displays profit and owner profit as money columns. Sales create/edit forms calculate fee from the selected product's pricing model and linked project, keep the Fee field read-only by default, and expose an `Override Fee` checkbox that enables manual fee editing and stops fee autocalculation. The same form displays read-only profit as `amount - fee` and owner profit as `profit * product.ownership / 100`; profit and owner profit are computed, persisted values. Tax is not tracked by the system.
+- The sales CRUD table should use compact explicit column widths so Product, Project, and money columns do not create excessive empty horizontal space.
 
 Sales import page:
 
@@ -376,7 +377,7 @@ Sales report page:
 - Month selector populated with months that have sales data for the selected year, plus a full-year option.
 - Year and month selectors are displayed together in the same filter row without an extra report category header above the page title.
 - Report table with grouped source headers, using `Quantity` and `Amount` under each source group.
-- Report column widths should stay compact and the horizontal scroll width should be derived from the number of visible source groups so unused whitespace does not make the table wider than necessary.
+- Report column widths should stay compact but wide enough to avoid wrapping source and total headers; the horizontal scroll width should be derived from the number of visible source groups.
 - `Surface` source group hidden unless the selected period has surface sales.
 - Profit is read from the persisted sales profit values, calculated at sale write time as amount minus fee; total cost and income are not displayed in the sales report.
 - Money cells displayed with a dollar prefix, comma grouping, and two decimals.

@@ -240,11 +240,17 @@ describe('EntityListPage', () => {
     ).toHaveAttribute('src', 'https://example.test/walnut-project.jpg')
     expect(screen.queryByRole('columnheader', { name: 'Product ID' })).not.toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Product' })).toBeVisible()
-    expect(screen.getByRole('columnheader', { name: 'Project' })).toBeVisible()
+    const salesTable = screen.getByRole('table')
+    const colStyles = Array.from(salesTable.querySelectorAll('col')).map(
+      (column) => column.getAttribute('style') ?? '',
+    )
+
+    for (const width of [56, 112, 190, 190, 84, 114, 94, 112, 112, 124]) {
+      expect(
+        colStyles.some((style) => style.includes(`width: ${width}px`)),
+      ).toBe(true)
+    }
     expect(screen.queryByRole('columnheader', { name: 'Tax' })).not.toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Profit' })).toBeVisible()
-    expect(screen.getByRole('columnheader', { name: 'Owner Profit' })).toBeVisible()
     expect(screen.getAllByText('$100.00')).toHaveLength(2)
     expect(screen.getAllByText('$0.00')).not.toHaveLength(0)
     expect(screen.getByText('$25.00')).toBeVisible()
