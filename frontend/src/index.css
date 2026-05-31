@@ -8,6 +8,8 @@
   --accent: #1677ff;
   --accent-strong: #0958d9;
   --accent-soft: #e6f4ff;
+  --table-hover-bg: #f0f7ff;
+  --table-stripe-bg: #fafafa;
   --sans:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
@@ -279,6 +281,23 @@ button {
 .ant-table-wrapper {
   max-width: 100%;
   min-width: 0;
+}
+
+.ant-table-wrapper .ant-table {
+  font-size: 13px !important;
+}
+
+.ant-table-wrapper .ant-table-thead > tr > th,
+.ant-table-wrapper .ant-table-tbody > tr > td {
+  padding: 7px 10px !important;
+}
+
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row:nth-child(even) > td {
+  background: var(--table-stripe-bg);
+}
+
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: var(--table-hover-bg);
 }
 
 .entity-data-table .ant-table {
@@ -927,6 +946,6 @@ button {
   .entity-data-table .ant-table-cell,
   .report-table .ant-table-cell,
   .split-editor .ant-table-cell {
-    padding: 8px 10px;
+    padding: 6px 8px !important;
   }
 }

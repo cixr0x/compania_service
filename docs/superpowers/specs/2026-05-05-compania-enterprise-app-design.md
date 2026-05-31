@@ -325,6 +325,7 @@ Ant Design application rules for this project:
 - On mobile, use a controlled navigation drawer rather than the zero-width collapsed sider trigger so the app header does not overlap navigation controls.
 - Responsive behavior should preserve the desktop Ant Design layout while adapting below tablet widths: hide the fixed sider behind the drawer, reduce page padding, stack table toolbars, make form controls full-width, keep wide tables in horizontal scroll regions, wrap import/report filters, and avoid page-level horizontal overflow.
 - Shared entity tables should keep compact enterprise readability: right-align numeric and money values, format date-like values, display booleans as tags, provide horizontal scrolling for wide data, and include a visible edit action while preserving double-click navigation.
+- Ant Design tables should use compact density and subtle striped body rows across entity lists, reports, import review tables, and inline detail tables.
 - Wide reports, including the sales report, should use Ant Design table horizontal scrolling with stable column widths instead of allowing tables to spill outside the page panel.
 - Tables that present sales channels or external channel IDs side by side should use stable, muted header color coding by channel: Store, Ecommerce, Event, and Surface each keep a distinct header color.
 

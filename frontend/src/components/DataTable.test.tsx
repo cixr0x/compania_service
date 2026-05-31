@@ -118,6 +118,14 @@ describe('DataTable', () => {
     expect(within(scrollRegion).getByRole('table')).toBeVisible()
   })
 
+  it('uses the compact Ant Design table density by default', () => {
+    render(<DataTableHarness />)
+
+    expect(screen.getByRole('table').closest('.ant-table')).toHaveClass(
+      'ant-table-small',
+    )
+  })
+
   it('applies custom header classes to configured columns', () => {
     render(
       <DataTable

@@ -389,7 +389,7 @@ export function DataTable<Row extends Record<string, unknown>>({
           }
           rowKey={(row) => String(getRowId(row))}
           scroll={{ x: 'max-content' }}
-          size="middle"
+          size="small"
         />
       </div>
     </div>
