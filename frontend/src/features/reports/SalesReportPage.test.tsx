@@ -131,17 +131,20 @@ describe('SalesReportPage', () => {
     expect(table).toHaveStyle({ width: '1304px' })
     expect(columnHeaders[0]).toHaveTextContent('Project ID')
     expect(columnHeaders[1]).toHaveTextContent('Product')
-    expect(within(table).getByRole('columnheader', { name: 'Store' })).toHaveAttribute(
-      'colspan',
-      '2',
-    )
+    const storeHeader = within(table).getByRole('columnheader', { name: 'Store' })
+    const ecommerceHeader = within(table).getByRole('columnheader', {
+      name: 'Ecommerce',
+    })
+    const eventHeader = within(table).getByRole('columnheader', { name: 'Event' })
+
+    expect(storeHeader).toHaveAttribute('colspan', '2')
+    expect(storeHeader).toHaveClass('channel-header-store')
     expect(
-      within(table).getByRole('columnheader', { name: 'Ecommerce' }),
+      ecommerceHeader,
     ).toHaveAttribute('colspan', '2')
-    expect(within(table).getByRole('columnheader', { name: 'Event' })).toHaveAttribute(
-      'colspan',
-      '2',
-    )
+    expect(ecommerceHeader).toHaveClass('channel-header-ecommerce')
+    expect(eventHeader).toHaveAttribute('colspan', '2')
+    expect(eventHeader).toHaveClass('channel-header-event')
     expect(
       within(table).queryByRole('columnheader', { name: 'Surface' }),
     ).not.toBeInTheDocument()

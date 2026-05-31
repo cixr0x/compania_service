@@ -483,6 +483,30 @@ button {
   text-align: center;
 }
 
+.ant-table-thead > tr > th.channel-header-store {
+  background: #e6f4ff !important;
+  border-color: #91caff !important;
+  color: #0958d9 !important;
+}
+
+.ant-table-thead > tr > th.channel-header-ecommerce {
+  background: #f6ffed !important;
+  border-color: #b7eb8f !important;
+  color: #237804 !important;
+}
+
+.ant-table-thead > tr > th.channel-header-event {
+  background: #fff7e6 !important;
+  border-color: #ffd591 !important;
+  color: #ad4e00 !important;
+}
+
+.ant-table-thead > tr > th.channel-header-surface {
+  background: #f9f0ff !important;
+  border-color: #d3adf7 !important;
+  color: #531dab !important;
+}
+
 .report-loading {
   display: flex;
   justify-content: center;

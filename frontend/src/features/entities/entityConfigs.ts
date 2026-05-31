@@ -1,4 +1,5 @@
 import type { DataTableColumn } from '../../components/DataTable'
+import { getChannelHeaderClass } from '../../utils/channelHeaders'
 import { parseMoneyNumber } from '../../utils/money'
 
 export type EntityRow = Record<string, unknown>
@@ -295,10 +296,18 @@ export const entityConfigs = {
         thumbnailGetter: (row) => row.image,
         width: 240,
       }),
-      column('idEcommerce', 'Ecommerce ID'),
-      column('idStore', 'Store ID'),
-      column('idEvent', 'Event ID'),
-      column('idSurface', 'Surface ID'),
+      column('idEcommerce', 'Ecommerce ID', {
+        headerClassName: getChannelHeaderClass('ecommerce'),
+      }),
+      column('idStore', 'Store ID', {
+        headerClassName: getChannelHeaderClass('store'),
+      }),
+      column('idEvent', 'Event ID', {
+        headerClassName: getChannelHeaderClass('event'),
+      }),
+      column('idSurface', 'Surface ID', {
+        headerClassName: getChannelHeaderClass('surface'),
+      }),
       column('ownership', 'Ownership'),
       column('feeAmount', 'Fee Amount', {
         valueFormat: 'money',

@@ -118,6 +118,30 @@ describe('DataTable', () => {
     expect(within(scrollRegion).getByRole('table')).toBeVisible()
   })
 
+  it('applies custom header classes to configured columns', () => {
+    render(
+      <DataTable
+        columns={[
+          { key: 'name', header: 'Name' },
+          {
+            key: 'tag',
+            header: 'Store ID',
+            headerClassName: 'channel-header-store',
+          },
+        ]}
+        getRowId={(row) => row.id}
+        onRowDoubleClick={vi.fn()}
+        onSearchChange={vi.fn()}
+        rows={rows}
+        searchValue=""
+      />,
+    )
+
+    expect(screen.getByRole('columnheader', { name: 'Store ID' })).toHaveClass(
+      'channel-header-store',
+    )
+  })
+
   it('formats money columns with a dollar prefix, commas, and two decimal places', () => {
     render(
       <DataTable

@@ -89,10 +89,17 @@ describe('EntityListPage', () => {
 
     renderProductsList()
 
-    expect(await screen.findAllByText('Ecommerce ID')).not.toHaveLength(0)
-    expect(screen.getAllByText('Store ID')).not.toHaveLength(0)
-    expect(screen.getAllByText('Event ID')).not.toHaveLength(0)
-    expect(screen.getAllByText('Surface ID')).not.toHaveLength(0)
+    const ecommerceHeader = await screen.findByRole('columnheader', {
+      name: 'Ecommerce ID',
+    })
+    const storeHeader = screen.getByRole('columnheader', { name: 'Store ID' })
+    const eventHeader = screen.getByRole('columnheader', { name: 'Event ID' })
+    const surfaceHeader = screen.getByRole('columnheader', { name: 'Surface ID' })
+
+    expect(ecommerceHeader).toHaveClass('channel-header-ecommerce')
+    expect(storeHeader).toHaveClass('channel-header-store')
+    expect(eventHeader).toHaveClass('channel-header-event')
+    expect(surfaceHeader).toHaveClass('channel-header-surface')
     expect(await screen.findByText('EC-101')).toBeVisible()
     expect(
       screen.getByRole('img', { name: 'Walnut Desk thumbnail' }),

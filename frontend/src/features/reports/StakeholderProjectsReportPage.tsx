@@ -12,6 +12,7 @@ import type {
   StakeholderProjectsReportSource,
 } from '../../api/types'
 import { ProductNameCell } from '../../components/ProductNameCell'
+import { getChannelHeaderClass } from '../../utils/channelHeaders'
 import { formatCurrency } from '../../utils/money'
 import { StakeholderProjectTransactionLines } from './StakeholderProjectTransactionLines'
 
@@ -99,28 +100,39 @@ export function StakeholderProjectsReportPage() {
     (hasSelectedScope && reportQuery.isLoading)
   const sourceColumns = useMemo<ColumnsType<StakeholderProjectReportRow>>(
     () =>
-      sources.map((source) => ({
-        children: [
-          {
-            align: 'right' as const,
-            key: `${source}-quantity`,
-            render: (_value: unknown, reportRow: StakeholderProjectReportRow) =>
-              reportRow[source].quantity,
-            title: 'Quantity',
-            width: 112,
-          },
-          {
-            align: 'right' as const,
-            key: `${source}-amount`,
-            render: (_value: unknown, reportRow: StakeholderProjectReportRow) =>
-              formatCurrency(reportRow[source].amount),
-            title: 'Amount',
-            width: 136,
-          },
-        ],
-        key: source,
-        title: sourceLabels[source],
-      })),
+      sources.map((source) => {
+        const headerClassName = getChannelHeaderClass(source)
+
+        return {
+          children: [
+            {
+              align: 'right' as const,
+              key: `${source}-quantity`,
+              onHeaderCell: () => ({ className: headerClassName }),
+              render: (
+                _value: unknown,
+                reportRow: StakeholderProjectReportRow,
+              ) => reportRow[source].quantity,
+              title: 'Quantity',
+              width: 112,
+            },
+            {
+              align: 'right' as const,
+              key: `${source}-amount`,
+              onHeaderCell: () => ({ className: headerClassName }),
+              render: (
+                _value: unknown,
+                reportRow: StakeholderProjectReportRow,
+              ) => formatCurrency(reportRow[source].amount),
+              title: 'Amount',
+              width: 136,
+            },
+          ],
+          key: source,
+          onHeaderCell: () => ({ className: headerClassName }),
+          title: sourceLabels[source],
+        }
+      }),
     [sources],
   )
   return (

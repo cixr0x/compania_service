@@ -186,11 +186,24 @@ describe('StakeholderProjectsReportPage', () => {
     const sourceTable = within(projectRegion).getByRole('table', {
       name: 'Maple Shelf source totals',
     })
-    expect(within(sourceTable).getByRole('columnheader', { name: 'Store' })).toBeVisible()
+    const storeHeader = within(sourceTable).getByRole('columnheader', {
+      name: 'Store',
+    })
+    const ecommerceHeader = within(sourceTable).getByRole('columnheader', {
+      name: 'Ecommerce',
+    })
+    const eventHeader = within(sourceTable).getByRole('columnheader', {
+      name: 'Event',
+    })
+
+    expect(storeHeader).toBeVisible()
+    expect(storeHeader).toHaveClass('channel-header-store')
     expect(
-      within(sourceTable).getByRole('columnheader', { name: 'Ecommerce' }),
+      ecommerceHeader,
     ).toBeVisible()
-    expect(within(sourceTable).getByRole('columnheader', { name: 'Event' })).toBeVisible()
+    expect(ecommerceHeader).toHaveClass('channel-header-ecommerce')
+    expect(eventHeader).toBeVisible()
+    expect(eventHeader).toHaveClass('channel-header-event')
     expect(
       within(sourceTable).queryByRole('columnheader', { name: 'Surface' }),
     ).not.toBeInTheDocument()

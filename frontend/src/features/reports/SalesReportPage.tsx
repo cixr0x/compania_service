@@ -10,6 +10,7 @@ import type {
   SalesReportSummary,
 } from '../../api/types'
 import { ProductNameCell } from '../../components/ProductNameCell'
+import { getChannelHeaderClass } from '../../utils/channelHeaders'
 import { formatCurrency } from '../../utils/money'
 
 const sourceLabels: Record<SalesReportSource, string> = {
@@ -85,28 +86,35 @@ export function SalesReportPage() {
         title: 'Product',
         width: 240,
       },
-      ...sources.map((source) => ({
-        children: [
-          {
-            align: 'right' as const,
-            key: `${source}-quantity`,
-            render: (_value: unknown, row: SalesReportRow) =>
-              row[source].quantity,
-            title: 'Quantity',
-            width: 104,
-          },
-          {
-            align: 'right' as const,
-            key: `${source}-amount`,
-            render: (_value: unknown, row: SalesReportRow) =>
-              formatCurrency(row[source].amount),
-            title: 'Amount',
-            width: 128,
-          },
-        ],
-        key: source,
-        title: sourceLabels[source],
-      })),
+      ...sources.map((source) => {
+        const headerClassName = getChannelHeaderClass(source)
+
+        return {
+          children: [
+            {
+              align: 'right' as const,
+              key: `${source}-quantity`,
+              onHeaderCell: () => ({ className: headerClassName }),
+              render: (_value: unknown, row: SalesReportRow) =>
+                row[source].quantity,
+              title: 'Quantity',
+              width: 104,
+            },
+            {
+              align: 'right' as const,
+              key: `${source}-amount`,
+              onHeaderCell: () => ({ className: headerClassName }),
+              render: (_value: unknown, row: SalesReportRow) =>
+                formatCurrency(row[source].amount),
+              title: 'Amount',
+              width: 128,
+            },
+          ],
+          key: source,
+          onHeaderCell: () => ({ className: headerClassName }),
+          title: sourceLabels[source],
+        }
+      }),
       {
         align: 'right',
         dataIndex: 'totalQuantity',

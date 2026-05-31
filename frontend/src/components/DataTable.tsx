@@ -11,6 +11,7 @@ export type DataTableColumn<Row extends Record<string, unknown>> = {
   valueGetter?: (row: Row) => unknown
   valueFormat?: 'money'
   valueType?: 'boolean' | 'date' | 'number' | 'string'
+  headerClassName?: string
   thumbnailGetter?: (row: Row) => unknown
   width?: number
 }
@@ -294,6 +295,9 @@ export function DataTable<Row extends Record<string, unknown>>({
       className: isRightAligned(kind) ? 'ant-table-cell-right' : undefined,
       dataIndex: column.key,
       key: column.key,
+      onHeaderCell: column.headerClassName
+        ? () => ({ className: column.headerClassName })
+        : undefined,
       sorter: (left: Row, right: Row) =>
         compareValues(
           getColumnValue(left, column),
