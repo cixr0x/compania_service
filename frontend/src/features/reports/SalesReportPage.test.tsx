@@ -127,8 +127,9 @@ describe('SalesReportPage', () => {
     const table = columnHeaders[0].closest('table')!
 
     expect(table.closest('.ant-table-wrapper')).toBeInTheDocument()
+    expect(table.closest('.sales-report-table')).toBeInTheDocument()
     expect(table.closest('.ant-table')).toHaveClass('ant-table-small')
-    expect(table).toHaveStyle({ width: '1304px' })
+    expect(table).toHaveStyle({ width: '1180px' })
     expect(columnHeaders[0]).toHaveTextContent('Project ID')
     expect(columnHeaders[1]).toHaveTextContent('Product')
     const storeHeader = within(table).getByRole('columnheader', { name: 'Store' })
@@ -210,6 +211,9 @@ describe('SalesReportPage', () => {
     expect(
       await screen.findByRole('columnheader', { name: 'Surface' }),
     ).toBeVisible()
+    expect(
+      screen.getByRole('columnheader', { name: 'Surface' }).closest('table'),
+    ).toHaveStyle({ width: '1324px' })
     expect(screen.getByText('Event Kit')).toBeVisible()
   })
 

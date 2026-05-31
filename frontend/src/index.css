@@ -502,6 +502,21 @@ button {
   text-align: center;
 }
 
+.sales-report-table .ant-table-thead > tr > th,
+.sales-report-table .ant-table-tbody > tr > td {
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+
+.sales-report-table .ant-table-thead > tr > th {
+  line-height: 1.2;
+  white-space: normal;
+}
+
+.sales-report-table .ant-table-tbody > tr > td {
+  white-space: nowrap;
+}
+
 .ant-table-thead > tr > th.channel-header-store {
   background: #e6f4ff !important;
   border-color: #91caff !important;

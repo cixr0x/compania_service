@@ -376,6 +376,7 @@ Sales report page:
 - Month selector populated with months that have sales data for the selected year, plus a full-year option.
 - Year and month selectors are displayed together in the same filter row without an extra report category header above the page title.
 - Report table with grouped source headers, using `Quantity` and `Amount` under each source group.
+- Report column widths should stay compact and the horizontal scroll width should be derived from the number of visible source groups so unused whitespace does not make the table wider than necessary.
 - `Surface` source group hidden unless the selected period has surface sales.
 - Profit is read from the persisted sales profit values, calculated at sale write time as amount minus fee; total cost and income are not displayed in the sales report.
 - Money cells displayed with a dollar prefix, comma grouping, and two decimals.

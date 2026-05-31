@@ -25,7 +25,29 @@ const DEFAULT_REPORT_SOURCES: SalesReportSource[] = [
   'event',
 ]
 const EMPTY_PERIODS: SalesReportPeriod[] = []
-const REPORT_TABLE_WIDTH = 1304
+const REPORT_COLUMN_WIDTHS = {
+  fee: 96,
+  model: 76,
+  ownerProfit: 102,
+  product: 150,
+  profit: 96,
+  projectId: 60,
+  sourceAmount: 96,
+  sourceQuantity: 48,
+  totalAmount: 100,
+  totalQuantity: 68,
+}
+const REPORT_SOURCE_GROUP_WIDTH =
+  REPORT_COLUMN_WIDTHS.sourceQuantity + REPORT_COLUMN_WIDTHS.sourceAmount
+const REPORT_STATIC_WIDTH =
+  REPORT_COLUMN_WIDTHS.projectId +
+  REPORT_COLUMN_WIDTHS.product +
+  REPORT_COLUMN_WIDTHS.totalQuantity +
+  REPORT_COLUMN_WIDTHS.totalAmount +
+  REPORT_COLUMN_WIDTHS.model +
+  REPORT_COLUMN_WIDTHS.fee +
+  REPORT_COLUMN_WIDTHS.profit +
+  REPORT_COLUMN_WIDTHS.ownerProfit
 
 const monthFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'long',
@@ -43,6 +65,10 @@ function buildReportPath(year: string, month: string) {
   }
 
   return `/reports/sales-summary?${query.toString()}`
+}
+
+function getReportTableWidth(sources: SalesReportSource[]) {
+  return REPORT_STATIC_WIDTH + sources.length * REPORT_SOURCE_GROUP_WIDTH
 }
 
 export function SalesReportPage() {
@@ -75,16 +101,17 @@ export function SalesReportPage() {
         dataIndex: 'projectId',
         key: 'projectId',
         title: 'Project ID',
-        width: 104,
+        width: REPORT_COLUMN_WIDTHS.projectId,
       },
       {
         dataIndex: 'productName',
         key: 'productName',
+        ellipsis: true,
         render: (_value: SalesReportRow['productName'], row: SalesReportRow) => (
           <ProductNameCell imageUrl={row.productImage} name={row.productName} />
         ),
         title: 'Product',
-        width: 240,
+        width: REPORT_COLUMN_WIDTHS.product,
       },
       ...sources.map((source) => {
         const headerClassName = getChannelHeaderClass(source)
@@ -98,7 +125,7 @@ export function SalesReportPage() {
               render: (_value: unknown, row: SalesReportRow) =>
                 row[source].quantity,
               title: 'Quantity',
-              width: 104,
+              width: REPORT_COLUMN_WIDTHS.sourceQuantity,
             },
             {
               align: 'right' as const,
@@ -107,7 +134,7 @@ export function SalesReportPage() {
               render: (_value: unknown, row: SalesReportRow) =>
                 formatCurrency(row[source].amount),
               title: 'Amount',
-              width: 128,
+              width: REPORT_COLUMN_WIDTHS.sourceAmount,
             },
           ],
           key: source,
@@ -120,7 +147,7 @@ export function SalesReportPage() {
         dataIndex: 'totalQuantity',
         key: 'totalQuantity',
         title: 'Total Quantity',
-        width: 128,
+        width: REPORT_COLUMN_WIDTHS.totalQuantity,
       },
       {
         align: 'right',
@@ -128,14 +155,15 @@ export function SalesReportPage() {
         key: 'totalAmount',
         render: (value: SalesReportRow['totalAmount']) => formatCurrency(value),
         title: 'Total Amount',
-        width: 136,
+        width: REPORT_COLUMN_WIDTHS.totalAmount,
       },
       {
         dataIndex: 'model',
+        ellipsis: true,
         key: 'model',
         render: (value: SalesReportRow['model']) => value || '-',
         title: 'Model',
-        width: 140,
+        width: REPORT_COLUMN_WIDTHS.model,
       },
       {
         align: 'right',
@@ -143,7 +171,7 @@ export function SalesReportPage() {
         key: 'fee',
         render: (value: SalesReportRow['fee']) => formatCurrency(value),
         title: 'Fee',
-        width: 116,
+        width: REPORT_COLUMN_WIDTHS.fee,
       },
       {
         align: 'right',
@@ -151,7 +179,7 @@ export function SalesReportPage() {
         key: 'profit',
         render: (value: SalesReportRow['profit']) => formatCurrency(value),
         title: 'Profit',
-        width: 128,
+        width: REPORT_COLUMN_WIDTHS.profit,
       },
       {
         align: 'right',
@@ -159,7 +187,7 @@ export function SalesReportPage() {
         key: 'ownerProfit',
         render: (value: SalesReportRow['ownerProfit']) => formatCurrency(value),
         title: 'Owner Profit',
-        width: 136,
+        width: REPORT_COLUMN_WIDTHS.ownerProfit,
       },
     ],
     [sources],
@@ -228,7 +256,7 @@ export function SalesReportPage() {
       ) : null}
 
       <Table<SalesReportRow>
-        className="report-table"
+        className="report-table sales-report-table"
         columns={columns}
         dataSource={rows}
         loading={{
@@ -244,7 +272,7 @@ export function SalesReportPage() {
         }}
         pagination={false}
         rowKey={(row) => `${row.projectId}-${row.productName}`}
-        scroll={{ x: REPORT_TABLE_WIDTH }}
+        scroll={{ x: getReportTableWidth(sources) }}
         size="small"
       />
     </section>
