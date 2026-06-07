@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -32,16 +31,12 @@ function DataTableHarness({
 }: {
   onRowDoubleClick?: (row: ProductRow) => void
 }) {
-  const [searchValue, setSearchValue] = useState('')
-
   return (
     <DataTable
       columns={columns}
       getRowId={(row) => row.id}
       onRowDoubleClick={onRowDoubleClick}
-      onSearchChange={setSearchValue}
       rows={rows}
-      searchValue={searchValue}
     />
   )
 }
@@ -49,17 +44,6 @@ function DataTableHarness({
 describe('DataTable', () => {
   afterEach(() => {
     cleanup()
-  })
-
-  it('filters rows by search text across row values', async () => {
-    const user = userEvent.setup()
-
-    render(<DataTableHarness />)
-
-    await user.type(screen.getByRole('searchbox', { name: /search/i }), 'desk')
-
-    expect(screen.getByText('Walnut Desk')).toBeInTheDocument()
-    expect(screen.queryByText('Canvas Chair')).not.toBeInTheDocument()
   })
 
   it('calls onRowDoubleClick with the double-clicked row', async () => {
@@ -87,23 +71,21 @@ describe('DataTable', () => {
     expect(onRowDoubleClick).toHaveBeenNthCalledWith(2, rows[0])
   })
 
-  it('renders toolbar actions beside the search field', () => {
+  it('renders toolbar actions without the global search field', () => {
     render(
       <DataTable
         columns={columns}
         getRowId={(row) => row.id}
         onRowDoubleClick={vi.fn()}
-        onSearchChange={vi.fn()}
         rows={rows}
-        searchValue=""
         toolbarAction={<button type="button">Create</button>}
       />,
     )
 
-    const searchbox = screen.getByRole('searchbox', { name: /search/i })
-    const toolbar = searchbox.closest('.table-toolbar')
+    const toolbar = screen.getByRole('button', { name: 'Create' }).closest('.table-toolbar')
 
     expect(toolbar).toBeInTheDocument()
+    expect(screen.queryByRole('searchbox', { name: /search/i })).not.toBeInTheDocument()
     expect(within(toolbar as HTMLElement).getByRole('button', { name: 'Create' })).toBeVisible()
   })
 
@@ -139,9 +121,7 @@ describe('DataTable', () => {
         ]}
         getRowId={(row) => row.id}
         onRowDoubleClick={vi.fn()}
-        onSearchChange={vi.fn()}
         rows={rows}
-        searchValue=""
       />,
     )
 
@@ -159,12 +139,10 @@ describe('DataTable', () => {
         ]}
         getRowId={(row) => row.id}
         onRowDoubleClick={vi.fn()}
-        onSearchChange={vi.fn()}
         rows={[
           { id: 1, name: 'Large sale', tag: 'office', amount: 1000000 },
           { id: 2, name: 'Decimal sale', tag: 'studio', amount: '1250.5' },
         ]}
-        searchValue=""
       />,
     )
 
@@ -192,7 +170,6 @@ describe('DataTable', () => {
         ]}
         getRowId={(row) => row.id}
         onRowDoubleClick={onRowDoubleClick}
-        onSearchChange={vi.fn()}
         rows={[
           {
             amount: 1250,
@@ -204,7 +181,6 @@ describe('DataTable', () => {
             units: 3,
           },
         ]}
-        searchValue=""
       />,
     )
 
@@ -228,13 +204,11 @@ describe('DataTable', () => {
         columns={columns}
         getRowId={(row) => row.id}
         onRowDoubleClick={vi.fn()}
-        onSearchChange={vi.fn()}
         rows={Array.from({ length: 12 }, (_, index) => ({
           id: index + 1,
           name: `Project ${index + 1}`,
           tag: 'batch',
         }))}
-        searchValue=""
       />,
     )
 
@@ -243,7 +217,7 @@ describe('DataTable', () => {
     expect(screen.queryByText('Project 12')).not.toBeInTheDocument()
   })
 
-  it('renders, filters, and sorts derived column values', async () => {
+  it('renders and sorts derived column values', async () => {
     const user = userEvent.setup()
 
     const derivedColumns = [
@@ -258,14 +232,11 @@ describe('DataTable', () => {
     ] as DataTableColumn<ProductRow>[]
 
     function DerivedColumnHarness() {
-      const [searchValue, setSearchValue] = useState('')
-
       return (
         <DataTable
           columns={derivedColumns}
           getRowId={(row) => row.id}
           onRowDoubleClick={vi.fn()}
-          onSearchChange={setSearchValue}
           rows={[
             {
               id: 1,
@@ -282,7 +253,6 @@ describe('DataTable', () => {
               tag: 'studio',
             },
           ]}
-          searchValue={searchValue}
         />
       )
     }
@@ -292,15 +262,8 @@ describe('DataTable', () => {
     expect(screen.getByText('$10,000.50')).toBeVisible()
     expect(screen.getByText('$500.00')).toBeVisible()
 
-    await user.type(
-      screen.getByRole('searchbox', { name: /search/i }),
-      '$10,000.50',
-    )
+    expect(screen.queryByRole('searchbox', { name: /search/i })).not.toBeInTheDocument()
 
-    expect(screen.getByText('Large project')).toBeVisible()
-    expect(screen.queryByText('Small project')).not.toBeInTheDocument()
-
-    await user.clear(screen.getByRole('searchbox', { name: /search/i }))
     await user.click(screen.getByRole('columnheader', { name: /total cost/i }))
 
     const bodyRows = screen.getAllByRole('row').slice(1)

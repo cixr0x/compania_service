@@ -1,6 +1,6 @@
 import { EditOutlined } from '@ant-design/icons'
-import { useMemo, type ReactNode } from 'react'
-import { Button, Input, Table, Tag } from 'antd'
+import type { ReactNode } from 'react'
+import { Button, Table, Tag } from 'antd'
 import type { ColumnType, ColumnsType } from 'antd/es/table'
 import { formatCurrency } from '../utils/money'
 import { ProductNameCell } from './ProductNameCell'
@@ -19,8 +19,6 @@ export type DataTableColumn<Row extends Record<string, unknown>> = {
 type DataTableProps<Row extends Record<string, unknown>> = {
   rows: Row[]
   columns: DataTableColumn<Row>[]
-  searchValue: string
-  onSearchChange: (value: string) => void
   getRowId: (row: Row) => string | number
   onRowDoubleClick: (row: Row) => void
   isLoading?: boolean
@@ -265,8 +263,6 @@ function getRowEditLabel<Row extends Record<string, unknown>>(
 export function DataTable<Row extends Record<string, unknown>>({
   rows,
   columns,
-  searchValue,
-  onSearchChange,
   getRowId,
   onRowDoubleClick,
   isLoading = false,
@@ -274,20 +270,7 @@ export function DataTable<Row extends Record<string, unknown>>({
   toolbarAction,
   toolbarFilters,
 }: DataTableProps<Row>) {
-  const visibleRows = useMemo(() => {
-    const normalizedSearch = searchValue.trim().toLowerCase()
-    return normalizedSearch
-      ? rows.filter((row) =>
-          columns.some((column) => {
-            const kind = inferColumnKind(column, rows)
-
-            return formatCellValue(getColumnValue(row, column), column, kind)
-              .toLowerCase()
-              .includes(normalizedSearch)
-          }),
-        )
-      : rows
-  }, [columns, rows, searchValue])
+  const visibleRows = rows
 
   const dataColumns: ColumnType<Row>[] = columns.map((column) => {
     const kind = inferColumnKind(column, visibleRows)
@@ -341,20 +324,11 @@ export function DataTable<Row extends Record<string, unknown>>({
 
   return (
     <div className="table-stack">
-      <div className="table-toolbar">
-        <label className="search-field ant-search-field">
-          <span>Search</span>
-          <Input.Search
-            allowClear
-            onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search records"
-            value={searchValue}
-          />
-        </label>
-        {toolbarAction ? (
+      {toolbarAction ? (
+        <div className="table-toolbar">
           <div className="table-toolbar-actions">{toolbarAction}</div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       {toolbarFilters ? (
         <div className="table-filter-row">{toolbarFilters}</div>
       ) : null}

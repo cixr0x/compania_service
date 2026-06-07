@@ -84,8 +84,8 @@ describe('EntityListPage', () => {
     expect(createLink).toHaveAttribute('href', '/products/new')
     expect(toolbar).toBeInTheDocument()
     expect(
-      within(toolbar as HTMLElement).getByRole('searchbox', { name: /search/i }),
-    ).toBeVisible()
+      within(toolbar as HTMLElement).queryByRole('searchbox', { name: /search/i }),
+    ).not.toBeInTheDocument()
   })
 
   it('requests an explicit MVP page size for Products', async () => {

@@ -195,7 +195,6 @@ function UnknownEntityPage() {
 export function EntityListPage() {
   const { entityName } = useParams()
   const navigate = useNavigate()
-  const [searchValue, setSearchValue] = useState('')
   const [salesFilters, setSalesFilters] = useState<SalesFilters>({})
   const config = getEntityConfig(entityName)
   const isSalesPage = config?.path === 'sales'
@@ -252,9 +251,7 @@ export function EntityListPage() {
         onRowDoubleClick={(row) =>
           navigate(`/${config.path}/${String(row[config.idField])}`)
         }
-        onSearchChange={setSearchValue}
         rows={query.data ?? []}
-        searchValue={searchValue}
         toolbarAction={
           <Link to={`/${config.path}/new`}>
             <Button icon={<PlusOutlined />} type="primary">

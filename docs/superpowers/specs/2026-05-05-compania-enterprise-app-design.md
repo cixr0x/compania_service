@@ -21,7 +21,7 @@ Included:
 
 - CRUD REST APIs for products, pricing models, projects, stakeholders, project stakeholder splits, and sales.
 - Table view for the user-facing entities. Project stakeholder splits are managed from the project form instead of a standalone navigation item.
-- Create button in the table toolbar beside search on each table view.
+- Create button in the table toolbar on each table view.
 - Double-click row navigation to an update form for that entity.
 - CSV/XLSX sales import into staging tables.
 - Import review screen where the user selects source and import date, checks imported descriptions against matched products, reviews validation errors, and commits validated rows to final sales.
@@ -320,7 +320,7 @@ Ant Design application rules for this project:
 - Maintain certainty through consistent components, spacing, table behavior, labels, and feedback patterns.
 - Keep screens meaningful by emphasizing the user's work mission, clear goals, and immediate operation results.
 - Design for growth by favoring reusable modules and discoverable workflows over one-off custom UI.
-- Use Ant Design `Table` for structured operational data, with search/filtering, sorting, pagination, loading, and empty states where useful.
+- Use Ant Design `Table` for structured operational data, with dedicated filters where useful, plus sorting, pagination, loading, and empty states.
 - Use Ant Design data-entry components for forms and keep labels, validation, and formatting close to the relevant field. Do not render per-field helper descriptions unless a future requirement explicitly asks for them.
 - Use Ant Design feedback components such as `Alert`, `Message`, `Notification`, `Spin`, `Modal`, and `Popconfirm` according to feedback severity.
 - On mobile, use a controlled navigation drawer rather than the zero-width collapsed sider trigger so the app header does not overlap navigation controls.
@@ -338,8 +338,8 @@ Main navigation is grouped into sections:
 
 Entity pages:
 
-- Table view with sortable visible columns and a text filter for searchable fields.
-- Create button in the table toolbar beside search, using Ant Design primary button styling.
+- Table view with sortable visible columns. Page-specific filters may be shown above the table when useful.
+- Create button in the table toolbar, using Ant Design primary button styling.
 - Double-click table row navigates to edit form; table rows also expose a visible Edit action for discoverability.
 - Entity table columns backed by foreign keys display the related entity name/label rather than the raw foreign key ID. Primary key ID columns may still display IDs.
 - Table cells that display a product name show a small product image thumbnail to the left of the name when the product has an image URL.

@@ -211,16 +211,6 @@ button {
   background: var(--accent-strong);
 }
 
-.search-field {
-  color: var(--text-muted);
-  display: grid;
-  flex: 1;
-  font-size: 12px;
-  font-weight: 700;
-  gap: 5px;
-  max-width: 420px;
-}
-
 .empty-state {
   display: grid;
   gap: 3px;
@@ -259,12 +249,8 @@ button {
   align-items: end;
   display: flex;
   gap: 12px;
-  justify-content: space-between;
+  justify-content: flex-end;
   min-width: 0;
-}
-
-.table-toolbar .search-field {
-  flex: 1 1 280px;
 }
 
 .table-toolbar-actions {
@@ -833,7 +819,6 @@ button {
     flex-direction: column;
   }
 
-  .table-toolbar .search-field,
   .table-toolbar-actions {
     flex: 0 0 auto;
     max-width: none;
