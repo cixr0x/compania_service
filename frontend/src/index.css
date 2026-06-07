@@ -704,6 +704,32 @@ button {
   min-width: 0;
 }
 
+.import-section > .ant-spin,
+.import-section > .ant-spin .ant-spin-container {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.import-stage-table {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.import-stage-table .ant-table,
+.import-stage-table .ant-table-container,
+.import-stage-table .ant-table-content {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+
+.import-stage-table .ant-table-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .section-heading-row {
   align-items: center;
   display: flex;

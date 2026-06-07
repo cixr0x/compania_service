@@ -16,4 +16,13 @@ describe('global table styling', () => {
     )
     expect(tableCss).toContain('background: var(--table-stripe-bg)')
   })
+
+  it('keeps the sales import staged rows table constrained inside its panel', () => {
+    expect(tableCss).toContain('.import-stage-table')
+    expect(tableCss).toContain('.import-section > .ant-spin')
+    expect(tableCss).toContain('.import-stage-table .ant-table')
+    expect(tableCss).toContain('.import-stage-table .ant-table-container')
+    expect(tableCss).toContain('.import-stage-table .ant-table-content')
+    expect(tableCss).toContain('text-overflow: ellipsis')
+  })
 })

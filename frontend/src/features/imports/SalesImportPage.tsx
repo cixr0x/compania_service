@@ -45,6 +45,8 @@ const sourceLabels: Record<ImportSource, string> = {
   surface: 'Surface',
 }
 
+const IMPORT_STAGE_TABLE_WIDTH = 1040
+
 function queryKeys(batchId: number) {
   return {
     batch: ['import-batches', batchId] as const,
@@ -377,18 +379,20 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
       align: 'right',
       dataIndex: 'rowNumber',
       title: 'Row',
-      width: 80,
+      width: 64,
     },
     {
       dataIndex: 'externalProductId',
       render: (value: ImportStageRow['externalProductId']) => value ?? '-',
       title: 'External ID',
+      width: 132,
     },
     {
       dataIndex: 'importedProductDescription',
       render: (value: ImportStageRow['importedProductDescription']) =>
         value ?? '-',
       title: 'Imported Description',
+      width: 280,
     },
     {
       dataIndex: 'product',
@@ -399,20 +403,21 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
           <Tag color="warning">Unmatched product</Tag>
         ),
       title: 'Matched Product',
+      width: 220,
     },
     {
       align: 'right',
       dataIndex: 'quantity',
       render: (value: ImportStageRow['quantity']) => value ?? '-',
       title: 'Quantity',
-      width: 110,
+      width: 82,
     },
     {
       align: 'right',
       dataIndex: 'amount',
       render: (value: ImportStageRow['amount']) => formatDecimal(value),
       title: 'Amount',
-      width: 130,
+      width: 122,
     },
     {
       render: (_, row) => getStatusTag(formatRowStatus(row)),
@@ -601,6 +606,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
 
           <Spin spinning={stageQuery.isLoading}>
             <Table<ImportStageRow>
+              className="import-stage-table"
               columns={stagedRowColumns}
               dataSource={rows}
               locale={{
@@ -610,8 +616,9 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
               }}
               pagination={{ pageSize: 10, showSizeChanger: false }}
               rowKey="idImportStage"
-              scroll={{ x: 1040 }}
+              scroll={{ x: IMPORT_STAGE_TABLE_WIDTH }}
               size="small"
+              tableLayout="fixed"
             />
           </Spin>
         </section>

@@ -368,6 +368,7 @@ Sales import page:
 - File upload.
 - Validation summary.
 - Staged row table with row number, external product ID, imported product description, matched product name, quantity, amount, and status.
+- The staged row table uses fixed layout, explicit column widths, and a constrained horizontal scroll container so Ant Design column measurement cannot expand the page while rows are loading or rendered.
 - Error panel for import errors.
 - Commit button enabled only when required metadata is present and the batch has no validation errors.
 

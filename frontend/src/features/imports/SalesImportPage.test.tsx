@@ -151,8 +151,21 @@ describe('SalesImportPage', () => {
       name: 'Staged Rows',
     })
     const table = within(stagedRowsRegion).getByRole('table')
+    const columnWidths = Array.from(table.querySelectorAll('col')).map(
+      (column) => column.getAttribute('style'),
+    )
 
-    expect(table.closest('.ant-table-wrapper')).toBeInTheDocument()
+    expect(table.closest('.import-stage-table')).toBeInTheDocument()
+    expect(table).toHaveStyle({ tableLayout: 'fixed', width: '1040px' })
+    expect(columnWidths).toEqual([
+      'width: 64px;',
+      'width: 132px;',
+      'width: 280px;',
+      'width: 220px;',
+      'width: 82px;',
+      'width: 122px;',
+      'width: 140px;',
+    ])
     for (const columnName of [
       'Row',
       'External ID',
