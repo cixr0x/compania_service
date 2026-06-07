@@ -38,6 +38,30 @@ function renderProductsList() {
   return renderEntityList('/products')
 }
 
+async function selectAntOption(
+  user: ReturnType<typeof userEvent.setup>,
+  combobox: HTMLElement,
+  optionName: string,
+) {
+  await user.click(combobox)
+  let titledOptions = screen.queryAllByTitle(optionName)
+  let textOptions = screen.queryAllByText(optionName)
+
+  if (titledOptions.length === 0 && textOptions.length === 0) {
+    await user.click(combobox)
+    titledOptions = screen.queryAllByTitle(optionName)
+    textOptions = screen.queryAllByText(optionName)
+  }
+
+  const options =
+    titledOptions.length > 0
+      ? titledOptions
+      : textOptions.length > 0
+        ? textOptions
+        : await screen.findAllByText(optionName)
+  await user.click(options[options.length - 1])
+}
+
 describe('EntityListPage', () => {
   afterEach(() => {
     cleanup()
@@ -256,6 +280,116 @@ describe('EntityListPage', () => {
     expect(screen.getByText('$25.00')).toBeVisible()
     expect(screen.queryByText('42')).not.toBeInTheDocument()
     expect(screen.queryByText('501')).not.toBeInTheDocument()
+  })
+
+  it('filters the sales table by product, project, and sale month outside the table headers', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation((path: string) => {
+      if (path === '/sales?pageSize=100') {
+        return Promise.resolve([])
+      }
+
+      if (path === '/products?pageSize=100') {
+        return Promise.resolve([
+          {
+            id: 42,
+            image: 'https://example.test/walnut-desk.jpg',
+            name: 'Walnut Desk',
+          },
+        ])
+      }
+
+      if (path === '/projects?pageSize=100') {
+        return Promise.resolve([
+          {
+            idProduct: 42,
+            idProject: 501,
+            product: {
+              id: 42,
+              image: 'https://example.test/walnut-desk.jpg',
+              name: 'Walnut Desk',
+            },
+          },
+        ])
+      }
+
+      if (path === '/reports/sales-summary/periods') {
+        return Promise.resolve([{ months: [5], year: 2026 }])
+      }
+
+      if (path === '/sales?pageSize=100&idProduct=42') {
+        return Promise.resolve([])
+      }
+
+      if (path === '/sales?pageSize=100&idProduct=42&idProject=501') {
+        return Promise.resolve([])
+      }
+
+      if (path === '/sales?pageSize=100&idProduct=42&idProject=501&month=2026-05') {
+        return Promise.resolve([])
+      }
+
+      return Promise.reject(new Error(`Unexpected GET ${path}`))
+    })
+
+    renderEntityList('/sales')
+
+    const salesFilters = await screen.findByRole('region', {
+      name: 'Sales filters',
+    })
+    const productFilter = within(salesFilters).getByRole('combobox', {
+      name: 'Product filter',
+    })
+    const projectFilter = within(salesFilters).getByRole('combobox', {
+      name: 'Project filter',
+    })
+    const monthFilter = within(salesFilters).getByRole('combobox', {
+      name: 'Month filter',
+    })
+
+    expect(productFilter).toBeVisible()
+    expect(projectFilter).toBeVisible()
+    expect(monthFilter).toBeVisible()
+    expect(
+      screen.queryByRole('columnheader', { name: 'Product filter' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('columnheader', { name: 'Project filter' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('columnheader', { name: 'Month filter' }),
+    ).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(getJson).toHaveBeenCalledWith('/reports/sales-summary/periods')
+    })
+
+    await selectAntOption(user, productFilter, 'Walnut Desk')
+    await waitFor(() => {
+      expect(getJson).toHaveBeenCalledWith('/sales?pageSize=100&idProduct=42')
+    })
+
+    await selectAntOption(user, projectFilter, 'Project #501 - Walnut Desk')
+    await waitFor(() => {
+      expect(getJson).toHaveBeenCalledWith(
+        '/sales?pageSize=100&idProduct=42&idProject=501',
+      )
+    })
+
+    const updatedSalesFilters = screen.getByRole('region', {
+      name: 'Sales filters',
+    })
+    await selectAntOption(
+      user,
+      within(updatedSalesFilters).getByRole('combobox', {
+        name: 'Month filter',
+      }),
+      'May 2026',
+    )
+    await waitFor(() => {
+      expect(getJson).toHaveBeenCalledWith(
+        '/sales?pageSize=100&idProduct=42&idProject=501&month=2026-05',
+      )
+    })
   })
 
   it('shows model code in the models table', async () => {

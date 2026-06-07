@@ -26,6 +26,7 @@ type DataTableProps<Row extends Record<string, unknown>> = {
   isLoading?: boolean
   emptyMessage?: string
   toolbarAction?: ReactNode
+  toolbarFilters?: ReactNode
 }
 
 type ColumnKind = 'boolean' | 'date' | 'id' | 'money' | 'number' | 'string'
@@ -271,6 +272,7 @@ export function DataTable<Row extends Record<string, unknown>>({
   isLoading = false,
   emptyMessage = 'No records found.',
   toolbarAction,
+  toolbarFilters,
 }: DataTableProps<Row>) {
   const visibleRows = useMemo(() => {
     const normalizedSearch = searchValue.trim().toLowerCase()
@@ -353,6 +355,9 @@ export function DataTable<Row extends Record<string, unknown>>({
           <div className="table-toolbar-actions">{toolbarAction}</div>
         ) : null}
       </div>
+      {toolbarFilters ? (
+        <div className="table-filter-row">{toolbarFilters}</div>
+      ) : null}
 
       <div
         aria-label="Scrollable records table"

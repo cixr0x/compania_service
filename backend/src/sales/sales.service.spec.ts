@@ -61,6 +61,37 @@ describe('SalesService', () => {
     });
   });
 
+  it('filters list responses by product, project, and sale month', async () => {
+    jest.spyOn(prisma.sale, 'findMany').mockResolvedValue([]);
+
+    const service = buildService();
+    await service.findAll({
+      idProduct: 42,
+      idProject: 501,
+      month: '2026-05',
+      page: 2,
+      pageSize: 10,
+    });
+
+    expect(prisma.sale.findMany).toHaveBeenCalledWith({
+      include: {
+        product: true,
+        project: { include: { product: true } },
+      },
+      orderBy: { idSale: 'desc' },
+      skip: 10,
+      take: 10,
+      where: {
+        date: {
+          gte: new Date('2026-05-01T00:00:00.000Z'),
+          lt: new Date('2026-06-01T00:00:00.000Z'),
+        },
+        idProduct: 42,
+        idProject: 501,
+      },
+    });
+  });
+
   it('creates a sale with default fee and persisted profit fields when fee is omitted', async () => {
     jest.spyOn(prisma.sale, 'create').mockResolvedValue({
       idSale: 1,

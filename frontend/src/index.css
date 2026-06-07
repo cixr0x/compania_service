@@ -273,6 +273,33 @@ button {
   gap: 8px;
 }
 
+.table-filter-row {
+  min-width: 0;
+}
+
+.sales-table-filters {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.sales-table-filter {
+  color: var(--text-muted);
+  display: grid;
+  flex: 0 1 240px;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 5px;
+  min-width: 180px;
+}
+
+.sales-table-filter .ant-select {
+  width: 100%;
+}
+
 .entity-data-table {
   max-width: 100%;
   min-width: 0;
@@ -822,6 +849,16 @@ button {
   .table-toolbar-actions > * .ant-btn {
     justify-content: center;
     width: 100%;
+  }
+
+  .sales-table-filters {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .sales-table-filter {
+    min-width: 0;
   }
 
   .page-content {

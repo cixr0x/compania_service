@@ -4,10 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { parseSaleDate } from './dto/sale-date-string.validator';
+import { SalesQueryDto } from './dto/sales-query.dto';
 import { UpdateSaleDto } from './dto/update-sale.dto';
 import { SaleFeeCalculatorService } from './sale-fee-calculator.service';
 import { SaleFinancialsCalculatorService } from './sale-financials-calculator.service';
@@ -33,15 +33,22 @@ export class SalesService {
     });
   }
 
-  findAll(query: PaginationQueryDto) {
+  findAll(query: SalesQueryDto) {
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 25;
-    return this.prisma.sale.findMany({
+    const where = this.buildSalesWhere(query);
+    const args: Prisma.SaleFindManyArgs = {
       include: saleInclude,
       orderBy: { idSale: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
-    });
+    };
+
+    if (Object.keys(where).length > 0) {
+      args.where = where;
+    }
+
+    return this.prisma.sale.findMany(args);
   }
 
   async findOne(id: number) {
@@ -182,6 +189,43 @@ export class SalesService {
       dto.idProduct !== undefined ||
       dto.quantity !== undefined
     );
+  }
+
+  private buildSalesWhere(query: SalesQueryDto): Prisma.SaleWhereInput {
+    const where: Prisma.SaleWhereInput = {};
+
+    if (query.idProduct !== undefined) {
+      where.idProduct = query.idProduct;
+    }
+
+    if (query.idProject !== undefined) {
+      where.idProject = query.idProject;
+    }
+
+    if (query.month) {
+      const { end, start } = this.getMonthDateRange(query.month);
+      where.date = {
+        gte: start,
+        lt: end,
+      };
+    }
+
+    return where;
+  }
+
+  private getMonthDateRange(month: string) {
+    const match = month.match(/^(\d{4})-(0[1-9]|1[0-2])$/);
+
+    if (!match) {
+      throw new BadRequestException('Month must be in YYYY-MM format');
+    }
+
+    const year = Number(match[1]);
+    const monthIndex = Number(match[2]) - 1;
+    const start = new Date(Date.UTC(year, monthIndex, 1));
+    const end = new Date(Date.UTC(year, monthIndex + 1, 1));
+
+    return { end, start };
   }
 
   private async ensureProductExists(idProduct: number) {

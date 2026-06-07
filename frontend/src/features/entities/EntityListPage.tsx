@@ -1,13 +1,185 @@
-import { useState } from 'react'
+import { useMemo, useState, type Dispatch, type SetStateAction } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Typography } from 'antd'
+import { Button, Select, Typography } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getJson } from '../../api/client'
+import type { Product, Project, SalesReportPeriod } from '../../api/types'
 import { DataTable } from '../../components/DataTable'
 import { getEntityConfig, type EntityRow } from './entityConfigs'
 
 const ENTITY_LIST_PAGE_SIZE = 100
+
+type SalesFilters = {
+  idProduct?: string
+  idProject?: string
+  month?: string
+}
+
+const monthFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  timeZone: 'UTC',
+  year: 'numeric',
+})
+
+function buildEntityListPath(
+  path: string,
+  salesFilters: SalesFilters,
+) {
+  const query = new URLSearchParams({
+    pageSize: String(ENTITY_LIST_PAGE_SIZE),
+  })
+
+  if (path === 'sales') {
+    if (salesFilters.idProduct) {
+      query.set('idProduct', salesFilters.idProduct)
+    }
+
+    if (salesFilters.idProject) {
+      query.set('idProject', salesFilters.idProject)
+    }
+
+    if (salesFilters.month) {
+      query.set('month', salesFilters.month)
+    }
+  }
+
+  return `/${path}?${query.toString()}`
+}
+
+function formatProjectOption(project: Project) {
+  return project.product?.name
+    ? `Project #${String(project.idProject)} - ${project.product.name}`
+    : `Project #${String(project.idProject)}`
+}
+
+function formatMonthValue(value: string) {
+  const [year, month] = value.split('-').map(Number)
+  return monthFormatter.format(new Date(Date.UTC(year, month - 1, 1)))
+}
+
+function buildMonthOptions(periods: SalesReportPeriod[]) {
+  return periods
+    .flatMap((period) =>
+      Array.isArray(period.months)
+        ? period.months.map((month) => {
+            const value = `${period.year}-${String(month).padStart(2, '0')}`
+            return {
+              label: formatMonthValue(value),
+              value,
+            }
+          })
+        : [],
+    )
+    .sort((left, right) => right.value.localeCompare(left.value))
+}
+
+type SalesTableFiltersProps = {
+  filters: SalesFilters
+  isLoading: boolean
+  periods: SalesReportPeriod[]
+  products: Product[]
+  projects: Project[]
+  setFilters: Dispatch<SetStateAction<SalesFilters>>
+}
+
+function SalesTableFilters({
+  filters,
+  isLoading,
+  periods,
+  products,
+  projects,
+  setFilters,
+}: SalesTableFiltersProps) {
+  const selectedProductId = filters.idProduct
+    ? Number(filters.idProduct)
+    : null
+  const projectOptions = projects
+    .filter((project) =>
+      selectedProductId === null ? true : project.idProduct === selectedProductId,
+    )
+    .map((project) => ({
+      label: formatProjectOption(project),
+      value: String(project.idProject),
+    }))
+  const productOptions = products.map((product) => ({
+    label: product.name,
+    value: String(product.id),
+  }))
+  const monthOptions = buildMonthOptions(periods)
+
+  return (
+    <section
+      aria-label="Sales filters"
+      className="sales-table-filters"
+      role="region"
+    >
+      <label className="sales-table-filter">
+        <span>Product</span>
+        <Select
+          allowClear
+          aria-label="Product filter"
+          loading={isLoading}
+          optionFilterProp="label"
+          options={productOptions}
+          placeholder="All products"
+          showSearch
+          value={filters.idProduct}
+          onChange={(value?: string) => {
+            setFilters((current) => {
+              const nextProductId = value ? Number(value) : null
+              const currentProject = projects.find(
+                (project) => String(project.idProject) === current.idProject,
+              )
+
+              return {
+                ...current,
+                idProduct: value,
+                idProject:
+                  nextProductId !== null &&
+                  currentProject?.idProduct === nextProductId
+                    ? current.idProject
+                    : undefined,
+              }
+            })
+          }}
+        />
+      </label>
+
+      <label className="sales-table-filter">
+        <span>Project</span>
+        <Select
+          allowClear
+          aria-label="Project filter"
+          loading={isLoading}
+          optionFilterProp="label"
+          options={projectOptions}
+          placeholder="All projects"
+          showSearch
+          value={filters.idProject}
+          onChange={(value?: string) =>
+            setFilters((current) => ({ ...current, idProject: value }))
+          }
+        />
+      </label>
+
+      <label className="sales-table-filter">
+        <span>Month</span>
+        <Select
+          allowClear
+          aria-label="Month filter"
+          loading={isLoading}
+          options={monthOptions}
+          placeholder="All months"
+          value={filters.month}
+          onChange={(value?: string) =>
+            setFilters((current) => ({ ...current, month: value }))
+          }
+        />
+      </label>
+    </section>
+  )
+}
 
 function UnknownEntityPage() {
   return (
@@ -24,13 +196,34 @@ export function EntityListPage() {
   const { entityName } = useParams()
   const navigate = useNavigate()
   const [searchValue, setSearchValue] = useState('')
+  const [salesFilters, setSalesFilters] = useState<SalesFilters>({})
   const config = getEntityConfig(entityName)
+  const isSalesPage = config?.path === 'sales'
+  const listPath = useMemo(
+    () => (config ? buildEntityListPath(config.path, salesFilters) : ''),
+    [config, salesFilters],
+  )
 
   const query = useQuery({
     enabled: Boolean(config),
-    queryKey: ['entities', config?.path, ENTITY_LIST_PAGE_SIZE],
+    queryKey: ['entities', listPath],
+    queryFn: () => getJson<EntityRow[]>(listPath),
+  })
+  const productsQuery = useQuery({
+    enabled: isSalesPage,
+    queryKey: ['sales-table-filters', 'products'],
+    queryFn: () => getJson<Product[]>('/products?pageSize=100'),
+  })
+  const projectsQuery = useQuery({
+    enabled: isSalesPage,
+    queryKey: ['sales-table-filters', 'projects'],
+    queryFn: () => getJson<Project[]>('/projects?pageSize=100'),
+  })
+  const periodsQuery = useQuery({
+    enabled: isSalesPage,
+    queryKey: ['sales-table-filters', 'months'],
     queryFn: () =>
-      getJson<EntityRow[]>(`/${config!.path}?pageSize=${ENTITY_LIST_PAGE_SIZE}`),
+      getJson<SalesReportPeriod[]>('/reports/sales-summary/periods'),
   })
 
   if (!config) {
@@ -68,6 +261,22 @@ export function EntityListPage() {
               Create
             </Button>
           </Link>
+        }
+        toolbarFilters={
+          isSalesPage ? (
+            <SalesTableFilters
+              filters={salesFilters}
+              isLoading={
+                productsQuery.isLoading ||
+                projectsQuery.isLoading ||
+                periodsQuery.isLoading
+              }
+              periods={periodsQuery.data ?? []}
+              products={productsQuery.data ?? []}
+              projects={projectsQuery.data ?? []}
+              setFilters={setSalesFilters}
+            />
+          ) : null
         }
       />
     </section>
