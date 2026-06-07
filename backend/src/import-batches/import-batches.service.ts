@@ -21,6 +21,17 @@ import { SaleFinancialsCalculatorService } from '../sales/sale-financials-calcul
 const batchDetailInclude = {
   _count: { select: { stageRows: true, errors: true } },
 };
+const importStageInclude = {
+  product: {
+    include: {
+      projects: {
+        include: { model: true },
+        orderBy: { idProject: 'asc' as const },
+      },
+    },
+  },
+  project: { include: { model: true, product: true } },
+};
 
 const mutableTerminalStatuses: ImportStatus[] = ['committed', 'cancelled'];
 type TransactionClient = Prisma.TransactionClient;
@@ -28,6 +39,7 @@ type StageForParse = {
   rowNumber: number;
   externalProductId: string | null;
   importedProductDescription: string | null;
+  idProject?: number | null;
   quantity: number | null;
   amount: Prisma.Decimal | number | string | null;
   rawRow: Prisma.JsonValue | null;
@@ -152,7 +164,7 @@ export class ImportBatchesService {
     const [stageRows, errors] = await Promise.all([
       this.prisma.importStage.findMany({
         where: { idImportBatch: id },
-        include: { product: true },
+        include: importStageInclude,
         orderBy: { rowNumber: 'asc' },
       }),
       this.prisma.importError.findMany({
@@ -183,6 +195,56 @@ export class ImportBatchesService {
     return this.prisma.importError.findMany({
       where: { idImportBatch: id },
       orderBy: [{ rowNumber: 'asc' }, { idImportError: 'asc' }],
+    });
+  }
+
+  async updateStageRow(
+    idImportBatch: number,
+    idImportStage: number,
+    dto: { idProject?: number | null },
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      await this.lockImportBatch(tx, idImportBatch);
+      const batch = await tx.importBatch.findUnique({
+        where: { idImportBatch },
+      });
+      if (!batch) {
+        throw new NotFoundException(`Import batch ${idImportBatch} was not found`);
+      }
+      this.ensureBatchCanMutate(batch.status);
+
+      const stage = await tx.importStage.findFirst({
+        where: { idImportBatch, idImportStage },
+      });
+      if (!stage) {
+        throw new NotFoundException(
+          `Import stage row ${idImportStage} was not found`,
+        );
+      }
+
+      if (dto.idProject !== null && dto.idProject !== undefined) {
+        if (stage.idProduct === null) {
+          throw new BadRequestException(
+            'A matched product is required before selecting a project',
+          );
+        }
+
+        const project = await tx.project.findFirst({
+          where: { idProject: dto.idProject, idProduct: stage.idProduct },
+          select: { idProject: true },
+        });
+        if (!project) {
+          throw new BadRequestException(
+            `Project ${dto.idProject} does not belong to matched product ${stage.idProduct}`,
+          );
+        }
+      }
+
+      return tx.importStage.update({
+        where: { idImportStage },
+        data: { idProject: dto.idProject ?? null },
+        include: importStageInclude,
+      });
     });
   }
 
@@ -425,6 +487,7 @@ export class ImportBatchesService {
             quantity: row.quantity,
             amount: row.amount,
             idProduct: row.idProduct,
+            idProject: row.idProject,
           },
         });
       }
@@ -461,6 +524,7 @@ export class ImportBatchesService {
       externalProductId: row.externalProductId,
       importedProductDescription: row.importedProductDescription,
       idProduct: row.idProduct,
+      idProject: row.idProject,
       quantity: row.quantity,
       amount: row.amount,
       rawRow: row.rawRow as Prisma.InputJsonValue,
@@ -492,6 +556,10 @@ export class ImportBatchesService {
           : null,
       quantity: typeof row.quantity === 'number' ? row.quantity : null,
       amount: decimalToNumber(row.amount),
+      idProject:
+        typeof row.idProject === 'number' && Number.isFinite(row.idProject)
+          ? row.idProject
+          : null,
       rawRow:
         row.rawRow &&
         typeof row.rawRow === 'object' &&

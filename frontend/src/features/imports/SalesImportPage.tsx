@@ -24,6 +24,7 @@ import type {
   ImportError,
   ImportSource,
   ImportStageRow,
+  Project,
 } from '../../api/types'
 import { formatCurrency } from '../../utils/money'
 
@@ -45,7 +46,7 @@ const sourceLabels: Record<ImportSource, string> = {
   surface: 'Surface',
 }
 
-const IMPORT_STAGE_TABLE_WIDTH = 1040
+const IMPORT_STAGE_TABLE_WIDTH = 1240
 
 function queryKeys(batchId: number) {
   return {
@@ -101,6 +102,10 @@ function formatRowStatus(row: ImportStageRow) {
     return 'Unmatched'
   }
 
+  if (row.idProject === null || row.idProject === undefined) {
+    return 'Needs review'
+  }
+
   return 'Valid'
 }
 
@@ -119,6 +124,8 @@ function isCompleteStageRow(row: ImportStageRow) {
     row.amount !== null &&
     row.amount !== undefined &&
     row.amount !== '' &&
+    row.idProject !== null &&
+    row.idProject !== undefined &&
     row.product !== null &&
     row.product !== undefined
   )
@@ -126,6 +133,26 @@ function isCompleteStageRow(row: ImportStageRow) {
 
 function normalizeBatchDate(batch: ImportBatch | undefined) {
   return batch?.importDate?.slice(0, 10) ?? ''
+}
+
+function getRowProjects(row: ImportStageRow) {
+  if (row.product?.projects && row.product.projects.length > 0) {
+    return row.product.projects
+  }
+
+  return row.project ? [row.project] : []
+}
+
+function formatProjectOption(project?: Project | null) {
+  if (!project) {
+    return '-'
+  }
+
+  const modelName = project.model?.name ?? project.model?.code ?? null
+
+  return modelName
+    ? `Project #${project.idProject} - ${modelName}`
+    : `Project #${project.idProject}`
 }
 
 export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
@@ -298,6 +325,47 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     },
   })
 
+  const stageProjectMutation = useMutation({
+    mutationFn: async ({
+      idImportStage,
+      idProject,
+    }: {
+      idImportStage: number
+      idProject: number
+    }) => {
+      if (!activeBatchId) {
+        throw new Error('Upload a batch before selecting projects.')
+      }
+
+      return patchJson<ImportStageRow, { idProject: number }>(
+        `/import-batches/${activeBatchId}/stage/${idImportStage}`,
+        { idProject },
+      )
+    },
+    onError: (error) => {
+      setOperationError(getOperationErrorMessage(error))
+    },
+    onMutate: () => {
+      setOperationError(null)
+    },
+    onSuccess: (updatedRow) => {
+      if (!activeKeys) {
+        return
+      }
+
+      queryClient.setQueryData<ImportStageRow[]>(activeKeys.stage, (current) =>
+        current?.map((row) =>
+          row.idImportStage === updatedRow.idImportStage ? updatedRow : row,
+        ),
+      )
+    },
+    onSettled: async () => {
+      if (activeBatchId) {
+        await refreshBatch(activeBatchId)
+      }
+    },
+  })
+
   function handleUpload() {
     if (hasActiveBatch) {
       return
@@ -306,7 +374,10 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
   }
 
   const isAnyMutationPending =
-    uploadMutation.isPending || validateMutation.isPending || commitMutation.isPending
+    uploadMutation.isPending ||
+    validateMutation.isPending ||
+    commitMutation.isPending ||
+    stageProjectMutation.isPending
   const isAnyOperationPending =
     isAnyMutationPending ||
     batchQuery.isFetching ||
@@ -374,6 +445,56 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
       ? 2
       : 1
     : 0
+  function renderProjectCell(row: ImportStageRow) {
+    if (!row.product) {
+      return '-'
+    }
+
+    const projects = getRowProjects(row)
+    const selectedProject =
+      row.project ??
+      projects.find((project) => project.idProject === row.idProject) ??
+      null
+
+    if (projects.length > 1) {
+      return (
+        <Select
+          aria-label={`Project for row ${row.rowNumber}`}
+          disabled={
+            !activeBatchId ||
+            batchQuery.data?.status === 'committed' ||
+            (stageProjectMutation.isPending &&
+              stageProjectMutation.variables?.idImportStage === row.idImportStage)
+          }
+          loading={
+            stageProjectMutation.isPending &&
+            stageProjectMutation.variables?.idImportStage === row.idImportStage
+          }
+          options={projects.map((project) => ({
+            label: formatProjectOption(project),
+            value: project.idProject,
+          }))}
+          placeholder="Select project"
+          size="small"
+          style={{ width: '100%' }}
+          value={row.idProject ?? undefined}
+          onChange={(value) =>
+            stageProjectMutation.mutate({
+              idImportStage: row.idImportStage,
+              idProject: Number(value),
+            })
+          }
+        />
+      )
+    }
+
+    if (selectedProject) {
+      return <Typography.Text>{formatProjectOption(selectedProject)}</Typography.Text>
+    }
+
+    return <Tag color="warning">Project required</Tag>
+  }
+
   const stagedRowColumns: TableProps<ImportStageRow>['columns'] = [
     {
       align: 'right',
@@ -404,6 +525,11 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
         ),
       title: 'Matched Product',
       width: 220,
+    },
+    {
+      render: (_, row) => renderProjectCell(row),
+      title: 'Project',
+      width: 200,
     },
     {
       align: 'right',

@@ -17,6 +17,37 @@ vi.mock('../../api/client', () => ({
   postJson: vi.fn(),
 }))
 
+const starterProject = {
+  idProject: 501,
+  idProduct: 101,
+  idModel: 7,
+  isActive: true,
+  units: 100,
+  unitCost: '10',
+  productionCost: '0',
+  adminCost: '0',
+  costAdjustment: '0',
+  adjustmentDescription: null,
+  model: {
+    idModel: 7,
+    code: 'ladrillo',
+    name: 'Ladrillo',
+    description: null,
+  },
+}
+
+const consignaProject = {
+  ...starterProject,
+  idProject: 502,
+  idModel: 8,
+  model: {
+    idModel: 8,
+    code: 'consigna',
+    name: 'Consigna',
+    description: null,
+  },
+}
+
 const stagedRows: ImportStageRow[] = [
   {
     idImportStage: 10,
@@ -25,6 +56,7 @@ const stagedRows: ImportStageRow[] = [
     externalProductId: 'SKU-STARTER',
     importedProductDescription: 'Starter kit black bundle',
     idProduct: 101,
+    idProject: 501,
     quantity: 3,
     amount: '129.99',
     rawRow: null,
@@ -40,8 +72,10 @@ const stagedRows: ImportStageRow[] = [
       idSurface: null,
       idModel: null,
       ownership: 100,
+      projects: [starterProject],
       tag: null,
     },
+    project: starterProject,
     errors: [],
   },
 ]
@@ -156,12 +190,13 @@ describe('SalesImportPage', () => {
     )
 
     expect(table.closest('.import-stage-table')).toBeInTheDocument()
-    expect(table).toHaveStyle({ tableLayout: 'fixed', width: '1040px' })
+    expect(table).toHaveStyle({ tableLayout: 'fixed', width: '1240px' })
     expect(columnWidths).toEqual([
       'width: 64px;',
       'width: 132px;',
       'width: 280px;',
       'width: 220px;',
+      'width: 200px;',
       'width: 82px;',
       'width: 122px;',
       'width: 140px;',
@@ -171,6 +206,7 @@ describe('SalesImportPage', () => {
       'External ID',
       'Imported Description',
       'Matched Product',
+      'Project',
       'Quantity',
       'Amount',
       'Status',
@@ -186,7 +222,46 @@ describe('SalesImportPage', () => {
     expect(
       within(table).getByRole('img', { name: 'Starter Kit thumbnail' }),
     ).toHaveAttribute('src', 'https://example.test/starter-kit.jpg')
+    expect(within(table).getByText('Project #501 - Ladrillo')).toBeVisible()
     expect(within(table).getByText('Valid').closest('.ant-tag')).toBeInTheDocument()
+  })
+
+  it('lets the user select the staged project when a matched product has multiple projects', async () => {
+    const user = userEvent.setup()
+    const multiProjectRow: ImportStageRow = {
+      ...stagedRows[0],
+      idProject: null,
+      project: null,
+      product: {
+        ...stagedRows[0].product!,
+        projects: [starterProject, consignaProject],
+      },
+    }
+    mockImportQueries([multiProjectRow], [])
+    vi.mocked(patchJson).mockResolvedValue({
+      ...multiProjectRow,
+      idProject: 502,
+      project: consignaProject,
+    })
+
+    renderSalesImportPage()
+
+    const stagedRowsRegion = await screen.findByRole('region', {
+      name: 'Staged Rows',
+    })
+    const projectSelect = await within(stagedRowsRegion).findByRole(
+      'combobox',
+      { name: 'Project for row 2' },
+    )
+    expect(within(stagedRowsRegion).getByText('Needs review')).toBeVisible()
+
+    await selectAntOption(user, projectSelect, 'Project #502 - Consigna')
+
+    await waitFor(() => {
+      expect(patchJson).toHaveBeenCalledWith('/import-batches/1/stage/10', {
+        idProject: 502,
+      })
+    })
   })
 
   it('formats staged sale amounts with a dollar prefix, commas, and two decimal places', async () => {
@@ -305,7 +380,9 @@ describe('SalesImportPage', () => {
         {
           ...stagedRows[0],
           idProduct: null,
+          idProject: null,
           product: null,
+          project: null,
         },
       ],
       [],
@@ -321,6 +398,27 @@ describe('SalesImportPage', () => {
     await user.type(screen.getByLabelText('Import date'), '2026-05-05')
 
     expect(incompleteCommit).toBeDisabled()
+
+    cleanup()
+    vi.clearAllMocks()
+    mockImportQueries(
+      [
+        {
+          ...stagedRows[0],
+          idProject: null,
+          project: null,
+          product: {
+            ...stagedRows[0].product!,
+            projects: [starterProject, consignaProject],
+          },
+        },
+      ],
+      [],
+    )
+
+    renderSalesImportPage()
+
+    expect(await screen.findByRole('button', { name: /commit/i })).toBeDisabled()
 
     cleanup()
     vi.clearAllMocks()

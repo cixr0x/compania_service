@@ -1,9 +1,9 @@
-import { BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectsService } from './projects.service';
 
 type ProjectCreateMock = (args: {
   data: {
+    idModel: number;
     idProduct: number;
     units: number;
     unitCost: number;
@@ -78,6 +78,7 @@ describe('ProjectsService', () => {
   it('creates projects with production cost and active flag', async () => {
     const service = new ProjectsService(prisma);
     await service.create({
+      idModel: 9,
       idProduct: 42,
       units: 10,
       unitCost: 4.5,
@@ -87,12 +88,10 @@ describe('ProjectsService', () => {
     });
 
     expect(runTransaction).toHaveBeenCalled();
-    expect(projectFindFirst).toHaveBeenCalledWith({
-      where: { idProduct: 42, isActive: true },
-      select: { idProject: true },
-    });
+    expect(projectFindFirst).not.toHaveBeenCalled();
     expect(projectCreate).toHaveBeenCalledWith({
       data: {
+        idModel: 9,
         idProduct: 42,
         units: 10,
         unitCost: 4.5,
@@ -100,7 +99,6 @@ describe('ProjectsService', () => {
         adminCost: 2.25,
         costAdjustment: 0,
         isActive: true,
-        activeProductId: 42,
       },
     });
   });
@@ -108,6 +106,7 @@ describe('ProjectsService', () => {
   it('creates projects with signed cost adjustment details', async () => {
     const service = new ProjectsService(prisma);
     await service.create({
+      idModel: 9,
       idProduct: 42,
       units: 10,
       unitCost: 4.5,
@@ -119,6 +118,7 @@ describe('ProjectsService', () => {
 
     expect(projectCreate).toHaveBeenCalledWith({
       data: {
+        idModel: 9,
         idProduct: 42,
         units: 10,
         unitCost: 4.5,
@@ -127,39 +127,48 @@ describe('ProjectsService', () => {
         costAdjustment: -1.5,
         adjustmentDescription: 'Damaged packaging discount',
         isActive: false,
-        activeProductId: null,
       },
     });
   });
 
-  it('rejects creating an active project when the product already has one', async () => {
+  it('allows creating multiple active projects for the same product', async () => {
     projectFindFirst.mockResolvedValue({ idProject: 500 });
 
     const service = new ProjectsService(prisma);
 
-    await expect(
-      service.create({
+    await service.create({
+      idModel: 9,
+      idProduct: 42,
+      units: 10,
+      unitCost: 4.5,
+      productionCost: 7.75,
+      adminCost: 2.25,
+      isActive: true,
+    });
+
+    expect(projectFindFirst).not.toHaveBeenCalled();
+    expect(projectCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        idModel: 9,
         idProduct: 42,
-        units: 10,
-        unitCost: 4.5,
-        productionCost: 7.75,
-        adminCost: 2.25,
         isActive: true,
       }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    expect(projectCreate).not.toHaveBeenCalled();
+    });
   });
 
-  it('rejects updating a project to active when the product already has one', async () => {
+  it('allows updating a project to active when the product already has one', async () => {
     projectFindFirst.mockResolvedValue({ idProject: 500 });
 
     const service = new ProjectsService(prisma);
 
-    await expect(
-      service.update(501, {
-        isActive: true,
-      }),
-    ).rejects.toBeInstanceOf(BadRequestException);
-    expect(projectUpdate).not.toHaveBeenCalled();
+    await service.update(501, {
+      isActive: true,
+    });
+
+    expect(projectFindFirst).not.toHaveBeenCalled();
+    expect(projectUpdate).toHaveBeenCalledWith({
+      data: { isActive: true },
+      where: { idProject: 501 },
+    });
   });
 });

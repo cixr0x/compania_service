@@ -9,6 +9,7 @@ export type ParsedImportRow = {
   rowNumber: number;
   externalProductId: string | null;
   importedProductDescription: string | null;
+  idProject?: number | null;
   quantity: number | null;
   amount: number | null;
   rawRow: Record<string, unknown>;
@@ -130,9 +131,27 @@ export class ImportValidatorService {
       ) {
         errors.push({
           rowNumber: row.rowNumber,
-          field: 'idProduct',
-          message: `Matched product ${externalProductId} does not have an active project`,
+          field: 'idProject',
+          message: `Matched product ${externalProductId} does not have any projects`,
         });
+      }
+
+      const idProject = resolveProjectId(row.idProject, product);
+
+      if (externalProductId && product && product.projects.length > 1) {
+        if (row.idProject === null || row.idProject === undefined) {
+          errors.push({
+            rowNumber: row.rowNumber,
+            field: 'idProject',
+            message: `Select a project for matched product ${externalProductId}`,
+          });
+        } else if (idProject === null) {
+          errors.push({
+            rowNumber: row.rowNumber,
+            field: 'idProject',
+            message: `Project ${row.idProject} does not belong to matched product ${externalProductId}`,
+          });
+        }
       }
 
       return {
@@ -143,7 +162,7 @@ export class ImportValidatorService {
         amount: row.amount,
         rawRow: row.rawRow,
         idProduct: product?.id ?? null,
-        idProject: product?.projects[0]?.idProject ?? null,
+        idProject,
       };
     });
 
@@ -165,13 +184,32 @@ export class ImportValidatorService {
         id: true,
         [externalIdField]: true,
         projects: {
-          where: { isActive: true },
           select: { idProject: true },
-          take: 1,
         },
       },
     }) as unknown as Promise<ProductLookup[]>;
   }
+}
+
+function resolveProjectId(
+  selectedProjectId: number | null | undefined,
+  product: ProductLookup | undefined,
+) {
+  if (!product || !Array.isArray(product.projects) || product.projects.length === 0) {
+    return null;
+  }
+
+  if (product.projects.length === 1) {
+    return product.projects[0].idProject;
+  }
+
+  if (typeof selectedProjectId !== 'number') {
+    return null;
+  }
+
+  return product.projects.some((project) => project.idProject === selectedProjectId)
+    ? selectedProjectId
+    : null;
 }
 
 function normalizeString(value: string | null): string | null {

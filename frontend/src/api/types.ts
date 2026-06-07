@@ -29,6 +29,7 @@ export type Product = {
   feeAmount?: DecimalValue | null
   tag: string | null
   model?: PricingModel | null
+  projects?: Project[]
 }
 
 export type Stakeholder = {
@@ -47,6 +48,7 @@ export type Setting = {
 export type Project = {
   idProject: number
   idProduct: number
+  idModel: number
   isActive: boolean
   units: number
   unitCost: DecimalValue
@@ -54,6 +56,7 @@ export type Project = {
   adminCost: DecimalValue
   costAdjustment: DecimalValue
   adjustmentDescription: string | null
+  model?: PricingModel
   product?: Product
   stakeholders?: ProjectStakeholder[]
   transactions?: ProjectTransaction[]
@@ -123,11 +126,13 @@ export type ImportStageRow = {
   externalProductId: string | null
   importedProductDescription: string | null
   idProduct: number | null
+  idProject: number | null
   quantity: number | null
   amount: DecimalValue | null
   rawRow: Record<string, unknown> | null
   createdAt: IsoDateTime
   product?: Product | null
+  project?: Project | null
   errors?: ImportError[]
 }
 

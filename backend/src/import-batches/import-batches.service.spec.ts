@@ -21,8 +21,12 @@ describe('ImportBatchesService', () => {
       deleteMany: jest.fn(),
     },
     importStage: {
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
+    },
+    project: {
+      findFirst: jest.fn(),
     },
     sale: {
       createMany: jest.fn(),
@@ -81,6 +85,39 @@ describe('ImportBatchesService', () => {
     expect(prisma.sale.createMany).not.toHaveBeenCalled();
   });
 
+  it('updates a staged row project when the project belongs to the matched product', async () => {
+    jest.spyOn(prisma.importBatch, 'findUnique').mockResolvedValue({
+      idImportBatch: 1,
+      status: 'has_errors',
+    });
+    jest.spyOn(prisma.importStage, 'findFirst').mockResolvedValue({
+      idImportStage: 10,
+      idImportBatch: 1,
+      idProduct: 7,
+    });
+    jest.spyOn(prisma.project, 'findFirst').mockResolvedValue({
+      idProject: 70,
+      idProduct: 7,
+    });
+    jest.spyOn(prisma.importStage, 'update').mockResolvedValue({
+      idImportStage: 10,
+      idProject: 70,
+    });
+    const service = buildService();
+
+    await service.updateStageRow(1, 10, { idProject: 70 });
+
+    expect(prisma.project.findFirst).toHaveBeenCalledWith({
+      where: { idProject: 70, idProduct: 7 },
+      select: { idProject: true },
+    });
+    expect(prisma.importStage.update).toHaveBeenCalledWith({
+      where: { idImportStage: 10 },
+      data: { idProject: 70 },
+      include: expect.any(Object),
+    });
+  });
+
   it('rejects commit with incomplete staged rows without creating sales', async () => {
     jest.spyOn(prisma.importBatch, 'findUnique').mockResolvedValue({
       idImportBatch: 1,
@@ -113,6 +150,7 @@ describe('ImportBatchesService', () => {
         externalProductId: 'EV-7',
         importedProductDescription: 'Ticket',
         idProduct: 70,
+        idProject: 70,
         quantity: 2,
         amount: '30.50',
         rawRow: { id: 'EV-7' },
@@ -123,6 +161,7 @@ describe('ImportBatchesService', () => {
         externalProductId: 'EV-8',
         importedProductDescription: 'Pass',
         idProduct: 80,
+        idProject: 80,
         quantity: 1,
         amount: 12,
         rawRow: { id: 'EV-8' },
@@ -180,6 +219,7 @@ describe('ImportBatchesService', () => {
           quantity: 2,
           amount: 30.5,
           rawRow: { id: 'EV-7' },
+          idProject: 70,
         },
         {
           rowNumber: 2,
@@ -188,6 +228,7 @@ describe('ImportBatchesService', () => {
           quantity: 1,
           amount: 12,
           rawRow: { id: 'EV-8' },
+          idProject: 80,
         },
       ],
       prisma,
@@ -200,6 +241,7 @@ describe('ImportBatchesService', () => {
         quantity: 2,
         amount: 30.5,
         idProduct: 7,
+        idProject: 70,
       },
     });
     expect(prisma.sale.createMany).toHaveBeenCalledWith({
@@ -287,6 +329,7 @@ describe('ImportBatchesService', () => {
         externalProductId: 'S-7',
         importedProductDescription: 'Shirt',
         idProduct: 7,
+        idProject: 70,
         quantity: 2,
         amount: '30.50',
         rawRow: { id: 'S-7' },
@@ -340,6 +383,7 @@ describe('ImportBatchesService', () => {
         quantity: 2,
         amount: 30.5,
         idProduct: null,
+        idProject: null,
       },
     });
     expect(prisma.importError.deleteMany).toHaveBeenCalledWith({
@@ -407,6 +451,7 @@ describe('ImportBatchesService', () => {
         externalProductId: 'EV-7',
         importedProductDescription: 'Ticket',
         idProduct: 7,
+        idProject: 70,
         quantity: 2,
         amount: '30.50',
         rawRow: { id: 'EV-7' },
@@ -503,6 +548,7 @@ describe('ImportBatchesService', () => {
           rowNumber: 2,
           externalProductId: 'S-7',
           importedProductDescription: 'Shirt',
+          idProject: 70,
           quantity: 2,
           amount: '30.50',
           rawRow: { id: 'S-7' },
@@ -519,6 +565,7 @@ describe('ImportBatchesService', () => {
           amount: 30.5,
           rawRow: { id: 'S-7' },
           idProduct: 7,
+          idProject: 70,
         },
       ],
       errors: [],

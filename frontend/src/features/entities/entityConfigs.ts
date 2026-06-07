@@ -31,6 +31,7 @@ export type EntityField = {
   optionSource?: {
     labelField: string
     labelFormatter?: (row: EntityRow) => string | null | undefined
+    optionFilter?: (row: EntityRow, values: EntityRow) => boolean
     path: EntityName
     valueField: string
   }
@@ -249,8 +250,8 @@ function getSaleOwnerProfit(row: EntityRow) {
 }
 
 function getSaleProductModelName(row: EntityRow) {
-  const product = asEntityRow(row.product)
-  const model = asEntityRow(product?.model)
+  const project = asEntityRow(row.project)
+  const model = asEntityRow(project?.model)
   const name = model?.name
   const code = model?.code
 
@@ -261,23 +262,18 @@ function getSaleProductModelName(row: EntityRow) {
   return typeof code === 'string' && code.trim() !== '' ? code.trim() : ''
 }
 
-function getModelCode(row: EntityRow): string | null {
-  const selectedCode = row.selectedModelCode
-
-  if (typeof selectedCode === 'string' && selectedCode.trim() !== '') {
-    return selectedCode.trim().toLowerCase()
-  }
-
-  const model = asEntityRow(row.model)
-  const modelCode = model?.code
-
-  return typeof modelCode === 'string' && modelCode.trim() !== ''
-    ? modelCode.trim().toLowerCase()
-    : null
+function isOnlySelectedProductProject(row: EntityRow) {
+  return parseMoneyNumber(row.selectedProductProjectCount) === 1
 }
 
-function isConsignaModel(row: EntityRow) {
-  return getModelCode(row) === 'consigna'
+function isProjectForSelectedProduct(row: EntityRow, values: EntityRow) {
+  const selectedProductId = parseMoneyNumber(values.idProduct)
+
+  if (selectedProductId === null) {
+    return true
+  }
+
+  return parseMoneyNumber(row.idProduct) === selectedProductId
 }
 
 function isFeeOverrideEnabled(row: EntityRow) {
@@ -311,13 +307,8 @@ export const entityConfigs = {
       column('ownership', 'Ownership'),
       column('feeAmount', 'Fee Amount', {
         valueFormat: 'money',
-        valueGetter: (row) => (isConsignaModel(row) ? row.feeAmount : null),
       }),
       column('tag', 'Tag'),
-      column('idModel', 'Model', {
-        valueGetter: (row) => getRelatedEntityName(row, 'model'),
-        valueType: 'string',
-      }),
     ],
     fields: [
       text('name', 'Name', {
@@ -348,16 +339,6 @@ export const entityConfigs = {
       text('idSurface', 'Surface external ID', {
         section: 'Channel mapping',
       }),
-      select('idModel', 'Model', undefined, {
-        optionSource: {
-          labelField: 'name',
-          path: 'models',
-          valueField: 'idModel',
-        },
-        requiredOnCreate: true,
-        section: 'Commercial attributes',
-        valueType: 'number',
-      }),
       number('ownership', 'Owner-retained profit', {
         max: 100,
         min: 0,
@@ -371,7 +352,6 @@ export const entityConfigs = {
         section: 'Commercial attributes',
         step: 0.01,
         valueFormat: 'money',
-        visibleWhen: isConsignaModel,
       }),
       text('tag', 'Tag', {
         section: 'Commercial attributes',
@@ -413,6 +393,11 @@ export const entityConfigs = {
         valueType: 'string',
         width: 240,
       }),
+      column('idModel', 'Model', {
+        valueGetter: (row) => getRelatedEntityName(row, 'model'),
+        valueType: 'string',
+        width: 140,
+      }),
       column('isActive', 'Active'),
       column('units', 'Units'),
       column('unitCost', 'Unit Cost', { valueFormat: 'money' }),
@@ -433,6 +418,15 @@ export const entityConfigs = {
           valueField: 'id',
         },
         requiredOnCreate: true,
+        valueType: 'number',
+      }),
+      select('idModel', 'Model', undefined, {
+        optionSource: {
+          labelField: 'name',
+          path: 'models',
+          valueField: 'idModel',
+        },
+        required: true,
         valueType: 'number',
       }),
       checkbox('isActive', 'Active'),
@@ -598,10 +592,11 @@ export const entityConfigs = {
         optionSource: {
           labelField: 'idProject',
           labelFormatter: formatProjectOption,
+          optionFilter: isProjectForSelectedProduct,
           path: 'projects',
           valueField: 'idProject',
         },
-        readOnly: true,
+        readOnlyWhen: isOnlySelectedProductProject,
         required: true,
         valueType: 'number',
       }),

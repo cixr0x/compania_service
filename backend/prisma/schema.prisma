@@ -12,6 +12,7 @@ model PricingModel {
   name        String    @db.VarChar(255)
   description String?   @db.Text
   products    Product[]
+  projects    Project[]
 
   @@map("model")
 }
@@ -40,8 +41,8 @@ model Product {
 model Project {
   idProject             Int                  @id @default(autoincrement()) @map("id_project")
   idProduct             Int                  @map("id_product")
+  idModel               Int                  @map("id_model")
   isActive              Boolean              @default(false) @map("is_active")
-  activeProductId       Int?                 @unique(map: "project_one_active_per_product") @map("active_product_id")
   units                 Int
   unitCost              Decimal              @map("unit_cost") @db.Decimal(12, 2)
   productionCost        Decimal              @default(0) @map("production_cost") @db.Decimal(12, 2)
@@ -49,9 +50,11 @@ model Project {
   costAdjustment        Decimal              @default(0) @map("cost_adjustment") @db.Decimal(12, 2)
   adjustmentDescription String?              @map("adjustment_description") @db.Text
   product               Product              @relation(fields: [idProduct], references: [id], onDelete: Restrict)
+  model                 PricingModel         @relation(fields: [idModel], references: [idModel], onDelete: Restrict)
   stakeholders          ProjectStakeholder[]
   sales                 Sale[]
   transactions          ProjectTransaction[]
+  importStages          ImportStage[]
 
   @@map("project")
 }
@@ -152,15 +155,18 @@ model ImportStage {
   externalProductId          String?       @map("external_product_id") @db.VarChar(255)
   importedProductDescription String?       @map("imported_product_description") @db.Text
   idProduct                  Int?          @map("id_product")
+  idProject                  Int?          @map("id_project")
   quantity                   Int?
   amount                     Decimal?      @db.Decimal(12, 2)
   rawRow                     Json?         @map("raw_row")
   createdAt                  DateTime      @default(now()) @map("created_at")
   batch                      ImportBatch   @relation(fields: [idImportBatch], references: [idImportBatch], onDelete: Cascade)
   product                    Product?      @relation(fields: [idProduct], references: [id], onDelete: SetNull)
+  project                    Project?      @relation(fields: [idProject], references: [idProject], onDelete: SetNull)
   errors                     ImportError[]
 
   @@index([idImportBatch])
+  @@index([idProject])
   @@map("import_stage")
 }
 

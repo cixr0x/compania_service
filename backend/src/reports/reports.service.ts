@@ -74,7 +74,8 @@ type SalesSummaryPeriod = {
 };
 
 const salesReportInclude = {
-  product: { include: { model: true } },
+  product: true,
+  project: { include: { model: true } },
 };
 
 @Injectable()
@@ -128,7 +129,7 @@ export class ReportsService {
       const row =
         rowsByProductProject.get(key) ??
         createEmptyRow({
-          model: sale.product.model?.name ?? '',
+          model: sale.project.model?.name ?? '',
           productImage: normalizeImageUrl(sale.product.image),
           productName: sale.product.name,
           projectId: sale.idProject,

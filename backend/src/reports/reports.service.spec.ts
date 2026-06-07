@@ -47,7 +47,6 @@ describe('ReportsService', () => {
         product: {
           id: 42,
           image: 'https://example.test/maple-shelf.jpg',
-          model: { name: 'Furniture' },
           name: 'Maple Shelf',
           ownership: '25.00',
         },
@@ -55,6 +54,7 @@ describe('ReportsService', () => {
         project: {
           adminCost: '20.00',
           idProject: 501,
+          model: { name: 'Ladrillo' },
           productionCost: '100.00',
         },
         quantity: 2,
@@ -68,7 +68,6 @@ describe('ReportsService', () => {
         product: {
           id: 42,
           image: 'https://example.test/maple-shelf.jpg',
-          model: { name: 'Furniture' },
           name: 'Maple Shelf',
           ownership: '25.00',
         },
@@ -76,6 +75,7 @@ describe('ReportsService', () => {
         project: {
           adminCost: '20.00',
           idProject: 501,
+          model: { name: 'Ladrillo' },
           productionCost: '100.00',
         },
         quantity: 1,
@@ -89,7 +89,6 @@ describe('ReportsService', () => {
         product: {
           id: 42,
           image: 'https://example.test/maple-shelf.jpg',
-          model: { name: 'Furniture' },
           name: 'Maple Shelf',
           ownership: '25.00',
         },
@@ -97,6 +96,7 @@ describe('ReportsService', () => {
         project: {
           adminCost: '30.00',
           idProject: 502,
+          model: { name: 'Consigna' },
           productionCost: '70.00',
         },
         quantity: 3,
@@ -109,7 +109,8 @@ describe('ReportsService', () => {
 
     expect(prisma.sale.findMany).toHaveBeenCalledWith({
       include: {
-        product: { include: { model: true } },
+        product: true,
+        project: { include: { model: true } },
       },
       orderBy: [{ product: { name: 'asc' } }, { idProject: 'asc' }],
       where: {
@@ -125,7 +126,7 @@ describe('ReportsService', () => {
         ecommerce: { amount: 150, quantity: 1 },
         event: { amount: 0, quantity: 0 },
         fee: 7,
-        model: 'Furniture',
+        model: 'Ladrillo',
         ownerProfit: 82.5,
         productImage: 'https://example.test/maple-shelf.jpg',
         productName: 'Maple Shelf',
@@ -140,7 +141,7 @@ describe('ReportsService', () => {
         ecommerce: { amount: 0, quantity: 0 },
         event: { amount: 300, quantity: 3 },
         fee: 10,
-        model: 'Furniture',
+        model: 'Consigna',
         ownerProfit: 65,
         productImage: 'https://example.test/maple-shelf.jpg',
         productName: 'Maple Shelf',
@@ -163,7 +164,6 @@ describe('ReportsService', () => {
         ownerProfit: '40.00',
         product: {
           id: 88,
-          model: null,
           name: 'Event Kit',
           ownership: '50.00',
         },
@@ -171,6 +171,7 @@ describe('ReportsService', () => {
         project: {
           adminCost: '10.00',
           idProject: 701,
+          model: null,
           productionCost: '20.00',
         },
         quantity: 4,

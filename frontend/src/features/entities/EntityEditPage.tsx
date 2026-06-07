@@ -179,7 +179,11 @@ function getOptionSources(config: EntityConfig | null) {
   )
 }
 
-function buildFieldOptions(field: EntityField, rows: EntityRow[] | undefined) {
+function buildFieldOptions(
+  field: EntityField,
+  rows: EntityRow[] | undefined,
+  values: EntityRow,
+) {
   const optionSource = field.optionSource
 
   if (!optionSource || !Array.isArray(rows)) {
@@ -187,6 +191,10 @@ function buildFieldOptions(field: EntityField, rows: EntityRow[] | undefined) {
   }
 
   return rows.flatMap((row) => {
+    if (optionSource.optionFilter && !optionSource.optionFilter(row, values)) {
+      return []
+    }
+
     const rawValue = row[optionSource.valueField]
     const rawLabel = row[optionSource.labelField]
     const formattedLabel = optionSource.labelFormatter?.(row)
@@ -213,6 +221,7 @@ function buildFieldOptions(field: EntityField, rows: EntityRow[] | undefined) {
 function resolveDynamicOptions(
   config: EntityConfig | null,
   optionRowsByPath: Partial<Record<EntityConfig['path'], EntityRow[]>>,
+  values: EntityRow,
 ): EntityConfig | null {
   if (!config) {
     return null
@@ -227,6 +236,7 @@ function resolveDynamicOptions(
             options: buildFieldOptions(
               field,
               optionRowsByPath[field.optionSource.path],
+              values,
             ),
           }
         : field,
@@ -339,17 +349,8 @@ function getModelCode(value: unknown): string | null {
     : null
 }
 
-function getSelectedModelCode(values: EntityRow, models: EntityRow[] | undefined) {
-  const selectedModelId = getNumericId(values.idModel)
-  const optionModel = Array.isArray(models)
-    ? models.find((model) => getNumericId(model.idModel) === selectedModelId)
-    : null
-
-  return getModelCode(optionModel) ?? getModelCode(values.model)
-}
-
-function getProductModelCode(product: EntityRow | null) {
-  return getModelCode(product?.model)
+function getProjectModelCode(project: EntityRow | null) {
+  return getModelCode(project?.model)
 }
 
 function getBooleanValue(value: unknown) {
@@ -359,10 +360,11 @@ function getBooleanValue(value: unknown) {
 function calculateSaleFee(
   values: EntityRow,
   product: EntityRow | null,
+  project: EntityRow | null,
 ) {
   const amount = parseMoneyNumber(values.amount) ?? 0
   const quantity = parseMoneyNumber(values.quantity) ?? 0
-  const modelCode = getProductModelCode(product)
+  const modelCode = getProjectModelCode(project)
 
   if (modelCode === 'consigna256') {
     return roundCurrency(amount * 0.25)
@@ -383,31 +385,15 @@ function calculateSaleFee(
   return parseMoneyNumber(values.fee) ?? 0
 }
 
-function withProductDerivedValues(
-  values: EntityRow,
-  models: EntityRow[] | undefined,
-): EntityRow {
-  return {
-    ...values,
-    selectedModelCode: getSelectedModelCode(values, models),
-  }
-}
-
-function getActiveProjectForProduct(
+function getProjectsForProduct(
   productId: number | null,
   projects: EntityRow[] | undefined,
 ) {
   if (productId === null || !Array.isArray(projects)) {
-    return null
+    return []
   }
 
-  return (
-    projects.find(
-      (project) =>
-        getNumericId(project.idProduct) === productId &&
-        (project.isActive === true || project.isActive === 'true'),
-    ) ?? null
-  )
+  return projects.filter((project) => getNumericId(project.idProduct) === productId)
 }
 
 function withSalesCalculatedValues(
@@ -418,7 +404,8 @@ function withSalesCalculatedValues(
   const amount = parseMoneyNumber(values.amount) ?? 0
   const product = getSelectedProduct(values, products)
   const project = getSelectedProject(values, projects)
-  const calculatedFee = calculateSaleFee(values, product)
+  const productProjects = getProjectsForProduct(getNumericId(values.idProduct), projects)
+  const calculatedFee = calculateSaleFee(values, product, project)
   const feeOverride = getBooleanValue(values.feeOverride)
   const fee =
     feeOverride && values.fee !== null && values.fee !== undefined
@@ -436,6 +423,7 @@ function withSalesCalculatedValues(
     profit,
     product,
     project,
+    selectedProductProjectCount: productProjects.length,
   }
 }
 
@@ -537,11 +525,6 @@ export function EntityEditPage() {
       ) as Partial<Record<EntityConfig['path'], EntityRow[]>>,
     [optionSourceQueries, optionSources],
   )
-  const formConfig = useMemo(() => {
-
-    return resolveDynamicOptions(config, optionRowsByPath)
-  }, [config, optionRowsByPath])
-
   const detailQuery = useQuery({
     enabled: Boolean(
       config && config.path !== 'project-stakeholders' && !isCreate && id,
@@ -634,14 +617,16 @@ export function EntityEditPage() {
           optionRowsByPath.products,
           optionRowsByPath.projects,
         )
-      : config?.path === 'products'
-        ? withProductDerivedValues(formValues, optionRowsByPath.models)
       : config?.path === 'projects'
         ? {
             ...formValues,
             transactionTotal: projectTransactionState.totalCost,
           }
       : formValues
+  const formConfig = useMemo(
+    () => resolveDynamicOptions(config, optionRowsByPath, displayedFormValues),
+    [config, displayedFormValues, optionRowsByPath],
+  )
 
   if (!config || !formConfig) {
     return (
@@ -673,14 +658,15 @@ export function EntityEditPage() {
       }
 
       if (config?.path === 'sales' && name === 'idProduct') {
-        const activeProject = getActiveProjectForProduct(
+        const productProjects = getProjectsForProduct(
           getNumericId(value),
           optionRowsByPath.projects,
         )
 
         nextValues.idProject =
-          activeProject && activeProject.idProject !== undefined
-            ? String(activeProject.idProject)
+          productProjects.length === 1 &&
+          productProjects[0].idProject !== undefined
+            ? String(productProjects[0].idProject)
             : ''
       }
 

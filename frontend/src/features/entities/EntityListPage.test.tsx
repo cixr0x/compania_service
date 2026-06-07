@@ -179,7 +179,7 @@ describe('EntityListPage', () => {
     expect(await screen.findByText('$9,500.00')).toBeVisible()
   })
 
-  it('shows related entity names instead of foreign key IDs in entity tables', async () => {
+  it('does not show the legacy product model column', async () => {
     vi.mocked(getJson).mockResolvedValue([
       {
         id: 101,
@@ -191,10 +191,28 @@ describe('EntityListPage', () => {
 
     renderProductsList()
 
-    expect(await screen.findByText('Furniture')).toBeVisible()
-    expect(screen.queryByRole('columnheader', { name: 'Model ID' })).not.toBeInTheDocument()
-    expect(screen.getByRole('columnheader', { name: 'Model' })).toBeVisible()
+    expect(await screen.findByText('Walnut Desk')).toBeVisible()
+    expect(screen.queryByText('Furniture')).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Model' })).not.toBeInTheDocument()
     expect(screen.queryByText('7')).not.toBeInTheDocument()
+  })
+
+  it('shows project model names in the projects table', async () => {
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        idModel: 7,
+        idProduct: 42,
+        idProject: 501,
+        model: { idModel: 7, name: 'Ladrillo' },
+        product: { id: 42, name: 'Walnut Desk' },
+        transactions: [],
+      },
+    ])
+
+    renderEntityList('/projects')
+
+    expect(await screen.findByText('Ladrillo')).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Model' })).toBeVisible()
   })
 
   it('shows product names instead of product IDs in the projects table', async () => {

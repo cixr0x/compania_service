@@ -45,10 +45,10 @@ export class CreateProductDto {
   idSurface?: string;
 
   @Type(() => Number)
-  @IsNotEmpty()
+  @IsOptional()
   @IsInt()
   @Min(1)
-  idModel!: number;
+  idModel?: number;
 
   @IsOptional()
   @Type(() => Number)

@@ -14,6 +14,11 @@ export class CreateProjectDto {
   @Min(1)
   idProduct!: number;
 
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  idModel!: number;
+
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;

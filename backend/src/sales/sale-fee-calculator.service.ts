@@ -24,6 +24,12 @@ export class SaleFeeCalculatorService {
       select: {
         id: true,
         feeAmount: true,
+      },
+    });
+    const project = await client.project.findUnique({
+      where: { idProject: input.idProject },
+      select: {
+        idProject: true,
         model: { select: { code: true } },
       },
     });
@@ -32,10 +38,14 @@ export class SaleFeeCalculatorService {
       throw new BadRequestException(`Product ${input.idProduct} was not found`);
     }
 
-    const modelCode = product.model?.code?.trim().toLowerCase();
+    if (!project) {
+      throw new BadRequestException(`Project ${input.idProject} was not found`);
+    }
+
+    const modelCode = project.model?.code?.trim().toLowerCase();
     if (!modelCode) {
       throw new BadRequestException(
-        `Product ${input.idProduct} does not have a pricing model code`,
+        `Project ${input.idProject} does not have a pricing model code`,
       );
     }
 

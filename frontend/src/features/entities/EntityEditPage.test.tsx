@@ -78,9 +78,7 @@ describe('EntityEditPage', () => {
 
   it('treats the new route as create mode and saves with POST', async () => {
     const user = userEvent.setup()
-    vi.mocked(getJson).mockResolvedValue([
-      { idModel: 7, name: 'Furniture', description: 'Furniture model' },
-    ])
+    vi.mocked(getJson).mockResolvedValue([])
     vi.mocked(postJson).mockResolvedValue({ id: 102 })
 
     renderEntityEditPage('/products/new', '/:entityName/:id')
@@ -95,22 +93,17 @@ describe('EntityEditPage', () => {
     ).not.toBeInTheDocument()
 
     await user.type(screen.getByLabelText('Name'), 'Maple Shelf')
-    await selectAntOption(
-      user,
-      await screen.findByRole('combobox', { name: 'Model' }),
-      'Furniture',
-    )
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith(
         '/products',
-        expect.objectContaining({ idModel: 7, name: 'Maple Shelf' }),
+        expect.objectContaining({ name: 'Maple Shelf' }),
       )
     })
     expect(patchJson).not.toHaveBeenCalled()
     expect(deleteJson).not.toHaveBeenCalled()
-    expect(getJson).toHaveBeenCalledWith('/models')
+    expect(getJson).not.toHaveBeenCalledWith('/models')
   })
 
   it('uses form Cancel to return to the list without saving', async () => {
@@ -149,79 +142,19 @@ describe('EntityEditPage', () => {
     expect(screen.getByText('%')).toBeVisible()
   })
 
-  it('renders product model choices by model name and saves the selected model id', async () => {
+  it('does not expose legacy product model selection', async () => {
+    renderEntityEditPage('/products/new', '/:entityName/:id')
+
+    expect(screen.queryByRole('combobox', { name: 'Model' })).not.toBeInTheDocument()
+    expect(getJson).not.toHaveBeenCalledWith('/models')
+  })
+
+  it('shows and saves product fee amount as an optional product field', async () => {
     const user = userEvent.setup()
-    vi.mocked(getJson).mockResolvedValue([
-      { idModel: 7, name: 'Furniture', description: 'Furniture model' },
-      { idModel: 9, name: 'Lighting', description: 'Lighting model' },
-    ])
     vi.mocked(postJson).mockResolvedValue({ id: 102 })
 
     renderEntityEditPage('/products/new', '/:entityName/:id')
 
-    const modelSelect = await screen.findByRole('combobox', { name: 'Model' })
-    expect(modelSelect.closest('.ant-select')).toBeInTheDocument()
-
-    await user.click(modelSelect)
-    expect(await screen.findByTitle('Furniture')).toBeInTheDocument()
-    expect(screen.getByTitle('Lighting')).toBeInTheDocument()
-    expect(screen.queryByTitle('7')).not.toBeInTheDocument()
-
-    await clickAntOptionByTitle(user, 'Furniture')
-    await user.type(screen.getByLabelText('Name'), 'Maple Shelf')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
-
-    await waitFor(() => {
-      expect(postJson).toHaveBeenCalledWith(
-        '/products',
-        expect.objectContaining({ idModel: 7, name: 'Maple Shelf' }),
-      )
-    })
-  })
-
-  it('requires a model when creating a product', async () => {
-    const user = userEvent.setup()
-    vi.mocked(getJson).mockResolvedValue([
-      { idModel: 7, name: 'Furniture', description: 'Furniture model' },
-    ])
-
-    renderEntityEditPage('/products/new', '/:entityName/:id')
-
-    const modelSelect = await screen.findByRole('combobox', { name: 'Model' })
-    expect(modelSelect).toHaveAttribute('aria-required', 'true')
-    expect(
-      within(
-        screen.getByRole('group', { name: 'Commercial attributes' }),
-      ).queryByText('Required'),
-    ).not.toBeInTheDocument()
-    expect(screen.getByText('Model').closest('label')).toHaveClass(
-      'ant-form-item-required',
-    )
-
-    await user.type(screen.getByLabelText('Name'), 'Maple Shelf')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
-
-    expect(postJson).not.toHaveBeenCalled()
-    expect(screen.getByText('Model is required.')).toBeVisible()
-  })
-
-  it('shows and saves product fee amount only for the consigna model', async () => {
-    const user = userEvent.setup()
-    vi.mocked(getJson).mockResolvedValue([
-      { code: 'retail', idModel: 7, name: 'Retail' },
-      { code: 'consigna', idModel: 9, name: 'Consigna' },
-    ])
-    vi.mocked(postJson).mockResolvedValue({ id: 102 })
-
-    renderEntityEditPage('/products/new', '/:entityName/:id')
-
-    expect(screen.queryByLabelText('Fee Amount')).not.toBeInTheDocument()
-
-    const modelSelect = await screen.findByRole('combobox', { name: 'Model' })
-    await selectAntOption(user, modelSelect, 'Retail')
-    expect(screen.queryByLabelText('Fee Amount')).not.toBeInTheDocument()
-
-    await selectAntOption(user, modelSelect, 'Consigna')
     const feeAmountInput = await screen.findByLabelText('Fee Amount')
     expect(feeAmountInput).toBeVisible()
     expect(feeAmountInput).toHaveValue('')
@@ -233,21 +166,13 @@ describe('EntityEditPage', () => {
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/products', {
         feeAmount: 1250.5,
-        idModel: 9,
         name: 'Consigna Shelf',
       })
     })
   })
 
-  it('hides product fee amount for existing products using non-consigna models', async () => {
+  it('shows product fee amount for existing products regardless of legacy model', async () => {
     vi.mocked(getJson).mockImplementation(async (path) => {
-      if (path === '/models') {
-        return [
-          { code: 'retail', idModel: 7, name: 'Retail' },
-          { code: 'consigna', idModel: 9, name: 'Consigna' },
-        ]
-      }
-
       if (path === '/products/101') {
         return {
           feeAmount: 125.5,
@@ -264,7 +189,7 @@ describe('EntityEditPage', () => {
     renderEntityEditPage('/products/101', '/:entityName/:id')
 
     expect(await screen.findByDisplayValue('Retail Shelf')).toBeVisible()
-    expect(screen.queryByLabelText('Fee Amount')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Fee Amount')).toBeVisible()
   })
 
   it('updates the product image preview when the image URL changes', async () => {
@@ -322,7 +247,6 @@ describe('EntityEditPage', () => {
         description: 'Standing desk',
         idEcommerce: 'EC-101',
         idEvent: 'EV-101',
-        idModel: 7,
         idStore: 'ST-101',
         idSurface: 'SF-101',
         image: 'desk.png',
@@ -485,7 +409,7 @@ describe('EntityEditPage', () => {
     })
   })
 
-  it('auto assigns the read-only sale project from the selected product active project', async () => {
+  it('auto assigns and disables the sale project when the selected product has one project', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
       if (path === '/products') {
@@ -493,7 +417,6 @@ describe('EntityEditPage', () => {
           {
             feeAmount: 625.25,
             id: 101,
-            model: { code: 'consigna', name: 'Consigna' },
             name: 'Walnut Desk',
             ownership: 25,
           },
@@ -506,19 +429,15 @@ describe('EntityEditPage', () => {
           {
             idProject: 501,
             idProduct: 101,
-            isActive: true,
-            product: { id: 101, name: 'Walnut Desk' },
-          },
-          {
-            idProject: 502,
-            idProduct: 101,
             isActive: false,
+            model: { code: 'consigna', name: 'Consigna' },
             product: { id: 101, name: 'Walnut Desk' },
           },
           {
             idProject: 503,
             idProduct: 102,
-            isActive: true,
+            isActive: false,
+            model: { code: 'interno', name: 'Interno' },
             product: { id: 102, name: 'Maple Shelf' },
           },
         ]
@@ -589,6 +508,67 @@ describe('EntityEditPage', () => {
     expect(getJson).toHaveBeenCalledWith('/projects')
   })
 
+  it('requires selecting a sale project when the selected product has multiple projects', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products') {
+        return [
+          {
+            id: 101,
+            name: 'Walnut Desk',
+            ownership: 25,
+          },
+          { id: 102, name: 'Maple Shelf', ownership: 50 },
+        ]
+      }
+
+      if (path === '/projects') {
+        return [
+          {
+            idProject: 501,
+            idProduct: 101,
+            model: { code: 'ladrillo', name: 'Ladrillo' },
+            product: { id: 101, name: 'Walnut Desk' },
+          },
+          {
+            idProject: 502,
+            idProduct: 101,
+            model: { code: 'interno', name: 'Interno' },
+            product: { id: 101, name: 'Walnut Desk' },
+          },
+          {
+            idProject: 503,
+            idProduct: 102,
+            model: { code: 'consigna', name: 'Consigna' },
+            product: { id: 102, name: 'Maple Shelf' },
+          },
+        ]
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
+
+    renderEntityEditPage('/sales/new', '/:entityName/:id')
+
+    await selectAntOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Product' }),
+      'Walnut Desk',
+    )
+    const projectSelect = screen.getByRole('combobox', { name: 'Project' })
+    expect(projectSelect.closest('.ant-select')).not.toHaveClass(
+      'ant-select-disabled',
+    )
+
+    await user.click(projectSelect)
+    expect(await screen.findByTitle('Project #501 - Walnut Desk')).toBeInTheDocument()
+    expect(screen.getByTitle('Project #502 - Walnut Desk')).toBeInTheDocument()
+    expect(screen.queryByTitle('Project #503 - Maple Shelf')).not.toBeInTheDocument()
+
+    await clickAntOptionByTitle(user, 'Project #502 - Walnut Desk')
+    expect(screen.getByLabelText('Model')).toHaveValue('Interno')
+  })
+
   it('allows a manual sale fee only when override fee is enabled', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
@@ -596,7 +576,6 @@ describe('EntityEditPage', () => {
         return [
           {
             id: 101,
-            model: { code: 'interno' },
             name: 'Internal Desk',
             ownership: 25,
           },
@@ -609,6 +588,7 @@ describe('EntityEditPage', () => {
             idProject: 501,
             idProduct: 101,
             isActive: true,
+            model: { code: 'interno', name: 'Interno' },
             product: { id: 101, name: 'Internal Desk' },
           },
         ]
@@ -673,7 +653,6 @@ describe('EntityEditPage', () => {
         return [
           {
             id: 101,
-            model: { code: 'ladrillo', name: 'Ladrillo' },
             name: 'Brick Shelf',
             ownership: 25,
           },
@@ -686,6 +665,7 @@ describe('EntityEditPage', () => {
             idProject: 501,
             idProduct: 101,
             isActive: true,
+            model: { code: 'ladrillo', name: 'Ladrillo' },
             product: { id: 101, name: 'Brick Shelf' },
             transactions: [
               { amount: 100 },
@@ -740,10 +720,23 @@ describe('EntityEditPage', () => {
 
   it('renders project product choices by product name and saves the selected product id', async () => {
     const user = userEvent.setup()
-    vi.mocked(getJson).mockResolvedValue([
-      { id: 42, name: 'Maple Shelf', idModel: 7 },
-      { id: 43, name: 'Walnut Desk', idModel: 7 },
-    ])
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products') {
+        return [
+          { id: 42, name: 'Maple Shelf' },
+          { id: 43, name: 'Walnut Desk' },
+        ]
+      }
+
+      if (path === '/models') {
+        return [
+          { idModel: 7, name: 'Ladrillo' },
+          { idModel: 9, name: 'Consigna' },
+        ]
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
     vi.mocked(postJson).mockResolvedValue({ idProject: 501 })
 
     renderEntityEditPage('/projects/new', '/:entityName/:id')
@@ -758,6 +751,11 @@ describe('EntityEditPage', () => {
     expect(screen.getByTitle('Walnut Desk')).toBeInTheDocument()
     expect(screen.queryByTitle('42')).not.toBeInTheDocument()
     await clickAntOptionByTitle(user, 'Maple Shelf')
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Model' }),
+      'Ladrillo',
+    )
     await user.click(screen.getByLabelText('Active'))
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '1,000,000.00')
@@ -768,6 +766,7 @@ describe('EntityEditPage', () => {
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
+        idModel: 7,
         idProduct: 42,
         isActive: true,
         unitCost: 1000000,
@@ -776,11 +775,51 @@ describe('EntityEditPage', () => {
     })
   })
 
+  it('requires a model when creating a project', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products') {
+        return [{ id: 42, name: 'Maple Shelf' }]
+      }
+
+      if (path === '/models') {
+        return [{ idModel: 7, name: 'Ladrillo' }]
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
+
+    renderEntityEditPage('/projects/new', '/:entityName/:id')
+
+    const modelSelect = await screen.findByRole('combobox', { name: 'Model' })
+    expect(modelSelect).toHaveAttribute('aria-required', 'true')
+
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Product' }),
+      'Maple Shelf',
+    )
+    await user.type(screen.getByLabelText('Units'), '10')
+    await user.type(screen.getByLabelText('Unit Cost'), '100')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(postJson).not.toHaveBeenCalled()
+    expect(screen.getByText('Model is required.')).toBeVisible()
+  })
+
   it('saves project cost transactions after creating the project and sums them for total cost', async () => {
     const user = userEvent.setup()
-    vi.mocked(getJson).mockResolvedValue([
-      { id: 42, name: 'Maple Shelf', idModel: 7 },
-    ])
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products') {
+        return [{ id: 42, name: 'Maple Shelf' }]
+      }
+
+      if (path === '/models') {
+        return [{ idModel: 7, name: 'Ladrillo' }]
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
     vi.mocked(postJson).mockResolvedValue({ idProject: 501 })
     vi.mocked(putJson).mockResolvedValue([
       {
@@ -820,6 +859,11 @@ describe('EntityEditPage', () => {
     expect(screen.queryByLabelText('Cost Adjustment')).not.toBeInTheDocument()
 
     await selectAntOption(user, productSelect, 'Maple Shelf')
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Model' }),
+      'Ladrillo',
+    )
     const costSection = screen.getByRole('group', {
       name: 'Project Cost Transactions',
     })
@@ -875,6 +919,7 @@ describe('EntityEditPage', () => {
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
+        idModel: 7,
         idProduct: 42,
         isActive: false,
       })
@@ -1097,8 +1142,8 @@ describe('EntityEditPage', () => {
 
   it('configures every foreign key form field as a select', () => {
     const foreignKeyFields: Array<[EntityName, string]> = [
-      ['products', 'idModel'],
       ['projects', 'idProduct'],
+      ['projects', 'idModel'],
       ['project-stakeholders', 'idProject'],
       ['project-stakeholders', 'idStakeholder'],
       ['sales', 'idProduct'],
@@ -1123,9 +1168,13 @@ describe('EntityEditPage', () => {
     vi.mocked(getJson).mockImplementation(async (path) => {
       if (path === '/products') {
         return [
-          { id: 42, name: 'Maple Shelf', idModel: 7 },
-          { id: 43, name: 'Walnut Desk', idModel: 7 },
+          { id: 42, name: 'Maple Shelf' },
+          { id: 43, name: 'Walnut Desk' },
         ]
+      }
+
+      if (path === '/models') {
+        return [{ idModel: 7, name: 'Ladrillo' }]
       }
 
       if (path === '/stakeholders?pageSize=100') {
@@ -1149,6 +1198,11 @@ describe('EntityEditPage', () => {
       name: 'Product',
     })
     await selectAntOption(user, productSelect, 'Maple Shelf')
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Model' }),
+      'Ladrillo',
+    )
     await user.click(screen.getByLabelText('Active'))
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '1,000,000.00')
@@ -1221,6 +1275,7 @@ describe('EntityEditPage', () => {
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
+        idModel: 7,
         idProduct: 42,
         isActive: true,
         unitCost: 1000000,
@@ -1240,7 +1295,11 @@ describe('EntityEditPage', () => {
   it('preloads an existing stakeholder split in the project edit form and saves all rows for that project', async () => {
     vi.mocked(getJson).mockImplementation(async (path) => {
       if (path === '/products') {
-        return [{ id: 42, name: 'Maple Shelf', idModel: 7 }]
+        return [{ id: 42, name: 'Maple Shelf' }]
+      }
+
+      if (path === '/models') {
+        return [{ idModel: 7, name: 'Ladrillo' }]
       }
 
       if (path === '/stakeholders?pageSize=100') {
@@ -1252,9 +1311,11 @@ describe('EntityEditPage', () => {
 
       if (path === '/projects/77') {
         return {
+          idModel: 7,
           idProduct: 42,
           idProject: 77,
           isActive: true,
+          model: { idModel: 7, name: 'Ladrillo' },
           unitCost: 1000000,
           units: 10,
         }
@@ -1320,6 +1381,7 @@ describe('EntityEditPage', () => {
 
     await waitFor(() => {
       expect(patchJson).toHaveBeenCalledWith('/projects/77', {
+        idModel: 7,
         idProduct: 42,
         isActive: true,
         unitCost: 1000000,

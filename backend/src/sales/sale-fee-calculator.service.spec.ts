@@ -25,15 +25,10 @@ describe('SaleFeeCalculatorService', () => {
       jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
         id: 7,
         feeAmount,
-        model: { code },
       });
       jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
         idProject: 51,
-        transactions: [
-          { amount: '100.00' },
-          { amount: '20.00' },
-          { amount: '5.00' },
-        ],
+        model: { code },
       });
 
       const calculator = new SaleFeeCalculatorService(prisma);
@@ -53,6 +48,9 @@ describe('SaleFeeCalculatorService', () => {
     jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
       id: 7,
       feeAmount: null,
+    });
+    jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
+      idProject: 51,
       model: { code: 'ladrillo' },
     });
 
@@ -66,21 +64,20 @@ describe('SaleFeeCalculatorService', () => {
         quantity: 2,
       }),
     ).resolves.toBe(18);
-    expect(prisma.project.findUnique).not.toHaveBeenCalled();
+    expect(prisma.project.findUnique).toHaveBeenCalledWith({
+      where: { idProject: 51 },
+      select: { idProject: true, model: { select: { code: true } } },
+    });
   });
 
   it('rejects consigna fee calculation when product fee amount is missing', async () => {
     jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
       id: 7,
       feeAmount: null,
-      model: { code: 'consigna' },
     });
     jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
       idProject: 51,
-      transactions: [
-        { amount: '100.00' },
-        { amount: '20.00' },
-      ],
+      model: { code: 'consigna' },
     });
 
     const calculator = new SaleFeeCalculatorService(prisma);

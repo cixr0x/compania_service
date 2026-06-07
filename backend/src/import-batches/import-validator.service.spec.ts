@@ -32,9 +32,7 @@ describe('ImportValidatorService', () => {
         id: true,
         idEcommerce: true,
         projects: {
-          where: { isActive: true },
           select: { idProject: true },
-          take: 1,
         },
       },
     });
@@ -42,7 +40,7 @@ describe('ImportValidatorService', () => {
     expect(result.errors).toEqual([]);
   });
 
-  it('creates an error when a matched product has no active project', async () => {
+  it('creates an error when a matched product has no project', async () => {
     productFindMany.mockResolvedValue([
       { id: 7, idStore: 'S-7', projects: [] },
     ]);
@@ -58,8 +56,80 @@ describe('ImportValidatorService', () => {
     expect(result.errors).toEqual([
       {
         rowNumber: 3,
-        field: 'idProduct',
-        message: 'Matched product S-7 does not have an active project',
+        field: 'idProject',
+        message: 'Matched product S-7 does not have any projects',
+      },
+    ]);
+  });
+
+  it('requires project selection when a matched product has multiple projects', async () => {
+    productFindMany.mockResolvedValue([
+      {
+        id: 7,
+        idStore: 'S-7',
+        projects: [{ idProject: 70 }, { idProject: 71 }],
+      },
+    ]);
+    const service = new ImportValidatorService(prisma);
+
+    const result = await service.validateRows('store', [
+      row({ rowNumber: 3, externalProductId: 'S-7' }),
+    ]);
+
+    expect(result.stageRows).toMatchObject([
+      { rowNumber: 3, idProduct: 7, idProject: null },
+    ]);
+    expect(result.errors).toEqual([
+      {
+        rowNumber: 3,
+        field: 'idProject',
+        message: 'Select a project for matched product S-7',
+      },
+    ]);
+  });
+
+  it('preserves a valid selected project when a matched product has multiple projects', async () => {
+    productFindMany.mockResolvedValue([
+      {
+        id: 7,
+        idStore: 'S-7',
+        projects: [{ idProject: 70 }, { idProject: 71 }],
+      },
+    ]);
+    const service = new ImportValidatorService(prisma);
+
+    const result = await service.validateRows('store', [
+      { ...row({ rowNumber: 3, externalProductId: 'S-7' }), idProject: 71 },
+    ]);
+
+    expect(result.stageRows).toMatchObject([
+      { rowNumber: 3, idProduct: 7, idProject: 71 },
+    ]);
+    expect(result.errors).toEqual([]);
+  });
+
+  it('rejects a selected project that does not belong to the matched product', async () => {
+    productFindMany.mockResolvedValue([
+      {
+        id: 7,
+        idStore: 'S-7',
+        projects: [{ idProject: 70 }, { idProject: 71 }],
+      },
+    ]);
+    const service = new ImportValidatorService(prisma);
+
+    const result = await service.validateRows('store', [
+      { ...row({ rowNumber: 3, externalProductId: 'S-7' }), idProject: 99 },
+    ]);
+
+    expect(result.stageRows).toMatchObject([
+      { rowNumber: 3, idProduct: 7, idProject: null },
+    ]);
+    expect(result.errors).toEqual([
+      {
+        rowNumber: 3,
+        field: 'idProject',
+        message: 'Project 99 does not belong to matched product S-7',
       },
     ]);
   });

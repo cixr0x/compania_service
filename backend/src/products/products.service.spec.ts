@@ -23,7 +23,7 @@ describe('ProductsService', () => {
       idStore: null,
       idEvent: null,
       idSurface: null,
-      idModel: 2,
+      idModel: null,
       ownership: '15.00',
       tag: 'starter',
     });
@@ -37,7 +37,6 @@ describe('ProductsService', () => {
       idStore: undefined,
       idEvent: undefined,
       idSurface: undefined,
-      idModel: 2,
       ownership: 15,
       tag: 'starter',
     });
@@ -51,7 +50,6 @@ describe('ProductsService', () => {
         idStore: undefined,
         idEvent: undefined,
         idSurface: undefined,
-        idModel: 2,
         ownership: 15,
         tag: 'starter',
       },
@@ -68,14 +66,12 @@ describe('ProductsService', () => {
     const service = new ProductsService(prisma);
     await service.create({
       name: 'Starter Kit',
-      idModel: 2,
       feeAmount: 125.5,
     });
 
     expect(prisma.product.create).toHaveBeenCalledWith({
       data: {
         name: 'Starter Kit',
-        idModel: 2,
         feeAmount: 125.5,
         ownership: 0,
       },
@@ -90,10 +86,10 @@ describe('ProductsService', () => {
     });
 
     const service = new ProductsService(prisma);
-    await service.create({ name: 'Starter Kit', idModel: 2 });
+    await service.create({ name: 'Starter Kit' });
 
     expect(prisma.product.create).toHaveBeenCalledWith({
-      data: { name: 'Starter Kit', idModel: 2, ownership: 0 },
+      data: { name: 'Starter Kit', ownership: 0 },
     });
   });
 
@@ -190,7 +186,6 @@ describe('ProductsService', () => {
       idStore: '',
       idEvent: ' EVT-1 ',
       idSurface: '\t',
-      idModel: 2,
     });
 
     expect(prisma.product.create).toHaveBeenCalledWith({
@@ -200,7 +195,6 @@ describe('ProductsService', () => {
         idStore: '',
         idEvent: 'EVT-1',
         idSurface: '',
-        idModel: 2,
         ownership: 0,
       },
     });

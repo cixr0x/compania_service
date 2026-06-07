@@ -5,7 +5,7 @@ import { CreateProductDto } from './create-product.dto';
 import { UpdateProductDto } from './update-product.dto';
 
 describe('Product DTO validation', () => {
-  it('requires model id when creating a product', async () => {
+  it('allows omitting legacy model id when creating a product', async () => {
     const dto = plainToInstance(CreateProductDto, {
       name: 'Maple Shelf',
       ownership: 15,
@@ -13,7 +13,7 @@ describe('Product DTO validation', () => {
 
     const errors = await validate(dto);
 
-    expect(errors.map((error) => error.property)).toContain('idModel');
+    expect(errors.map((error) => error.property)).not.toContain('idModel');
   });
 
   it('allows omitting model id when updating a product', async () => {
@@ -29,7 +29,6 @@ describe('Product DTO validation', () => {
   it('accepts a numeric product fee amount', async () => {
     const dto = plainToInstance(CreateProductDto, {
       name: 'Consigna Product',
-      idModel: 7,
       feeAmount: '125.50',
     });
 
