@@ -323,7 +323,8 @@ Ant Design application rules for this project:
 - Use Ant Design `Table` for structured operational data, with dedicated filters where useful, plus sorting, pagination, loading, and empty states.
 - Use Ant Design data-entry components for forms and keep labels, validation, and formatting close to the relevant field. Do not render per-field helper descriptions unless a future requirement explicitly asks for them.
 - Use Ant Design feedback components such as `Alert`, `Message`, `Notification`, `Spin`, `Modal`, and `Popconfirm` according to feedback severity.
-- On mobile, use a controlled navigation drawer rather than the zero-width collapsed sider trigger so the app header does not overlap navigation controls.
+- The desktop app shell should not render a persistent topbar/header. The left sider is the primary desktop navigation chrome; mobile uses only a small floating navigation trigger for the drawer.
+- On mobile, use a controlled navigation drawer rather than the zero-width collapsed sider trigger so page content does not overlap navigation controls.
 - Responsive behavior should preserve the desktop Ant Design layout while adapting below tablet widths: hide the fixed sider behind the drawer, reduce page padding, stack table toolbars, make form controls full-width, keep wide tables in horizontal scroll regions, wrap import/report filters, and avoid page-level horizontal overflow.
 - Shared entity tables should keep compact enterprise readability: right-align numeric and money values, format date-like values, display booleans as tags, provide horizontal scrolling for wide data, and include a visible edit action while preserving double-click navigation.
 - Ant Design tables should use compact density and subtle striped body rows across entity lists, reports, import review tables, and inline detail tables.

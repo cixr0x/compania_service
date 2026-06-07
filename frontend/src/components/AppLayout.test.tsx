@@ -40,6 +40,23 @@ describe('AppLayout', () => {
     expect(screen.queryByText('Commercial Operations')).not.toBeInTheDocument()
   })
 
+  it('does not render the old topbar container', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/projects']}>
+        <Routes>
+          <Route path="/" element={<AppLayout />}>
+            <Route path="projects" element={<div>Projects page</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(container.querySelector('.topbar')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveClass(
+      'mobile-menu-button',
+    )
+  })
+
   it('groups primary navigation into admin, catalog, and reports sections', () => {
     render(
       <MemoryRouter initialEntries={['/projects']}>

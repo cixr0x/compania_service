@@ -9,7 +9,7 @@ import {
   TagsOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
-import { Button, Drawer, Layout, Menu, Tag, Typography } from 'antd'
+import { Button, Drawer, Layout, Menu, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
@@ -111,20 +111,15 @@ export function AppLayout() {
       </Layout.Sider>
 
       <Layout className="content-frame">
-        <Layout.Header className="topbar">
-          <div className="topbar-title-group">
-            <Button
-              aria-controls={mobileNavigationId}
-              aria-expanded={isMobileMenuOpen}
-              aria-label="Open navigation"
-              className="mobile-menu-button"
-              icon={<MenuOutlined />}
-              onClick={() => setIsMobileMenuOpen(true)}
-              type="text"
-            />
-          </div>
-          <Tag color="blue">MVP</Tag>
-        </Layout.Header>
+        <Button
+          aria-controls={mobileNavigationId}
+          aria-expanded={isMobileMenuOpen}
+          aria-label="Open navigation"
+          className="mobile-menu-button"
+          icon={<MenuOutlined />}
+          onClick={() => setIsMobileMenuOpen(true)}
+          type="text"
+        />
 
         <Layout.Content className="page-content">
           <Outlet />
