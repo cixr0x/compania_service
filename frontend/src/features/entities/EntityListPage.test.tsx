@@ -277,7 +277,7 @@ describe('EntityListPage', () => {
     expect(screen.queryByRole('columnheader', { name: 'Tax' })).not.toBeInTheDocument()
     expect(screen.getAllByText('$100.00')).toHaveLength(2)
     expect(screen.getAllByText('$0.00')).not.toHaveLength(0)
-    expect(screen.getByText('$25.00')).toBeVisible()
+    expect(screen.getAllByText('$25.00')).toHaveLength(2)
     expect(screen.queryByText('42')).not.toBeInTheDocument()
     expect(screen.queryByText('501')).not.toBeInTheDocument()
   })
@@ -390,6 +390,63 @@ describe('EntityListPage', () => {
         '/sales?pageSize=100&idProduct=42&idProject=501&month=2026-05',
       )
     })
+  })
+
+  it('shows total owner profit for the currently loaded sales rows', async () => {
+    vi.mocked(getJson).mockImplementation((path: string) => {
+      if (path === '/sales?pageSize=100') {
+        return Promise.resolve([
+          {
+            amount: 100,
+            date: '2026-05-05',
+            fee: 0,
+            idProduct: 42,
+            idProject: 501,
+            idSale: 900,
+            product: { id: 42, name: 'Walnut Desk', ownership: 25 },
+            project: {
+              idProject: 501,
+              product: { id: 42, name: 'Walnut Desk' },
+            },
+            quantity: 1,
+            source: 'store',
+          },
+          {
+            amount: 50,
+            date: '2026-05-06',
+            fee: 10,
+            idProduct: 43,
+            idProject: 502,
+            idSale: 901,
+            product: { id: 43, name: 'Canvas Chair', ownership: 50 },
+            project: {
+              idProject: 502,
+              product: { id: 43, name: 'Canvas Chair' },
+            },
+            quantity: 1,
+            source: 'ecommerce',
+          },
+        ])
+      }
+
+      if (
+        path === '/products?pageSize=100' ||
+        path === '/projects?pageSize=100' ||
+        path === '/reports/sales-summary/periods'
+      ) {
+        return Promise.resolve([])
+      }
+
+      return Promise.reject(new Error(`Unexpected GET ${path}`))
+    })
+
+    renderEntityList('/sales')
+
+    expect(await screen.findAllByText('Canvas Chair')).not.toHaveLength(0)
+    const salesTable = screen.getByRole('table')
+
+    expect(within(salesTable).getByText('Total Owner Profit')).toBeVisible()
+    expect(within(salesTable).getByText('$45.00')).toBeVisible()
   })
 
   it('shows model code in the models table', async () => {

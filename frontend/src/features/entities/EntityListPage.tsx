@@ -5,7 +5,12 @@ import { PlusOutlined } from '@ant-design/icons'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getJson } from '../../api/client'
 import type { Product, Project, SalesReportPeriod } from '../../api/types'
-import { DataTable } from '../../components/DataTable'
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableSummaryItem,
+} from '../../components/DataTable'
+import { parseMoneyNumber } from '../../utils/money'
 import { getEntityConfig, type EntityRow } from './entityConfigs'
 
 const ENTITY_LIST_PAGE_SIZE = 100
@@ -72,6 +77,48 @@ function buildMonthOptions(periods: SalesReportPeriod[]) {
         : [],
     )
     .sort((left, right) => right.value.localeCompare(left.value))
+}
+
+function getTableColumnValue(
+  row: EntityRow,
+  column: DataTableColumn<EntityRow>,
+) {
+  return column.valueGetter ? column.valueGetter(row) : row[column.key]
+}
+
+function sumTableColumn(
+  rows: EntityRow[],
+  columns: DataTableColumn<EntityRow>[],
+  columnKey: string,
+) {
+  const column = columns.find((candidate) => candidate.key === columnKey)
+
+  if (!column) {
+    return 0
+  }
+
+  return rows.reduce(
+    (total, row) =>
+      total + (parseMoneyNumber(getTableColumnValue(row, column)) ?? 0),
+    0,
+  )
+}
+
+function getTableSummaryItems(
+  rows: EntityRow[],
+  columns: DataTableColumn<EntityRow>[],
+  isSalesPage: boolean,
+): DataTableSummaryItem<EntityRow>[] | undefined {
+  return isSalesPage
+    ? [
+        {
+          columnKey: 'ownerProfit',
+          label: 'Total Owner Profit',
+          value: sumTableColumn(rows, columns, 'ownerProfit'),
+          valueFormat: 'money',
+        },
+      ]
+    : undefined
 }
 
 type SalesTableFiltersProps = {
@@ -229,6 +276,8 @@ export function EntityListPage() {
     return <UnknownEntityPage />
   }
 
+  const rows = query.data ?? []
+
   return (
     <section className="page-panel" aria-labelledby={`${config.path}-heading`}>
       <div className="page-heading-row">
@@ -251,7 +300,8 @@ export function EntityListPage() {
         onRowDoubleClick={(row) =>
           navigate(`/${config.path}/${String(row[config.idField])}`)
         }
-        rows={query.data ?? []}
+        rows={rows}
+        summaryItems={getTableSummaryItems(rows, config.columns, isSalesPage)}
         toolbarAction={
           <Link to={`/${config.path}/new`}>
             <Button icon={<PlusOutlined />} type="primary">

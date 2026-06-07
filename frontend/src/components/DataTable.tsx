@@ -16,6 +16,13 @@ export type DataTableColumn<Row extends Record<string, unknown>> = {
   width?: number
 }
 
+export type DataTableSummaryItem<Row extends Record<string, unknown>> = {
+  columnKey: keyof Row & string
+  label: string
+  value: unknown
+  valueFormat?: 'money'
+}
+
 type DataTableProps<Row extends Record<string, unknown>> = {
   rows: Row[]
   columns: DataTableColumn<Row>[]
@@ -23,6 +30,7 @@ type DataTableProps<Row extends Record<string, unknown>> = {
   onRowDoubleClick: (row: Row) => void
   isLoading?: boolean
   emptyMessage?: string
+  summaryItems?: DataTableSummaryItem<Row>[]
   toolbarAction?: ReactNode
   toolbarFilters?: ReactNode
 }
@@ -237,6 +245,18 @@ function isRightAligned(kind: ColumnKind) {
   return kind === 'id' || kind === 'money' || kind === 'number'
 }
 
+function formatSummaryValue<Row extends Record<string, unknown>>(
+  summaryItem: DataTableSummaryItem<Row>,
+) {
+  if (isEmptyValue(summaryItem.value)) {
+    return '-'
+  }
+
+  return summaryItem.valueFormat === 'money'
+    ? formatCurrency(summaryItem.value)
+    : String(summaryItem.value)
+}
+
 function getRowEditLabel<Row extends Record<string, unknown>>(
   row: Row,
   columns: DataTableColumn<Row>[],
@@ -267,6 +287,7 @@ export function DataTable<Row extends Record<string, unknown>>({
   onRowDoubleClick,
   isLoading = false,
   emptyMessage = 'No records found.',
+  summaryItems = [],
   toolbarAction,
   toolbarFilters,
 }: DataTableProps<Row>) {
@@ -322,6 +343,15 @@ export function DataTable<Row extends Record<string, unknown>>({
     },
   ]
 
+  const summaryRows = summaryItems
+    .map((summaryItem) => ({
+      ...summaryItem,
+      columnIndex: dataColumns.findIndex(
+        (column) => column.key === summaryItem.columnKey,
+      ),
+    }))
+    .filter((summaryItem) => summaryItem.columnIndex >= 0)
+
   return (
     <div className="table-stack">
       {toolbarAction ? (
@@ -369,6 +399,47 @@ export function DataTable<Row extends Record<string, unknown>>({
           rowKey={(row) => String(getRowId(row))}
           scroll={{ x: 'max-content' }}
           size="small"
+          summary={
+            summaryRows.length > 0
+              ? () => (
+                  <Table.Summary fixed>
+                    {summaryRows.map((summaryItem, summaryIndex) => {
+                      const trailingColumnCount =
+                        tableColumns.length - summaryItem.columnIndex - 1
+
+                      return (
+                        <Table.Summary.Row
+                          className="entity-data-table-summary-row"
+                          key={`${summaryItem.columnKey}-${summaryIndex}`}
+                        >
+                          {summaryItem.columnIndex > 0 ? (
+                            <Table.Summary.Cell
+                              className="entity-data-table-summary-label"
+                              colSpan={summaryItem.columnIndex}
+                              index={0}
+                            >
+                              {summaryItem.label}
+                            </Table.Summary.Cell>
+                          ) : null}
+                          <Table.Summary.Cell
+                            className="entity-data-table-summary-value ant-table-cell-right"
+                            index={summaryItem.columnIndex}
+                          >
+                            {formatSummaryValue(summaryItem)}
+                          </Table.Summary.Cell>
+                          {trailingColumnCount > 0 ? (
+                            <Table.Summary.Cell
+                              colSpan={trailingColumnCount}
+                              index={summaryItem.columnIndex + 1}
+                            />
+                          ) : null}
+                        </Table.Summary.Row>
+                      )
+                    })}
+                  </Table.Summary>
+                )
+              : undefined
+          }
         />
       </div>
     </div>

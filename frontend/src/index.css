@@ -300,6 +300,22 @@ button {
   cursor: pointer;
 }
 
+.entity-data-table .entity-data-table-summary-row > td {
+  background: #f6ffed;
+  border-top: 1px solid var(--border);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.entity-data-table .entity-data-table-summary-label {
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.entity-data-table .entity-data-table-summary-value {
+  color: var(--text);
+}
+
 .entity-data-table .ant-pagination {
   margin-bottom: 0;
 }
