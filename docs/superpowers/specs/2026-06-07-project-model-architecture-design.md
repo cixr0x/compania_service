@@ -116,7 +116,7 @@ The `consigna` rule must reject or fail validation if the product has no usable 
 
 - Add a required Model select to project create/edit forms.
 - Project tables display the model name or code instead of the model ID.
-- Existing project detail sections remain unchanged except where total cost and stakeholder split calculations read project data.
+- Project cost transaction and stakeholder split detail sections are shown only when the selected project model code is `ladrillo`. When another model is selected, those sections are hidden and their row validation/submission restrictions are not applied.
 
 ### Sales
 
@@ -175,4 +175,3 @@ Frontend tests should cover:
 - Sales project auto-selects and disables when only one project exists.
 - Sales model display follows the selected project.
 - Sales import rows show project selection only when needed.
-

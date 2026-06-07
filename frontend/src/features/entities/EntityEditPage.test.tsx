@@ -807,6 +807,135 @@ describe('EntityEditPage', () => {
     expect(screen.getByText('Model is required.')).toBeVisible()
   })
 
+  it('hides project transactions and stakeholder split for non-ladrillo projects and saves without detail writes', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products') {
+        return [{ id: 42, name: 'Maple Shelf' }]
+      }
+
+      if (path === '/models') {
+        return [
+          { code: 'ladrillo', idModel: 7, name: 'Ladrillo' },
+          { code: 'consigna', idModel: 9, name: 'Consigna' },
+        ]
+      }
+
+      if (path === '/stakeholders?pageSize=100') {
+        return []
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
+    vi.mocked(postJson).mockResolvedValue({ idProject: 501 })
+
+    renderEntityEditPage('/projects/new', '/:entityName/:id')
+
+    await selectAntOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Product' }),
+      'Maple Shelf',
+    )
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Model' }),
+      'Consigna',
+    )
+    await user.type(screen.getByLabelText('Units'), '10')
+    await user.type(screen.getByLabelText('Unit Cost'), '100')
+
+    expect(
+      screen.queryByRole('group', { name: 'Project Cost Transactions' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('group', { name: 'Stakeholder Split' }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith('/projects', {
+        idModel: 9,
+        idProduct: 42,
+        isActive: false,
+        unitCost: 100,
+        units: 10,
+      })
+    })
+    expect(putJson).not.toHaveBeenCalled()
+    expect(getJson).not.toHaveBeenCalledWith('/stakeholders?pageSize=100')
+  })
+
+  it('skips hidden project detail restrictions after changing a project away from ladrillo', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products') {
+        return [{ id: 42, name: 'Maple Shelf' }]
+      }
+
+      if (path === '/models') {
+        return [
+          { code: 'ladrillo', idModel: 7, name: 'Ladrillo' },
+          { code: 'consigna', idModel: 9, name: 'Consigna' },
+        ]
+      }
+
+      if (path === '/stakeholders?pageSize=100') {
+        return []
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
+    vi.mocked(postJson).mockResolvedValue({ idProject: 501 })
+
+    renderEntityEditPage('/projects/new', '/:entityName/:id')
+
+    await selectAntOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Product' }),
+      'Maple Shelf',
+    )
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Model' }),
+      'Ladrillo',
+    )
+    const splitSection = await screen.findByRole('group', {
+      name: 'Stakeholder Split',
+    })
+    await user.click(
+      within(splitSection).getByRole('button', { name: 'Add stakeholder' }),
+    )
+    await user.click(
+      within(splitSection).getByRole('button', { name: 'Save row 1' }),
+    )
+    expect(
+      within(splitSection).getByText(
+        'Save or cancel stakeholder row edits before saving the project.',
+      ),
+    ).toBeVisible()
+
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Model' }),
+      'Consigna',
+    )
+    await user.type(screen.getByLabelText('Units'), '10')
+    await user.type(screen.getByLabelText('Unit Cost'), '100')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith('/projects', {
+        idModel: 9,
+        idProduct: 42,
+        isActive: false,
+        unitCost: 100,
+        units: 10,
+      })
+    })
+    expect(putJson).not.toHaveBeenCalled()
+  }, 15000)
+
   it('saves project cost transactions after creating the project and sums them for total cost', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
@@ -941,7 +1070,11 @@ describe('EntityEditPage', () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
       if (path === '/products') {
-        return [{ id: 42, name: 'Maple Shelf', idModel: 7 }]
+        return [{ id: 42, name: 'Maple Shelf' }]
+      }
+
+      if (path === '/models') {
+        return [{ code: 'ladrillo', idModel: 7, name: 'Ladrillo' }]
       }
 
       if (path === '/stakeholders?pageSize=100') {
@@ -950,9 +1083,11 @@ describe('EntityEditPage', () => {
 
       if (path === '/projects/77') {
         return {
+          idModel: 7,
           idProduct: 42,
           idProject: 77,
           isActive: true,
+          model: { code: 'ladrillo', idModel: 7, name: 'Ladrillo' },
           unitCost: 10,
           units: 100,
         }

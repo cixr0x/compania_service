@@ -343,14 +343,33 @@ function getModelCode(value: unknown): string | null {
     return null
   }
 
-  const code = (value as { code?: unknown }).code
-  return typeof code === 'string' && code.trim() !== ''
-    ? code.trim().toLowerCase()
+  const model = value as { code?: unknown; name?: unknown }
+  const code = model.code
+
+  if (typeof code === 'string' && code.trim() !== '') {
+    return code.trim().toLowerCase()
+  }
+
+  const name = model.name
+  return typeof name === 'string' && name.trim() !== ''
+    ? name.trim().toLowerCase()
     : null
 }
 
 function getProjectModelCode(project: EntityRow | null) {
   return getModelCode(project?.model)
+}
+
+function getProjectFormModelCode(
+  values: EntityRow,
+  models: EntityRow[] | undefined,
+) {
+  const selectedModelId = getNumericId(values.idModel)
+  const optionModel = models?.find(
+    (model) => getNumericId(model.idModel) === selectedModelId,
+  )
+
+  return getModelCode(optionModel ?? values.model)
 }
 
 function getBooleanValue(value: unknown) {
@@ -543,15 +562,21 @@ export function EntityEditPage() {
 
       const shouldSaveProjectSplit =
         projectSplitState.hasRows || projectSplitState.isDirty
+      const shouldManageProjectDetails =
+        getProjectFormModelCode(body, optionRowsByPath.models) === 'ladrillo'
 
-      if (shouldSaveProjectSplit && !projectSplitState.isValid) {
+      if (
+        shouldManageProjectDetails &&
+        shouldSaveProjectSplit &&
+        !projectSplitState.isValid
+      ) {
         throw new Error(
           projectSplitState.errorMessage ??
             'Project stakeholder split is not ready to save.',
         )
       }
 
-      if (!projectTransactionState.isValid) {
+      if (shouldManageProjectDetails && !projectTransactionState.isValid) {
         throw new Error(
           projectTransactionState.errorMessage ??
             'Project cost transactions are not ready to save.',
@@ -562,7 +587,7 @@ export function EntityEditPage() {
         ? await postJson<EntityRow, EntityRow>('/projects', body)
         : await patchJson<EntityRow, EntityRow>(`/projects/${id}`, body)
 
-      if (projectTransactionState.isDirty) {
+      if (shouldManageProjectDetails && projectTransactionState.isDirty) {
         const projectId = getProjectId(savedProject, id)
 
         if (projectId === null) {
@@ -575,7 +600,7 @@ export function EntityEditPage() {
         )
       }
 
-      if (shouldSaveProjectSplit) {
+      if (shouldManageProjectDetails && shouldSaveProjectSplit) {
         const projectId = getProjectId(savedProject, id)
 
         if (projectId === null) {
@@ -623,6 +648,10 @@ export function EntityEditPage() {
             transactionTotal: projectTransactionState.totalCost,
           }
       : formValues
+  const shouldManageProjectDetails =
+    config?.path === 'projects' &&
+    getProjectFormModelCode(displayedFormValues, optionRowsByPath.models) ===
+      'ladrillo'
   const formConfig = useMemo(
     () => resolveDynamicOptions(config, optionRowsByPath, displayedFormValues),
     [config, displayedFormValues, optionRowsByPath],
@@ -725,7 +754,7 @@ export function EntityEditPage() {
             onSubmit={handleSave}
             values={displayedFormValues}
           >
-            {config.path === 'projects' ? (
+            {config.path === 'projects' && shouldManageProjectDetails ? (
               <>
                 <ProjectTransactionLines
                   isCreate={isCreate}
