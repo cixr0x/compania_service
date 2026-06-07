@@ -25,6 +25,21 @@ describe('AppLayout', () => {
     ).toBeVisible()
   })
 
+  it('does not render the old admin console commercial operations header', () => {
+    render(
+      <MemoryRouter initialEntries={['/projects']}>
+        <Routes>
+          <Route path="/" element={<AppLayout />}>
+            <Route path="projects" element={<div>Projects page</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByText('Admin Console')).not.toBeInTheDocument()
+    expect(screen.queryByText('Commercial Operations')).not.toBeInTheDocument()
+  })
+
   it('groups primary navigation into admin, catalog, and reports sections', () => {
     render(
       <MemoryRouter initialEntries={['/projects']}>

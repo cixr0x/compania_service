@@ -122,10 +122,6 @@ export function AppLayout() {
               onClick={() => setIsMobileMenuOpen(true)}
               type="text"
             />
-            <div className="topbar-title-copy">
-              <Typography.Text className="eyebrow">Admin Console</Typography.Text>
-              <Typography.Title level={1}>Commercial Operations</Typography.Title>
-            </div>
           </div>
           <Tag color="blue">MVP</Tag>
         </Layout.Header>

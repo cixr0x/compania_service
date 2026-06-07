@@ -78,7 +78,6 @@ button {
 
 .brand-name,
 .brand-context,
-.eyebrow,
 .page-description,
 .empty-state p,
 .empty-state span {
@@ -127,33 +126,16 @@ button {
   min-width: 0;
 }
 
-.topbar-title-copy {
-  min-width: 0;
-}
-
 .mobile-menu-button {
   display: none;
   flex: 0 0 auto;
 }
 
-.topbar h1,
 .page-panel h2 {
   color: var(--text);
   font-size: 22px;
   line-height: 1.2;
   margin: 0;
-}
-
-.topbar .ant-typography {
-  margin: 0;
-}
-
-.eyebrow {
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: uppercase;
 }
 
 .page-content {
@@ -806,10 +788,6 @@ button {
     flex: 1 1 auto;
   }
 
-  .topbar h1 {
-    font-size: 19px;
-  }
-
   .primary-action {
     width: fit-content;
   }
@@ -962,13 +940,8 @@ button {
     padding: 10px 12px;
   }
 
-  .topbar .ant-tag,
-  .eyebrow {
+  .topbar .ant-tag {
     display: none;
-  }
-
-  .topbar h1 {
-    font-size: 17px;
   }
 
   .page-content {
