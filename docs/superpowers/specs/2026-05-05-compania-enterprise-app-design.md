@@ -39,9 +39,9 @@ Deferred:
 
 A product is the item being purchased and sold. Products have multiple external identifiers because each sales source may use a different ID for the same product.
 
-A model is a pricing model assigned to products.
+A model is a pricing model assigned to projects.
 
-A project is a batch purchase of one product. It stores the purchased units and unit cost. Project cost is tracked through project transaction rows, and the total project cost is derived as the sum of those transaction amounts; it is displayed in project screens but is not stored as a separate database field. Several stakeholders can participate in a project. A project can be active or inactive; at most one project can be active for the same product at any time.
+A project is a batch purchase of one product. It stores the purchased units, unit cost, and pricing model. Project cost is tracked through project transaction rows, and the total project cost is derived as the sum of those transaction amounts; it is displayed in project screens but is not stored as a separate database field. Several stakeholders can participate in a project. A project can be active or inactive; active status is metadata and does not enforce uniqueness per product.
 
 A stakeholder is a person or organization participating in one or more projects.
 
@@ -65,9 +65,9 @@ Application settings store configurable values by unique code. Settings are expo
 - `id_store`: external product ID used by store imports.
 - `id_event`: external product ID used by event imports.
 - `id_surface`: external product ID used by surface imports.
-- `id_model`: foreign key to `model`.
+- `id_model`: legacy nullable foreign key to `model`; pricing model ownership moved to projects and new business logic should not use this product field.
 - `ownership`: numeric percentage retained by the product owner for future profit calculations.
-- `fee_amount`: optional numeric fee amount used by products with the `consigna` pricing model.
+- `fee_amount`: optional numeric fee amount used when a sale is linked to a project whose pricing model code is `consigna`.
 - `tag`: text.
 
 ### model
@@ -81,14 +81,15 @@ Application settings store configurable values by unique code. Settings are expo
 
 - `id_project`: primary key.
 - `id_product`: foreign key to `product`.
+- `id_model`: required foreign key to `model`; the project's pricing model.
 - `units`: numeric quantity.
 - `unit_cost`: numeric cost per unit.
 - `production_cost`: legacy numeric production cost retained in the table for now but no longer edited by the UI or used for total project cost calculations.
 - `admin_cost`: legacy numeric administrative cost retained in the table for now but no longer edited by the UI or used for total project cost calculations.
 - `cost_adjustment`: legacy signed numeric adjustment retained in the table for now but no longer edited by the UI or used for total project cost calculations.
 - `adjustment_description`: legacy optional adjustment text retained in the table for now.
-- `is_active`: boolean flag indicating whether this is the current active project for the product.
-- `active_product_id`: internal nullable unique key maintained by the backend to enforce that only one active project can exist for a product.
+- `is_active`: boolean flag stored as project metadata.
+- `active_product_id`: legacy internal nullable key retained only while the database is migrated away from active-project uniqueness enforcement.
 
 Derived values:
 
@@ -152,7 +153,7 @@ Rules:
 - `quantity`: integer.
 - `amount`: numeric sale amount.
 - `source`: text value selected by the user during import.
-- `fee`: numeric fee calculated from the product's pricing model unless the sale has fee override enabled.
+- `fee`: numeric fee calculated from the linked project's pricing model unless the sale has fee override enabled.
 - `fee_override`: boolean flag. Defaults to `false`; when `true`, the manually entered `fee` is preserved and automatic fee recalculation is skipped.
 - `profit`: numeric stored profit, calculated as `amount - fee`.
 - `owner_profit`: numeric stored owner profit, calculated as `profit * product.ownership / 100`.
@@ -228,14 +229,16 @@ Validation errors for an import batch and optionally a specific staged row.
    - `event` uses `product.id_event`.
    - `surface` uses `product.id_surface`.
 6. Backend validates all staged rows and stores `import_error` rows for invalid data.
-7. Backend requires each matched product to have an active project.
-8. Frontend shows staged rows with imported product description and matched product name side by side.
-9. User selects or edits the import date before commit.
-10. User reviews validation errors and product matches.
-11. User clicks commit.
-12. Backend revalidates the entire batch inside a transaction.
-13. If any error remains, no sales rows are inserted and errors remain visible.
-14. If the batch is valid, backend inserts all staged rows into `sales`, stamps `source`, stamps the selected import date into `sales.date`, links `sales.id_project` to the matched product's active project, calculates `fee` from the matched product's pricing model, sets `fee_override` to `false`, calculates stored `profit` and `owner_profit`, and marks the batch as `committed`.
+7. Backend requires each matched product to have at least one project.
+8. Backend assigns the project automatically when the matched product has exactly one project.
+9. Frontend shows staged rows with imported product description, matched product name, and selected project side by side.
+10. If a matched product has multiple projects, the user selects the project for that staged row before commit.
+11. User selects or edits the import date before commit.
+12. User reviews validation errors, product matches, and project selections.
+13. User clicks commit.
+14. Backend revalidates the entire batch inside a transaction.
+15. If any error remains, no sales rows are inserted and errors remain visible.
+16. If the batch is valid, backend inserts all staged rows into `sales`, stamps `source`, stamps the selected import date into `sales.date`, links `sales.id_project` to the selected product project, calculates `fee` from the selected project's pricing model, sets `fee_override` to `false`, calculates stored `profit` and `owner_profit`, and marks the batch as `committed`.
 
 The final `sales` table should only contain committed, validated data.
 
@@ -344,23 +347,21 @@ Entity pages:
 - Double-click table row navigates to edit form; table rows also expose a visible Edit action for discoverability.
 - Entity table columns backed by foreign keys display the related entity name/label rather than the raw foreign key ID. Primary key ID columns may still display IDs.
 - Table cells that display a product name show a small product image thumbnail to the left of the name when the product has an image URL.
-- Product list tables include Fee Amount as money, populated for products whose model code is `consigna`.
+- Product list tables include Fee Amount as an optional money value used by `consigna` project-model sales.
 - Forms use backend validation responses for field-level error display. Form pages do not use the old Workspace eyebrow row; navigation back to the list is provided by a Cancel button beside Save.
-- Product create/edit forms load pricing models and show model names in the model selector while submitting the selected model ID to the API.
-- Product creation requires a pricing model and shows a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
-- Product create/edit forms show the Fee Amount money field only when the selected pricing model has code `consigna`.
-- Project create/edit forms load products and show product names in the product selector while submitting the selected product ID to the API.
+- Product create/edit forms do not expose pricing model selection because pricing models belong to projects. Product forms show a live image preview beside the product name, refreshed from the Image URL field as the user edits it.
+- Project create/edit forms load products and models, show readable names in both selectors, and submit the selected product and model IDs to the API.
 - Project create/edit forms include an active flag plus unit cost. Project cost is managed in a Project Cost Transactions detail section with a compact static table. Rows display date, description, and amount. Rows become editable only after selecting the row Edit action; editable rows expose Save and Cancel actions for that row. New transaction rows are added in edit mode, and project-level saving is blocked until all transaction row edits are saved or canceled. The fixed production cost, administrative cost, cost adjustment, and adjustment description fields remain in the database for now but are not exposed in the form.
 - Project create/edit forms display a read-only total cost field derived from the sum of project cost transaction rows, updated immediately as transaction amounts change. They also display a read-only real unit cost calculated as total project cost divided by project units.
 - Project table views display the same transaction-derived total cost and real unit cost with money formatting. Legacy fixed production, admin, and adjustment cost columns are not shown in the table view.
 - Project create/edit forms include a Stakeholder Split detail section. The section loads stakeholders by name and uses a compact static table by default. Rows show stakeholder, stake percentage, and a read-only stake amount calculated as total project cost multiplied by stake percentage. Rows become editable only after selecting the row Edit action; editable rows expose Save and Cancel actions for that row. New stakeholder rows are added in edit mode, project-level saving is blocked until all stakeholder row edits are saved or canceled, complete rows must total exactly `100` when lines are present, and removing all rows saves an empty split.
 - Project stakeholder splits are not exposed as a standalone primary navigation item in the MVP UI.
 - Stakeholder edit forms show the projects where the stakeholder participates, including the project label and stake percentage.
-- Sale create/edit forms load products and projects, show readable option labels, and submit the selected product and project IDs to the API. The Product field is user-editable; the Model field is read-only and displays the selected product's pricing model; the Project field is read-only and is automatically assigned to the selected product's active project whenever Product changes. If the selected product has no active project, Project remains empty and the required-field validation blocks saving. The backend rejects a manual sale if the submitted project does not belong to the submitted product.
+- Sale create/edit forms load products and projects, show readable option labels, and submit the selected product and project IDs to the API. The Product field is user-editable. The Project field is filtered to projects belonging to the selected product; if the selected product has exactly one project, it is selected by default and the field is disabled, and if the product has multiple projects the user must select one. The Model field is read-only and displays the selected project's pricing model. The backend rejects a manual sale if the submitted project does not belong to the submitted product.
 - Foreign key fields in create/edit forms should be selectors backed by the related entity list, not open numeric inputs.
 - Money fields in tables and import review screens should display with a dollar prefix, comma grouping, and two decimals, for example `$1,000,000.00`. Editable money fields may accept comma separators and submit numeric values to the API.
 - Optional text fields preserve empty strings on update. A cleared optional text field must be submitted and saved as `""`; fields that are truly omitted from a PATCH payload remain unchanged.
-- The sales CRUD table displays profit and owner profit as money columns, and shows a `Total Owner Profit` summary row that sums owner profit for the currently loaded table rows. Sales create/edit forms calculate fee from the selected product's pricing model and linked project, keep the Fee field read-only by default, and expose an `Override Fee` checkbox that enables manual fee editing and stops fee autocalculation. The same form displays read-only profit as `amount - fee` and owner profit as `profit * product.ownership / 100`; profit and owner profit are computed, persisted values. Tax is not tracked by the system.
+- The sales CRUD table displays profit and owner profit as money columns, and shows a `Total Owner Profit` summary row that sums owner profit for the currently loaded table rows. Sales create/edit forms calculate fee from the selected project's pricing model, keep the Fee field read-only by default, and expose an `Override Fee` checkbox that enables manual fee editing and stops fee autocalculation. The same form displays read-only profit as `amount - fee` and owner profit as `profit * product.ownership / 100`; profit and owner profit are computed, persisted values. Tax is not tracked by the system.
 - The sales CRUD table has separate dropdown filters above the table for Product, Project, and Month. These are not table-header filters. Product and Project use entity names rather than raw IDs, Project options are constrained when a Product is selected, and Month filters sales by `YYYY-MM`.
 - The sales CRUD table should use compact explicit column widths so Product, Project, and money columns do not create excessive empty horizontal space.
 
@@ -370,7 +371,8 @@ Sales import page:
 - Import date selector.
 - File upload.
 - Validation summary.
-- Staged row table with row number, external product ID, imported product description, matched product name, quantity, amount, and status.
+- Staged row table with row number, external product ID, imported product description, matched product name, selected project, quantity, amount, and status.
+- Staged rows auto-select the project when the matched product has exactly one project. If the matched product has multiple projects, the row shows a project selector and commit remains blocked until the user selects a valid project.
 - The staged row table uses fixed layout, explicit column widths, and a constrained horizontal scroll container so Ant Design column measurement cannot expand the page while rows are loading or rendered.
 - Error panel for import errors.
 - Commit button enabled only when required metadata is present and the batch has no validation errors.
@@ -383,7 +385,7 @@ Sales report page:
 - Report table with grouped source headers, using `Quantity` and `Amount` under each source group.
 - Report column widths should stay compact but wide enough to avoid wrapping source and total headers; the horizontal scroll width should be derived from the number of visible source groups.
 - `Surface` source group hidden unless the selected period has surface sales.
-- Profit is read from the persisted sales profit values, calculated at sale write time as amount minus fee; total cost and income are not displayed in the sales report.
+- Profit is read from the persisted sales profit values, calculated at sale write time as amount minus fee; model values are read from each sale's linked project. Total cost and income are not displayed in the sales report.
 - Money cells displayed with a dollar prefix, comma grouping, and two decimals.
 
 Stakeholder projects report page:
@@ -411,15 +413,16 @@ Expected validation rules:
 
 - Required names for products, models, and stakeholders.
 - Valid numeric values for units, project transaction amounts, costs, percentages, quantity, amount, and ownership.
+- Projects require a valid pricing model.
 - Stakeholder/project transactions require a valid date, a description, and a numeric amount.
-- At most one project can be active for a given product at any time.
+- Project active status is metadata and does not enforce uniqueness for a product.
 - Project stakeholder totals must equal exactly `100` per project.
 - Import source is required.
 - Import date is required before commit.
 - Import rows require external product ID, quantity, amount, and imported product description.
 - Import rows must match an existing product through the selected source's external ID field.
-- Import rows must match a product with an active project.
-- Sales require a project; manual sales validate that the selected project belongs to the selected product, and import commits use the matched product's active project.
+- Import rows must resolve to a valid project for the matched product. A single product project is selected automatically; multiple product projects require user selection.
+- Sales require a project; manual sales validate that the selected project belongs to the selected product, and import commits use the staged row's selected project.
 - Import commit revalidates staged rows inside the commit transaction before inserting `sales`; if revalidation fails, refreshed validation errors and `has_errors` status remain visible and no sales rows are inserted.
 
 Errors should be returned in a structured JSON shape containing field, message, and optional row number for import errors.
