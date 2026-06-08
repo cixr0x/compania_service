@@ -70,3 +70,25 @@ npm.cmd run start:dev
 ```
 
 The API should then be available at `http://localhost:3000/api`.
+
+## Production Deployment
+
+Linux VM deployment templates and the deployment runbook are in [deploy/README.md](deploy/README.md).
+
+Production build commands:
+
+```powershell
+Set-Location backend
+npm.cmd ci
+npx.cmd prisma generate
+npx.cmd prisma migrate deploy
+npm.cmd run build
+```
+
+```powershell
+Set-Location frontend
+npm.cmd ci
+npm.cmd run build
+```
+
+The backend exposes a health check at `/api/health` for service and reverse proxy verification.

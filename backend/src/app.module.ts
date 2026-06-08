@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { HealthController } from './health.controller';
 import { ImportBatchesModule } from './import-batches/import-batches.module';
 import { ModelsModule } from './models/models.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -29,5 +30,6 @@ import { StakeholdersModule } from './stakeholders/stakeholders.module';
     ImportBatchesModule,
     ReportsModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
