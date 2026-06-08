@@ -3,12 +3,13 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/errors/http-exception.filter';
 import { createValidationException } from './common/errors/validation-error.factory';
+import { resolveCorsOrigin } from './cors-origins';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',
+    origin: resolveCorsOrigin(process.env.CORS_ORIGIN),
   });
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalPipes(
