@@ -12,10 +12,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getJson, putJson } from '../../api/client'
 import { StakeholderProjectTransactionLines } from './StakeholderProjectTransactionLines'
 
-vi.mock('../../api/client', () => ({
-  getJson: vi.fn(),
-  putJson: vi.fn(),
-}))
+vi.mock('../../api/client', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../../api/client')>()
+
+  return {
+    ...actual,
+    getJson: vi.fn(),
+    putJson: vi.fn(),
+  }
+})
 
 function renderStakeholderProjectTransactionLines() {
   const queryClient = new QueryClient({

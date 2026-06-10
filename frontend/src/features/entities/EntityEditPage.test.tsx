@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AxiosError, type AxiosResponse } from 'axios'
 import {
   cleanup,
   fireEvent,
@@ -20,13 +21,19 @@ import {
 import { EntityEditPage } from './EntityEditPage'
 import { entityConfigs, type EntityName } from './entityConfigs'
 
-vi.mock('../../api/client', () => ({
-  deleteJson: vi.fn(),
-  getJson: vi.fn(),
-  patchJson: vi.fn(),
-  postJson: vi.fn(),
-  putJson: vi.fn(),
-}))
+vi.mock('../../api/client', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../../api/client')>()
+
+  return {
+    ...actual,
+    deleteJson: vi.fn(),
+    getJson: vi.fn(),
+    patchJson: vi.fn(),
+    postJson: vi.fn(),
+    putJson: vi.fn(),
+  }
+})
 
 function renderEntityEditPage(initialEntry: string, editPath: string) {
   const queryClient = new QueryClient({
@@ -104,6 +111,41 @@ describe('EntityEditPage', () => {
     expect(patchJson).not.toHaveBeenCalled()
     expect(deleteJson).not.toHaveBeenCalled()
     expect(getJson).not.toHaveBeenCalledWith('/models')
+  })
+
+  it('shows backend validation details when a save request returns 400', async () => {
+    const user = userEvent.setup()
+    const response = {
+      data: {
+        errors: [
+          { field: 'name', message: 'name must not be empty' },
+          { field: 'ownership', message: 'ownership must be a number' },
+        ],
+        message: 'Validation failed',
+      },
+      status: 400,
+      statusText: 'Bad Request',
+    } as AxiosResponse
+    const error = new AxiosError(
+      'Request failed with status code 400',
+      'ERR_BAD_REQUEST',
+      undefined,
+      undefined,
+      response,
+    )
+    vi.mocked(postJson).mockRejectedValue(error)
+
+    renderEntityEditPage('/products/new', '/:entityName/:id')
+
+    await user.type(screen.getByLabelText('Name'), 'Maple Shelf')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    const alert = await screen.findByRole('alert')
+
+    expect(alert).toHaveTextContent('Validation failed')
+    expect(alert).toHaveTextContent('name: name must not be empty')
+    expect(alert).toHaveTextContent('ownership: ownership must be a number')
+    expect(alert).not.toHaveTextContent('Request failed with status code 400')
   })
 
   it('uses form Cancel to return to the list without saving', async () => {

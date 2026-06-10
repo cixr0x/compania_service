@@ -10,7 +10,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Empty, Form, Input, Space, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { getJson, putJson } from '../../api/client'
+import { formatApiErrorMessage, getJson, putJson } from '../../api/client'
 import type { StakeholderProjectTransaction } from '../../api/types'
 import { formatMoney, parseMoneyNumber } from '../../utils/money'
 
@@ -167,8 +167,13 @@ export function StakeholderProjectTransactionLines({
         transactionsPath,
         buildPayload(rows),
       ),
-    onError: () =>
-      setSaveError('Unable to save stakeholder project transactions.'),
+    onError: (error) =>
+      setSaveError(
+        formatApiErrorMessage(
+          error,
+          'Unable to save stakeholder project transactions.',
+        ),
+      ),
     onSuccess: (rows) => {
       setDraftRows(sortTransactionRows(rows.map(buildDraftRow)))
       setSaveError(null)

@@ -1,4 +1,4 @@
-import type { AxiosResponse } from 'axios'
+import { AxiosError, type AxiosResponse } from 'axios'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 describe('buildApiUrl', () => {
@@ -73,5 +73,53 @@ describe('buildApiUrl', () => {
     expect(putSpy).toHaveBeenCalledWith('/products/1', { name: 'Replaced' })
     expect(patchSpy).toHaveBeenCalledWith('/products/1', { name: 'Updated' })
     expect(deleteSpy).toHaveBeenCalledWith('/products/1')
+  })
+
+  it('formats backend validation details from 400 responses', async () => {
+    const { formatApiErrorMessage } = await import('./client')
+    const response = {
+      data: {
+        errors: [
+          { field: 'name', message: 'name must not be empty' },
+          { field: 'items.0.quantity', message: 'quantity must be at least 1' },
+        ],
+        message: 'Validation failed',
+      },
+      status: 400,
+      statusText: 'Bad Request',
+    } as AxiosResponse
+    const error = new AxiosError(
+      'Request failed with status code 400',
+      'ERR_BAD_REQUEST',
+      undefined,
+      undefined,
+      response,
+    )
+
+    expect(formatApiErrorMessage(error)).toBe(
+      'Validation failed: name: name must not be empty; items.0.quantity: quantity must be at least 1',
+    )
+  })
+
+  it('formats backend message arrays from 400 responses', async () => {
+    const { formatApiErrorMessage } = await import('./client')
+    const response = {
+      data: {
+        message: ['name must not be empty', 'amount must be a number'],
+      },
+      status: 400,
+      statusText: 'Bad Request',
+    } as AxiosResponse
+    const error = new AxiosError(
+      'Request failed with status code 400',
+      'ERR_BAD_REQUEST',
+      undefined,
+      undefined,
+      response,
+    )
+
+    expect(formatApiErrorMessage(error)).toBe(
+      'name must not be empty; amount must be a number',
+    )
   })
 })

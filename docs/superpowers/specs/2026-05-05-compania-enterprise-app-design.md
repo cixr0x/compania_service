@@ -428,7 +428,7 @@ Expected validation rules:
 - Sales require a project; manual sales validate that the selected project belongs to the selected product, and import commits use the staged row's selected project.
 - Import commit revalidates staged rows inside the commit transaction before inserting `sales`; if revalidation fails, refreshed validation errors and `has_errors` status remain visible and no sales rows are inserted.
 
-Errors should be returned in a structured JSON shape containing field, message, and optional row number for import errors.
+Errors should be returned in a structured JSON shape containing field, message, and optional row number for import errors. The frontend displays backend `message` and structured `errors` details for failed requests, especially HTTP 400 validation failures, so users can correct the submitted data instead of seeing only generic transport text such as `Request failed with status code 400`.
 
 ## Testing Strategy
 
@@ -444,6 +444,7 @@ Backend tests:
 Frontend tests:
 
 - Component tests for reusable tables and forms.
+- API client and form tests for displaying backend validation details from HTTP 400 responses.
 - Import page tests for displaying matched product name beside imported product description.
 - Import page tests for disabled commit button when metadata or validation is incomplete.
 - Sales report page tests for period selectors, period-scoped product filtering, grouped source headers, average price columns, summary footer totals, hidden project ID column, and dynamic surface source visibility.

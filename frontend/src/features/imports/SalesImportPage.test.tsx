@@ -8,14 +8,20 @@ import App from '../../App'
 import type { ImportBatch, ImportError, ImportStageRow } from '../../api/types'
 import { SalesImportPage } from './SalesImportPage'
 
-vi.mock('../../api/client', () => ({
-  api: {
-    post: vi.fn(),
-  },
-  getJson: vi.fn(),
-  patchJson: vi.fn(),
-  postJson: vi.fn(),
-}))
+vi.mock('../../api/client', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../../api/client')>()
+
+  return {
+    ...actual,
+    api: {
+      post: vi.fn(),
+    },
+    getJson: vi.fn(),
+    patchJson: vi.fn(),
+    postJson: vi.fn(),
+  }
+})
 
 const starterProject = {
   idProject: 501,

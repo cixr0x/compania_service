@@ -13,7 +13,14 @@ import {
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useNavigate, useParams } from 'react-router-dom'
-import { deleteJson, getJson, patchJson, postJson, putJson } from '../../api/client'
+import {
+  deleteJson,
+  formatApiErrorMessage,
+  getJson,
+  patchJson,
+  postJson,
+  putJson,
+} from '../../api/client'
 import { EntityForm } from '../../components/EntityForm'
 import { ProductNameCell } from '../../components/ProductNameCell'
 import { parseMoneyNumber } from '../../utils/money'
@@ -57,11 +64,7 @@ type BuildEntityPayloadOptions = {
 }
 
 function getErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-
-  return 'The request could not be completed.'
+  return formatApiErrorMessage(error)
 }
 
 function normalizeDateValue(value: unknown): string {

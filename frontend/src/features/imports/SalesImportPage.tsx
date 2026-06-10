@@ -17,7 +17,13 @@ import {
 import type { TableProps, UploadFile, UploadProps } from 'antd'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { api, getJson, patchJson, postJson } from '../../api/client'
+import {
+  api,
+  formatApiErrorMessage,
+  getJson,
+  patchJson,
+  postJson,
+} from '../../api/client'
 import { ProductNameCell } from '../../components/ProductNameCell'
 import type {
   ImportBatch,
@@ -57,32 +63,7 @@ function queryKeys(batchId: number) {
 }
 
 function getOperationErrorMessage(error: unknown) {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'response' in error &&
-    typeof error.response === 'object' &&
-    error.response !== null &&
-    'data' in error.response
-  ) {
-    const data = error.response.data
-    if (typeof data === 'object' && data !== null && 'message' in data) {
-      const message = data.message
-      if (Array.isArray(message)) {
-        return message.join(', ')
-      }
-
-      if (typeof message === 'string') {
-        return message
-      }
-    }
-  }
-
-  if (error instanceof Error) {
-    return error.message
-  }
-
-  return 'The import operation failed.'
+  return formatApiErrorMessage(error, 'The import operation failed.')
 }
 
 function formatDecimal(value: ImportStageRow['amount']) {
