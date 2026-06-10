@@ -150,6 +150,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
   const [importDate, setImportDate] = useState('')
   const [isImportDateDirty, setIsImportDateDirty] = useState(false)
   const [operationError, setOperationError] = useState<string | null>(null)
+  const [operationSuccess, setOperationSuccess] = useState<string | null>(null)
 
   const activeKeys = activeBatchId ? queryKeys(activeBatchId) : null
   const hasActiveBatch = activeBatchId !== null
@@ -212,13 +213,16 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     ])
   }
 
-  function resetImport() {
+  function resetImport(options: { preserveSuccess?: boolean } = {}) {
     setActiveBatchId(null)
     setLockedSource(null)
     setFile(null)
     setImportDate('')
     setIsImportDateDirty(false)
     setOperationError(null)
+    if (!options.preserveSuccess) {
+      setOperationSuccess(null)
+    }
     if (params.id) {
       navigate('/imports')
     }
@@ -269,6 +273,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     },
     onMutate: () => {
       setOperationError(null)
+      setOperationSuccess(null)
     },
     onSettled: async () => {
       if (activeBatchId) {
@@ -298,6 +303,11 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     },
     onMutate: () => {
       setOperationError(null)
+      setOperationSuccess(null)
+    },
+    onSuccess: () => {
+      resetImport({ preserveSuccess: true })
+      setOperationSuccess('Sales import committed successfully.')
     },
     onSettled: async () => {
       if (activeBatchId) {
@@ -624,7 +634,10 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
                   Commit
                 </Button>
                 {hasActiveBatch ? (
-                <Button disabled={isAnyMutationPending} onClick={resetImport}>
+                <Button
+                  disabled={isAnyMutationPending}
+                  onClick={() => resetImport()}
+                >
                   New import
                 </Button>
                 ) : null}
@@ -658,6 +671,10 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
               </div>
             }
           />
+        ) : null}
+
+        {operationSuccess ? (
+          <Alert showIcon message={operationSuccess} type="success" />
         ) : null}
 
         <section className="import-section" aria-labelledby="import-errors-heading">

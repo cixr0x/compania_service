@@ -725,6 +725,50 @@ describe('SalesImportPage', () => {
     )
   })
 
+  it('shows success feedback and clears the screen after a successful commit', async () => {
+    const user = userEvent.setup()
+    mockImportQueries(stagedRows, [])
+    vi.mocked(patchJson).mockResolvedValue({
+      ...importBatch,
+      importDate: '2026-05-05T00:00:00.000Z',
+    })
+    vi.mocked(postJson).mockResolvedValue({
+      ...importBatch,
+      importDate: '2026-05-05T00:00:00.000Z',
+      status: 'committed',
+      committedAt: '2026-05-05T10:03:00.000Z',
+    })
+
+    renderSalesImportPage()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Import date')).toHaveValue('2026-05-04')
+    })
+    await user.clear(screen.getByLabelText('Import date'))
+    await user.type(screen.getByLabelText('Import date'), '2026-05-05')
+    const workflowActions = screen.getByRole('group', {
+      name: 'Workflow actions',
+    })
+    const commitButton = within(workflowActions).getByRole('button', {
+      name: /commit/i,
+    })
+    await waitFor(() => {
+      expect(commitButton).toBeEnabled()
+    })
+    await user.click(commitButton)
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith('/import-batches/1/commit', {})
+    })
+    expect(
+      await screen.findByText('Sales import committed successfully.'),
+    ).toBeVisible()
+    expect(screen.queryByText('Active batch #1')).not.toBeInTheDocument()
+    expect(getFileInput()).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Upload' })).toBeEnabled()
+    expect(screen.getByText(/choose a csv or xlsx file/i)).toBeVisible()
+  })
+
   it('refetches batch, stage, and errors when commit fails after patch', async () => {
     const user = userEvent.setup()
     mockImportQueries(stagedRows, [])
