@@ -67,9 +67,10 @@ describe('StakeholderProjectTransactionLines', () => {
 
     renderStakeholderProjectTransactionLines()
 
-    const section = await screen.findByRole('group', {
+    const section = await screen.findByRole('region', {
       name: 'Stakeholder Transactions',
     })
+    expect(section).toHaveClass('stakeholder-transactions-card')
     expect(getJson).toHaveBeenCalledWith(
       '/stakeholder-project-transactions/projects/501/stakeholders/10',
     )
@@ -102,7 +103,7 @@ describe('StakeholderProjectTransactionLines', () => {
 
     renderStakeholderProjectTransactionLines()
 
-    const section = await screen.findByRole('group', {
+    const section = await screen.findByRole('region', {
       name: 'Stakeholder Transactions',
     })
     await within(section).findByRole('button', { name: 'Add transaction' })
@@ -146,7 +147,7 @@ describe('StakeholderProjectTransactionLines', () => {
 
     renderStakeholderProjectTransactionLines()
 
-    const section = await screen.findByRole('group', {
+    const section = await screen.findByRole('region', {
       name: 'Stakeholder Transactions',
     })
     const table = await within(section).findByRole('table', {
@@ -180,7 +181,7 @@ describe('StakeholderProjectTransactionLines', () => {
 
     renderStakeholderProjectTransactionLines()
 
-    const section = await screen.findByRole('group', {
+    const section = await screen.findByRole('region', {
       name: 'Stakeholder Transactions',
     })
     await within(section).findByRole('button', { name: 'Add transaction' })
@@ -213,7 +214,7 @@ describe('StakeholderProjectTransactionLines', () => {
 
     renderStakeholderProjectTransactionLines()
 
-    const section = await screen.findByRole('group', {
+    const section = await screen.findByRole('region', {
       name: 'Stakeholder Transactions',
     })
     await within(section).findByText('Distribution')
@@ -254,7 +255,7 @@ describe('StakeholderProjectTransactionLines', () => {
 
     renderStakeholderProjectTransactionLines()
 
-    const section = await screen.findByRole('group', {
+    const section = await screen.findByRole('region', {
       name: 'Stakeholder Transactions',
     })
     await within(section).findByText('Distribution')

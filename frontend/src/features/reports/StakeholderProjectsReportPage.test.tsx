@@ -142,8 +142,11 @@ describe('StakeholderProjectsReportPage', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Stakeholder Projects Report',
+        name: 'Stakeholder Projects',
       }),
+    ).toBeVisible()
+    expect(
+      screen.getByText('Investment performance & transaction history'),
     ).toBeVisible()
     await user.click(screen.getByRole('button', { name: /Reports/i }))
     await waitFor(() => {
@@ -183,35 +186,24 @@ describe('StakeholderProjectsReportPage', () => {
       }),
     ).toHaveAttribute('src', 'https://example.test/maple-shelf.jpg')
     expect(within(projectRegion).getByText('Project #501')).toBeVisible()
-    expect(within(projectRegion).getByText('30.00%')).toBeVisible()
+    expect(within(projectRegion).getByText('30%')).toBeVisible()
     expect(within(projectRegion).getByText('3 / 10 units sold')).toBeVisible()
 
-    const sourceTable = within(projectRegion).getByRole('table', {
+    const sourceTiles = within(projectRegion).getByRole('list', {
       name: 'Maple Shelf source totals',
     })
-    const storeHeader = within(sourceTable).getByRole('columnheader', {
-      name: 'Store',
-    })
-    const ecommerceHeader = within(sourceTable).getByRole('columnheader', {
-      name: 'Ecommerce',
-    })
-    const eventHeader = within(sourceTable).getByRole('columnheader', {
-      name: 'Event',
-    })
-
-    expect(storeHeader).toBeVisible()
-    expect(storeHeader).toHaveClass('channel-header-store')
+    expect(sourceTiles).toHaveClass('stakeholder-source-grid')
+    expect(within(sourceTiles).getByText('Store')).toBeVisible()
+    expect(within(sourceTiles).getByText('2 units')).toBeVisible()
+    expect(within(sourceTiles).getByText('$200.00')).toBeVisible()
+    expect(within(sourceTiles).getByText('Ecommerce')).toBeVisible()
+    expect(within(sourceTiles).getByText('1 units')).toBeVisible()
+    expect(within(sourceTiles).getByText('$150.00')).toBeVisible()
+    expect(within(sourceTiles).getByText('Event')).toBeVisible()
+    expect(within(sourceTiles).getByText('0 units')).toBeVisible()
     expect(
-      ecommerceHeader,
-    ).toBeVisible()
-    expect(ecommerceHeader).toHaveClass('channel-header-ecommerce')
-    expect(eventHeader).toBeVisible()
-    expect(eventHeader).toHaveClass('channel-header-event')
-    expect(
-      within(sourceTable).queryByRole('columnheader', { name: 'Surface' }),
+      within(sourceTiles).queryByText('Surface'),
     ).not.toBeInTheDocument()
-    expect(within(sourceTable).getByText('$200.00')).toBeVisible()
-    expect(within(sourceTable).getByText('$150.00')).toBeVisible()
 
     expect(within(projectRegion).getByText('Units left')).toBeVisible()
     expect(within(projectRegion).getByText('7')).toBeVisible()
@@ -226,11 +218,13 @@ describe('StakeholderProjectsReportPage', () => {
     expect(within(projectRegion).getByText('Profit')).toBeVisible()
     expect(within(projectRegion).getByText('$310.00')).toBeVisible()
 
-    const stakeholderRegion = within(projectRegion).getByRole('region', {
+    const stakeholderRegion = screen.getByRole('region', {
       name: 'Alicia stakeholder detail',
     })
+    expect(stakeholderRegion).toHaveClass('stakeholder-detail-card')
     expect(within(stakeholderRegion).getByText('Alicia')).toBeVisible()
-    expect(within(stakeholderRegion).getByText('60.00%')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('Stake %')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('60%')).toBeVisible()
     expect(within(stakeholderRegion).getByText('Investment Balance')).toBeVisible()
     expect(within(stakeholderRegion).getByText('$100.00')).toBeVisible()
     expect(within(stakeholderRegion).getByText('Payments')).toBeVisible()
@@ -239,14 +233,14 @@ describe('StakeholderProjectsReportPage', () => {
     expect(within(stakeholderRegion).getByText('$205.80')).toBeVisible()
     expect(within(stakeholderRegion).getByText('$80.30')).toBeVisible()
     expect(
-      within(stakeholderRegion).getByRole('table', {
+      screen.getByRole('table', {
         name: 'Alicia transaction details',
       }),
     ).toBeVisible()
-    expect(within(stakeholderRegion).getByText('Distribution')).toBeVisible()
-    expect(within(stakeholderRegion).getAllByText('$125.50').length).toBeGreaterThan(0)
+    expect(screen.getByText('Distribution')).toBeVisible()
+    expect(screen.getAllByText('$125.50').length).toBeGreaterThan(0)
     expect(
-      within(stakeholderRegion).getByRole('button', {
+      screen.getByRole('button', {
         name: 'Add transaction',
       }),
     ).toBeVisible()

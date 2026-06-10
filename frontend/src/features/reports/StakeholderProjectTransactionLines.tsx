@@ -1,5 +1,12 @@
 import type { TableHTMLAttributes } from 'react'
 import { useMemo, useState } from 'react'
+import {
+  CloseOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  SaveOutlined,
+} from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Empty, Form, Input, Space, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -101,6 +108,23 @@ function compareTransactionRows(
 
 function sortTransactionRows(rows: TransactionDraftRow[]) {
   return [...rows].sort(compareTransactionRows)
+}
+
+function getAmountTone(value: unknown) {
+  const numericValue = parseMoneyNumber(value) ?? 0
+  return numericValue < 0 ? 'negative' : 'positive'
+}
+
+function formatTransactionAmount(value: unknown) {
+  const numericValue = parseMoneyNumber(value)
+
+  if (numericValue === null) {
+    return `$${formatMoney(value)}`
+  }
+
+  return numericValue < 0
+    ? `-$${formatMoney(Math.abs(numericValue))}`
+    : `$${formatMoney(numericValue)}`
 }
 
 export function StakeholderProjectTransactionLines({
@@ -282,6 +306,7 @@ export function StakeholderProjectTransactionLines({
 
   const tableColumns: ColumnsType<TransactionDraftRow> = [
     {
+      className: 'stakeholder-transaction-date-cell',
       dataIndex: 'date',
       key: 'date',
       render: (_value: string, row) => {
@@ -307,6 +332,7 @@ export function StakeholderProjectTransactionLines({
       width: 150,
     },
     {
+      className: 'stakeholder-transaction-description-cell',
       dataIndex: 'description',
       key: 'description',
       render: (_value: string, row) => {
@@ -338,6 +364,7 @@ export function StakeholderProjectTransactionLines({
     },
     {
       align: 'right',
+      className: 'stakeholder-transaction-amount-cell',
       dataIndex: 'amount',
       key: 'amount',
       render: (_value: string, row) => {
@@ -357,7 +384,11 @@ export function StakeholderProjectTransactionLines({
             value={editingRow.amount}
           />
         ) : (
-          `$${formatMoney(row.amount)}`
+          <span
+            className={`stakeholder-transaction-amount stakeholder-transaction-amount-${getAmountTone(row.amount)}`}
+          >
+            {formatTransactionAmount(row.amount)}
+          </span>
         )
       },
       title: 'Amount',
@@ -365,6 +396,7 @@ export function StakeholderProjectTransactionLines({
     },
     {
       align: 'right',
+      className: 'stakeholder-transaction-actions-cell',
       key: 'actions',
       render: (_value: unknown, row, index) => {
         const isEditing = Boolean(editingRows[row.rowKey])
@@ -374,41 +406,37 @@ export function StakeholderProjectTransactionLines({
           <Space size="small">
             <Button
               aria-label={`Save row ${rowNumber}`}
+              icon={<SaveOutlined />}
               loading={saveMutation.isPending}
               onClick={() => handleSaveRow(row.rowKey)}
               size="small"
               type="primary"
-            >
-              Save
-            </Button>
+            />
             <Button
               aria-label={`Cancel row ${rowNumber}`}
+              icon={<CloseOutlined />}
               onClick={() => handleCancelRow(row.rowKey)}
               size="small"
               type="default"
-            >
-              Cancel
-            </Button>
+            />
           </Space>
         ) : (
           <Space size="small">
             <Button
               aria-label={`Edit row ${rowNumber}`}
+              icon={<EditOutlined />}
               onClick={() => handleEditRow(row)}
               size="small"
               type="default"
-            >
-              Edit
-            </Button>
+            />
             <Button
               aria-label={`Remove row ${rowNumber}`}
+              icon={<DeleteOutlined />}
               loading={saveMutation.isPending}
               onClick={() => handleRemoveRow(row.rowKey)}
               size="small"
               type="default"
-            >
-              Remove
-            </Button>
+            />
           </Space>
         )
       },
@@ -418,8 +446,13 @@ export function StakeholderProjectTransactionLines({
   ]
 
   return (
-    <fieldset className="form-section split-editor">
-      <legend>Stakeholder Transactions</legend>
+    <section
+      aria-label="Stakeholder Transactions"
+      className="stakeholder-transactions-card"
+    >
+      <div className="stakeholder-transactions-card-header">
+        <Typography.Title level={3}>Stakeholder Transactions</Typography.Title>
+      </div>
 
       {transactionsQuery.isError ? (
         <Alert
@@ -456,13 +489,18 @@ export function StakeholderProjectTransactionLines({
             size="small"
           />
 
-          <Space className="form-actions">
-            <Button onClick={handleAddRow} type="default">
+          <div className="stakeholder-transactions-card-footer">
+            <Button
+              aria-label="Add transaction"
+              icon={<PlusOutlined />}
+              onClick={handleAddRow}
+              type="link"
+            >
               Add transaction
             </Button>
-          </Space>
+          </div>
         </Form>
       )}
-    </fieldset>
+    </section>
   )
 }

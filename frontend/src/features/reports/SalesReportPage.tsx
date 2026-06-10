@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Empty, Select, Space, Spin, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -25,6 +25,7 @@ const DEFAULT_REPORT_SOURCES: SalesReportSource[] = [
   'event',
 ]
 const EMPTY_PERIODS: SalesReportPeriod[] = []
+const EMPTY_REPORT_ROWS: SalesReportRow[] = []
 const REPORT_COLUMN_WIDTHS = {
   fee: 90,
   model: 90,
@@ -167,7 +168,12 @@ export function SalesReportPage() {
   })
   const report = reportQuery.data
   const sources = report?.sources ?? DEFAULT_REPORT_SOURCES
-  const rows = report?.rows ?? []
+  const rows = report?.rows ?? EMPTY_REPORT_ROWS
+  const activeProductId =
+    selectedProductId &&
+    rows.some((row) => String(row.productId) === selectedProductId)
+      ? selectedProductId
+      : ''
   const productOptions = useMemo(() => {
     const optionsByProduct = new Map<number, string>()
 
@@ -184,24 +190,16 @@ export function SalesReportPage() {
   }, [rows])
   const filteredRows = useMemo(
     () =>
-      selectedProductId
-        ? rows.filter((row) => String(row.productId) === selectedProductId)
+      activeProductId
+        ? rows.filter((row) => String(row.productId) === activeProductId)
         : rows,
-    [rows, selectedProductId],
+    [activeProductId, rows],
   )
   const reportTotals = useMemo(
     () => getReportTotals(filteredRows, sources),
     [filteredRows, sources],
   )
   const isLoading = reportQuery.isLoading || periodsQuery.isLoading
-  useEffect(() => {
-    if (
-      selectedProductId &&
-      !rows.some((row) => String(row.productId) === selectedProductId)
-    ) {
-      setSelectedProductId('')
-    }
-  }, [rows, selectedProductId])
   const columns = useMemo<ColumnsType<SalesReportRow>>(
     () => [
       {
@@ -388,7 +386,7 @@ export function SalesReportPage() {
               ]}
               showSearch
               style={{ minWidth: 220 }}
-              value={selectedProductId}
+              value={activeProductId}
             />
           </label>
         </Space>

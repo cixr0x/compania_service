@@ -1,18 +1,14 @@
-import type { TableHTMLAttributes } from 'react'
-import { useMemo, useState } from 'react'
+import { PieChartOutlined } from '@ant-design/icons'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Empty, Progress, Select, Spin, Table, Typography } from 'antd'
-import type { ColumnsType } from 'antd/es/table'
+import { Alert, Empty, Progress, Select, Spin, Typography } from 'antd'
 import { getJson } from '../../api/client'
 import type {
   Project,
-  StakeholderProjectReportRow,
   StakeholderProjectStakeholderRow,
   StakeholderProjectsReport,
   StakeholderProjectsReportSource,
 } from '../../api/types'
-import { ProductNameCell } from '../../components/ProductNameCell'
-import { getChannelHeaderClass } from '../../utils/channelHeaders'
 import { formatCurrency } from '../../utils/money'
 import { StakeholderProjectTransactionLines } from './StakeholderProjectTransactionLines'
 
@@ -28,10 +24,29 @@ const DEFAULT_REPORT_SOURCES: StakeholderProjectsReportSource[] = [
   'ecommerce',
   'event',
 ]
+const sourceTones: Record<StakeholderProjectsReportSource, string> = {
+  ecommerce: 'emerald',
+  event: 'amber',
+  store: 'blue',
+  surface: 'violet',
+}
 
 function formatPercentage(value: unknown) {
   const numericValue = Number(value)
-  return Number.isFinite(numericValue) ? `${numericValue.toFixed(2)}%` : '-'
+  if (!Number.isFinite(numericValue)) {
+    return '-'
+  }
+
+  return `${new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: 2,
+  }).format(numericValue)}%`
+}
+
+function formatUnits(value: unknown) {
+  const numericValue = Number(value)
+  return Number.isFinite(numericValue)
+    ? numericValue.toLocaleString()
+    : '-'
 }
 
 function buildReportPath(projectId: number, stakeholderId: number) {
@@ -48,14 +63,6 @@ function formatProjectOption(project: Project) {
   return productName
     ? `Project #${project.idProject} - ${productName}`
     : `Project #${project.idProject}`
-}
-
-function getNamedTableComponents(label: string) {
-  return {
-    table: (props: TableHTMLAttributes<HTMLTableElement>) => (
-      <table {...props} aria-label={label} />
-    ),
-  }
 }
 
 export function StakeholderProjectsReportPage() {
@@ -98,59 +105,28 @@ export function StakeholderProjectsReportPage() {
   const isLoading =
     projectsQuery.isLoading ||
     (hasSelectedScope && reportQuery.isLoading)
-  const sourceColumns = useMemo<ColumnsType<StakeholderProjectReportRow>>(
-    () =>
-      sources.map((source) => {
-        const headerClassName = getChannelHeaderClass(source)
-
-        return {
-          children: [
-            {
-              align: 'right' as const,
-              key: `${source}-quantity`,
-              onHeaderCell: () => ({ className: headerClassName }),
-              render: (
-                _value: unknown,
-                reportRow: StakeholderProjectReportRow,
-              ) => reportRow[source].quantity,
-              title: 'Quantity',
-              width: 112,
-            },
-            {
-              align: 'right' as const,
-              key: `${source}-amount`,
-              onHeaderCell: () => ({ className: headerClassName }),
-              render: (
-                _value: unknown,
-                reportRow: StakeholderProjectReportRow,
-              ) => formatCurrency(reportRow[source].amount),
-              title: 'Amount',
-              width: 136,
-            },
-          ],
-          key: source,
-          onHeaderCell: () => ({ className: headerClassName }),
-          title: sourceLabels[source],
-        }
-      }),
-    [sources],
-  )
   return (
     <section
-      className="page-panel report-page"
+      className="stakeholder-projects-page"
       aria-labelledby="stakeholder-projects-report-heading"
     >
-      <div className="page-heading-row">
+      <div className="stakeholder-projects-heading">
+        <div className="stakeholder-projects-heading-icon" aria-hidden="true">
+          <PieChartOutlined />
+        </div>
         <div>
           <Typography.Title id="stakeholder-projects-report-heading" level={2}>
-            Stakeholder Projects Report
+            Stakeholder Projects
           </Typography.Title>
+          <Typography.Text className="stakeholder-projects-subtitle">
+            Investment performance & transaction history
+          </Typography.Text>
         </div>
       </div>
 
-      <div className="report-controls">
-        <div className="report-filter-row stakeholder-report-filter-row">
-          <label className="form-field">
+      <div className="stakeholder-report-controls">
+        <div className="stakeholder-report-filter-row">
+          <label className="stakeholder-report-filter">
             Project
             <Select
               aria-label="Project"
@@ -169,7 +145,7 @@ export function StakeholderProjectsReportPage() {
             />
           </label>
 
-          <label className="form-field">
+          <label className="stakeholder-report-filter">
             Stakeholder
             <Select
               aria-label="Stakeholder"
@@ -215,59 +191,98 @@ export function StakeholderProjectsReportPage() {
       ) : null}
 
       {!isLoading && row ? (
-        <section
-          aria-label={`${row.productName} project ${row.projectId}`}
-          className="stakeholder-project-report-section"
-        >
-          <div className="stakeholder-project-header">
-            <ProductNameCell imageUrl={row.productImage} name={row.productName} />
-            <Typography.Text strong>Project #{row.projectId}</Typography.Text>
-            <Progress
-              percent={row.projectProgress}
-              showInfo={false}
-              size="small"
-            />
-            <Typography.Text strong>
-              {formatPercentage(row.projectProgress)}
-            </Typography.Text>
-            <Typography.Text type="secondary">
-              {row.totalUnitsSold} / {row.totalUnits} units sold
-            </Typography.Text>
-          </div>
+        <>
+          <section
+            aria-label={`${row.productName} project ${row.projectId}`}
+            className="stakeholder-project-card"
+          >
+            <div className="stakeholder-project-summary-header">
+              <div className="stakeholder-project-product">
+                <div className="stakeholder-project-product-image">
+                  {row.productImage ? (
+                    <img
+                      alt={`${row.productName} thumbnail`}
+                      src={row.productImage}
+                    />
+                  ) : (
+                    <span>{row.productName.charAt(0) || '?'}</span>
+                  )}
+                </div>
+                <div>
+                  <Typography.Title level={3}>{row.productName}</Typography.Title>
+                  <Typography.Text type="secondary">
+                    Project #{row.projectId}
+                  </Typography.Text>
+                </div>
+              </div>
 
-          <Table<StakeholderProjectReportRow>
-            className="report-table stakeholder-project-source-table"
-            columns={sourceColumns}
-            components={getNamedTableComponents(
-              `${row.productName} source totals`,
-            )}
-            dataSource={[row]}
-            pagination={false}
-            rowKey={(sourceRow) => `${sourceRow.projectId}-sources`}
-            scroll={{ x: sources.length * 248 }}
-            size="small"
-          />
+              <div className="stakeholder-project-progress">
+                <Typography.Text type="secondary">
+                  {`${formatUnits(row.totalUnitsSold)} / ${formatUnits(row.totalUnits)} units sold`}
+                </Typography.Text>
+                <div className="stakeholder-project-progress-row">
+                  <Progress
+                    percent={row.projectProgress}
+                    showInfo={false}
+                    size="small"
+                    strokeColor="#f59e0b"
+                  />
+                  <Typography.Text className="stakeholder-project-progress-value">
+                    {formatPercentage(row.projectProgress)}
+                  </Typography.Text>
+                </div>
+              </div>
+            </div>
 
-          <div className="stakeholder-project-metrics">
-            <Metric label="Units left" value={row.unitsLeft} />
-            <Metric label="Total sales" value={formatCurrency(row.totalSales)} />
-            <Metric label="Total fees" value={formatCurrency(row.totalFees)} />
-            <Metric
-              label="Net sales total"
-              value={formatCurrency(row.netSalesTotal)}
-            />
-            <Metric
-              label="Calculated cost"
-              value={formatCurrency(row.calculatedCost)}
-            />
-            <Metric label="Profit" value={formatCurrency(row.profit)} />
-          </div>
+            <div
+              aria-label={`${row.productName} source totals`}
+              className="stakeholder-source-grid"
+              role="list"
+            >
+              {sources.map((source) => (
+                <div
+                  className={`stakeholder-source-card stakeholder-source-card-${sourceTones[source]}`}
+                  key={source}
+                  role="listitem"
+                >
+                  <Typography.Text className="stakeholder-source-label">
+                    {sourceLabels[source]}
+                  </Typography.Text>
+                  <Typography.Text className="stakeholder-source-units">
+                    {`${formatUnits(row[source].quantity)} units`}
+                  </Typography.Text>
+                  <Typography.Text className="stakeholder-source-amount">
+                    {formatCurrency(row[source].amount)}
+                  </Typography.Text>
+                </div>
+              ))}
+            </div>
+
+            <div className="stakeholder-project-metrics">
+              <Metric label="Units left" value={formatUnits(row.unitsLeft)} />
+              <Metric label="Total sales" value={formatCurrency(row.totalSales)} />
+              <Metric label="Total fees" value={formatCurrency(row.totalFees)} />
+              <Metric
+                label="Net sales total"
+                value={formatCurrency(row.netSalesTotal)}
+              />
+              <Metric
+                label="Calculated cost"
+                value={formatCurrency(row.calculatedCost)}
+              />
+              <Metric
+                label="Profit"
+                tone="positive"
+                value={formatCurrency(row.profit)}
+              />
+            </div>
+          </section>
 
           <StakeholderDetail
             projectId={row.projectId}
             stakeholder={row.stakeholder}
           />
-        </section>
+        </>
       ) : null}
     </section>
   )
@@ -281,30 +296,44 @@ function StakeholderDetail({
   stakeholder: StakeholderProjectStakeholderRow
 }) {
   return (
-    <section
-      aria-label={`${stakeholder.stakeholderName} stakeholder detail`}
-      className="stakeholder-detail-section"
-    >
-      <div className="stakeholder-detail-heading">
-        <Typography.Title level={3}>{stakeholder.stakeholderName}</Typography.Title>
-      </div>
+    <>
+      <section
+        aria-label={`${stakeholder.stakeholderName} stakeholder detail`}
+        className="stakeholder-detail-card"
+      >
+        <div className="stakeholder-detail-heading">
+          <Typography.Title level={3}>
+            {stakeholder.stakeholderName}
+          </Typography.Title>
+        </div>
 
-      <div className="stakeholder-project-metrics">
-        <Metric
-          label="Stake percentage"
-          value={formatPercentage(stakeholder.stakePercentage)}
-        />
-        <Metric
-          label="Investment Balance"
-          value={formatCurrency(stakeholder.investment)}
-        />
-        <Metric label="Payments" value={formatCurrency(stakeholder.payments)} />
-        <Metric
-          label="Entitled Income"
-          value={formatCurrency(stakeholder.income)}
-        />
-        <Metric label="Balance" value={formatCurrency(stakeholder.balance)} />
-      </div>
+        <div className="stakeholder-project-metrics stakeholder-detail-metrics">
+          <Metric
+            label="Stake %"
+            value={formatPercentage(stakeholder.stakePercentage)}
+          />
+          <Metric
+            label="Investment Balance"
+            tone={stakeholder.investment < 0 ? 'negative' : undefined}
+            value={formatCurrency(stakeholder.investment)}
+          />
+          <Metric
+            label="Payments"
+            tone="positive"
+            value={formatCurrency(stakeholder.payments)}
+          />
+          <Metric
+            label="Entitled Income"
+            tone="income"
+            value={formatCurrency(stakeholder.income)}
+          />
+          <Metric
+            label="Balance"
+            tone="warning"
+            value={formatCurrency(stakeholder.balance)}
+          />
+        </div>
+      </section>
 
       <StakeholderProjectTransactionLines
         key={`${projectId}-${stakeholder.stakeholderId}`}
@@ -312,21 +341,27 @@ function StakeholderDetail({
         stakeholderId={stakeholder.stakeholderId}
         stakeholderName={stakeholder.stakeholderName}
       />
-    </section>
+    </>
   )
 }
 
 function Metric({
   label,
+  tone,
   value,
 }: {
   label: string
+  tone?: 'income' | 'negative' | 'positive' | 'warning'
   value: number | string
 }) {
   return (
     <div className="stakeholder-project-metric">
       <Typography.Text className="metric-label">{label}</Typography.Text>
-      <Typography.Text className="metric-value">{value}</Typography.Text>
+      <Typography.Text
+        className={`metric-value${tone ? ` metric-value-${tone}` : ''}`}
+      >
+        {value}
+      </Typography.Text>
     </div>
   )
 }
