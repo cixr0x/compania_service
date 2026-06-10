@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from './components/AppLayout'
+import { DashboardPage } from './features/dashboard/DashboardPage'
 import { EntityEditPage } from './features/entities/EntityEditPage'
 import { EntityListPage } from './features/entities/EntityListPage'
 import { SalesImportPage } from './features/imports/SalesImportPage'
@@ -10,7 +11,7 @@ function App() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route index element={<Navigate replace to="/products" />} />
+        <Route index element={<DashboardPage />} />
         <Route path="imports" element={<SalesImportPage />} />
         <Route path="imports/:id" element={<SalesImportPage />} />
         <Route path="reports/sales" element={<SalesReportPage />} />

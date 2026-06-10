@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -9,7 +9,7 @@ describe('AppLayout', () => {
     cleanup()
   })
 
-  it('renders primary navigation with Ant Design menu semantics', () => {
+  it('renders a top application navigation grouped by workflow', () => {
     render(
       <MemoryRouter initialEntries={['/projects']}>
         <Routes>
@@ -20,9 +20,20 @@ describe('AppLayout', () => {
       </MemoryRouter>,
     )
 
-    expect(
-      screen.getByRole('menu', { name: 'Primary navigation' }),
-    ).toBeVisible()
+    expect(screen.getByRole('banner')).toBeVisible()
+    expect(screen.getByRole('link', { name: /Compania Service/i })).toHaveAttribute(
+      'href',
+      '/',
+    )
+
+    const navigation = screen.getByRole('navigation', {
+      name: 'Primary navigation',
+    })
+
+    expect(within(navigation).getByRole('button', { name: /Catalog/i })).toBeVisible()
+    expect(within(navigation).getByRole('button', { name: /Sales/i })).toBeVisible()
+    expect(within(navigation).getByRole('button', { name: /Reports/i })).toBeVisible()
+    expect(within(navigation).getByRole('button', { name: /Admin/i })).toBeVisible()
   })
 
   it('does not render the old admin console commercial operations header', () => {
@@ -40,7 +51,7 @@ describe('AppLayout', () => {
     expect(screen.queryByText('Commercial Operations')).not.toBeInTheDocument()
   })
 
-  it('does not render the old topbar container', () => {
+  it('does not render the old sidebar shell', () => {
     const { container } = render(
       <MemoryRouter initialEntries={['/projects']}>
         <Routes>
@@ -51,13 +62,15 @@ describe('AppLayout', () => {
       </MemoryRouter>,
     )
 
-    expect(container.querySelector('.topbar')).not.toBeInTheDocument()
+    expect(container.querySelector('.app-sider')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveClass(
-      'mobile-menu-button',
+      'top-nav-mobile-button',
     )
   })
 
-  it('groups primary navigation into admin, catalog, and reports sections', () => {
+  it('opens grouped navigation menus with the configured route links', async () => {
+    const user = userEvent.setup()
+
     render(
       <MemoryRouter initialEntries={['/projects']}>
         <Routes>
@@ -68,23 +81,23 @@ describe('AppLayout', () => {
       </MemoryRouter>,
     )
 
-    const menu = screen.getByRole('menu', { name: 'Primary navigation' })
-    expect(within(menu).getByText('Admin')).toBeVisible()
-    expect(within(menu).getByText('Catalog')).toBeVisible()
-    expect(within(menu).getByText('Reports')).toBeVisible()
-    expect(
-      within(menu).getAllByRole('link').map((link) => link.textContent),
-    ).toEqual([
-      'Models',
-      'Settings',
-      'Products',
-      'Projects',
-      'Stakeholders',
-      'Sales',
-      'Sales Imports',
-      'Sales Report',
-      'Stakeholder Projects',
-    ])
+    await user.click(screen.getByRole('button', { name: /Catalog/i }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Products' })).toHaveAttribute(
+        'href',
+        '/products',
+      )
+    })
+
+    expect(screen.getByRole('link', { name: 'Projects' })).toHaveAttribute(
+      'href',
+      '/projects',
+    )
+    expect(screen.getByRole('link', { name: 'Stakeholders' })).toHaveAttribute(
+      'href',
+      '/stakeholders',
+    )
   })
 
   it('keeps project stakeholder splits out of the primary navigation', () => {
@@ -98,14 +111,7 @@ describe('AppLayout', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByRole('link', { name: 'Projects' })).toHaveAttribute(
-      'href',
-      '/projects',
-    )
-    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute(
-      'href',
-      '/settings',
-    )
+    expect(screen.getByRole('button', { name: /Catalog/i })).toBeVisible()
     expect(
       screen.queryByRole('link', { name: 'Project Stakeholders' }),
     ).not.toBeInTheDocument()

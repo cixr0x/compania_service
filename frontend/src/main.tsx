@@ -15,7 +15,7 @@ createRoot(document.getElementById('root')!).render(
       theme={{
         token: {
           borderRadius: 6,
-          colorPrimary: '#1677ff',
+          colorPrimary: '#f59e0b',
           fontFamily:
             "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         },

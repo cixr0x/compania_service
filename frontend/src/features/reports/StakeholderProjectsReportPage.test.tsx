@@ -145,9 +145,12 @@ describe('StakeholderProjectsReportPage', () => {
         name: 'Stakeholder Projects Report',
       }),
     ).toBeVisible()
-    expect(
-      screen.getByRole('link', { name: 'Stakeholder Projects' }),
-    ).toHaveAttribute('href', '/reports/stakeholder-projects')
+    await user.click(screen.getByRole('button', { name: /Reports/i }))
+    await waitFor(() => {
+      expect(
+        screen.getByRole('link', { name: 'Stakeholder Projects' }),
+      ).toHaveAttribute('href', '/reports/stakeholder-projects')
+    })
 
     const projectSelect = await screen.findByRole('combobox', {
       name: 'Project',

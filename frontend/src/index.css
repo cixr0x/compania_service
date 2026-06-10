@@ -5,11 +5,14 @@
   --text: #141414;
   --text-muted: #667085;
   --border: #d9d9d9;
-  --accent: #1677ff;
-  --accent-strong: #0958d9;
-  --accent-soft: #e6f4ff;
-  --table-hover-bg: #f0f7ff;
+  --accent: #f59e0b;
+  --accent-strong: #d97706;
+  --accent-soft: #fff7e6;
+  --table-hover-bg: #fff7e6;
   --table-stripe-bg: #fafafa;
+  --nav-bg: #1a2744;
+  --nav-bg-deep: #111c32;
+  --nav-muted: #a8b3c7;
   --sans:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     'Segoe UI', sans-serif;
@@ -52,6 +55,25 @@ button {
   background: var(--bg);
 }
 
+.top-app-shell {
+  display: flex;
+  flex-direction: column;
+}
+
+.top-app-header {
+  align-items: center;
+  background: var(--nav-bg);
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.16);
+  display: flex;
+  gap: 14px;
+  height: 58px;
+  line-height: normal;
+  padding: 0 18px;
+  position: sticky;
+  top: 0;
+  z-index: 900;
+}
+
 .app-sider {
   min-height: 100svh;
 }
@@ -66,9 +88,9 @@ button {
 
 .brand-mark {
   align-items: center;
-  background: #e6f4ff;
+  background: var(--accent);
   border-radius: 6px;
-  color: #0958d9;
+  color: #ffffff;
   display: flex;
   font-weight: 800;
   height: 38px;
@@ -96,6 +118,87 @@ button {
   font-size: 12px;
 }
 
+.top-brand {
+  align-items: center;
+  color: inherit;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 10px;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.top-brand:hover {
+  color: inherit;
+}
+
+.top-brand .brand-mark {
+  height: 34px;
+  width: 34px;
+}
+
+.top-brand-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.top-nav-divider {
+  background: rgba(255, 255, 255, 0.14);
+  flex: 0 0 auto;
+  height: 26px;
+  width: 1px;
+}
+
+.top-nav-groups {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 4px;
+  min-width: 0;
+}
+
+.top-nav-trigger {
+  color: var(--nav-muted);
+  font-weight: 600;
+}
+
+.top-nav-trigger:hover,
+.top-nav-trigger:focus-visible {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.top-nav-trigger-active {
+  background: rgba(245, 158, 11, 0.18) !important;
+  color: #fbbf24 !important;
+}
+
+.top-nav-chevron {
+  font-size: 11px;
+  margin-left: 2px;
+}
+
+.top-nav-actions {
+  margin-left: auto;
+}
+
+.top-icon-button {
+  color: var(--nav-muted);
+}
+
+.top-icon-button:hover,
+.top-icon-button:focus-visible {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.top-user-avatar {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.34);
+  color: #fbbf24;
+}
+
 .ant-menu a {
   color: inherit;
   text-decoration: none;
@@ -107,9 +210,10 @@ button {
   min-width: 0;
 }
 
-.mobile-menu-button {
+.top-nav-mobile-button {
   display: none;
   flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .page-panel h2 {
@@ -120,8 +224,13 @@ button {
 }
 
 .page-content {
+  flex: 1 1 auto;
   min-width: 0;
   padding: 24px 28px;
+}
+
+.top-page-content {
+  width: 100%;
 }
 
 .page-panel {
@@ -464,6 +573,253 @@ button {
   padding-top: 16px;
 }
 
+.dashboard-page {
+  display: grid;
+  gap: 18px;
+  margin: 0 auto;
+  max-width: 1280px;
+  width: 100%;
+}
+
+.dashboard-hero {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+}
+
+.dashboard-hero-mark,
+.dashboard-metric-icon,
+.dashboard-quick-link-icon {
+  align-items: center;
+  border-radius: 8px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  justify-content: center;
+}
+
+.dashboard-hero-mark {
+  background: var(--accent);
+  box-shadow: 0 8px 18px rgba(245, 158, 11, 0.22);
+  color: #ffffff;
+  font-size: 24px;
+  height: 48px;
+  width: 48px;
+}
+
+.dashboard-hero h1 {
+  color: #1f2937;
+  font-size: 28px;
+  line-height: 1.18;
+  margin: 0;
+}
+
+.dashboard-subtitle {
+  color: var(--text-muted);
+  display: block;
+  margin-top: 3px;
+}
+
+.dashboard-alert {
+  max-width: 760px;
+}
+
+.dashboard-metric-card,
+.dashboard-section-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  height: 100%;
+}
+
+.dashboard-metric-card .ant-card-body {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+}
+
+.dashboard-metric-icon {
+  font-size: 18px;
+  height: 36px;
+  margin-bottom: 2px;
+  width: 36px;
+}
+
+.dashboard-metric-icon-indigo {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.dashboard-metric-icon-violet {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+.dashboard-metric-icon-rose {
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.dashboard-metric-icon-blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.dashboard-metric-icon-slate {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.dashboard-metric-icon-green {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.dashboard-metric-icon-amber {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.dashboard-metric-icon-teal {
+  background: #f0fdfa;
+  color: #0f766e;
+}
+
+.dashboard-metric-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dashboard-metric-value {
+  color: #1f2937;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.dashboard-stack {
+  width: 100%;
+}
+
+.dashboard-section-card .ant-card-head {
+  min-height: 46px;
+}
+
+.dashboard-section-card .ant-card-head-title {
+  color: #334155;
+  font-weight: 700;
+}
+
+.dashboard-product-progress {
+  width: 100%;
+}
+
+.dashboard-list {
+  display: grid;
+}
+
+.dashboard-list-item {
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 0;
+}
+
+.dashboard-list-item:last-child {
+  border-bottom: 0;
+}
+
+.dashboard-list-item-body {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dashboard-recent-sale-item {
+  justify-content: space-between;
+}
+
+.dashboard-sale-amount {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.dashboard-avatar-0 {
+  background: #f59e0b;
+}
+
+.dashboard-avatar-1 {
+  background: #4f46e5;
+}
+
+.dashboard-avatar-2 {
+  background: #7c3aed;
+}
+
+.dashboard-avatar-3 {
+  background: #0f766e;
+}
+
+.dashboard-quick-links {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dashboard-quick-link {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: inherit;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  padding: 14px 16px;
+  text-decoration: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.dashboard-quick-link:hover {
+  border-color: #fbbf24;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  color: inherit;
+}
+
+.dashboard-quick-link-icon {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 18px;
+  height: 36px;
+  width: 36px;
+}
+
+.dashboard-quick-link-title,
+.dashboard-quick-link-description {
+  display: block;
+}
+
+.dashboard-quick-link-title {
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.dashboard-quick-link-description {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.dashboard-quick-link-arrow {
+  color: var(--accent-strong);
+}
+
 .report-page {
   display: grid;
   gap: 18px;
@@ -742,23 +1098,21 @@ button {
 }
 
 @media (max-width: 991px) {
-  .app-sider {
+  .top-nav-groups,
+  .top-nav-divider {
     display: none;
   }
 
-  .mobile-menu-button {
+  .top-nav-mobile-button {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
     display: inline-flex;
-    left: 12px;
-    position: fixed;
-    top: 12px;
-    z-index: 1000;
-    background: var(--panel);
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   }
 
-  .page-content {
-    padding-top: 64px;
+  .top-nav-mobile-button:hover,
+  .top-nav-mobile-button:focus-visible {
+    background: rgba(255, 255, 255, 0.16) !important;
+    color: #ffffff !important;
   }
 
   .mobile-navigation-drawer .ant-drawer-body {
@@ -779,6 +1133,10 @@ button {
 @media (max-width: 780px) {
   .app-shell {
     min-height: 100svh;
+  }
+
+  .top-app-header {
+    padding: 0 12px;
   }
 
   .page-heading-row {
@@ -824,7 +1182,11 @@ button {
   }
 
   .page-content {
-    padding: 64px 16px 16px;
+    padding: 16px;
+  }
+
+  .dashboard-quick-links {
+    grid-template-columns: 1fr;
   }
 
   .page-panel {
@@ -925,17 +1287,17 @@ button {
 }
 
 @media (max-width: 420px) {
-  .brand-block {
-    gap: 8px;
-  }
-
   .brand-mark {
     height: 34px;
     width: 34px;
   }
 
+  .top-brand-copy {
+    display: none;
+  }
+
   .page-content {
-    padding: 58px 10px 10px;
+    padding: 12px 10px;
   }
 
   .page-panel {

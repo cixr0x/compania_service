@@ -84,6 +84,7 @@ describe('SalesReportPage', () => {
   })
 
   it('renders the yearly sales report with grouped source columns and project id first', async () => {
+    const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation((path: string) => {
       if (path === '/reports/sales-summary/periods') {
         return Promise.resolve([{ year: 2026, months: [5, 4] }])
@@ -103,10 +104,13 @@ describe('SalesReportPage', () => {
     ).toBeVisible()
     const reportRegion = screen.getByRole('region', { name: 'Sales Report' })
     expect(within(reportRegion).queryByText('Reports')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Sales Report' })).toHaveAttribute(
-      'href',
-      '/reports/sales',
-    )
+    await user.click(screen.getByRole('button', { name: /Reports/i }))
+    await waitFor(() => {
+      expect(screen.getByRole('link', { name: 'Sales Report' })).toHaveAttribute(
+        'href',
+        '/reports/sales',
+      )
+    })
     const yearSelect = screen.getByRole('combobox', { name: 'Year' })
     const monthSelect = screen.getByRole('combobox', { name: 'Month' })
     const controlsRow = reportRegion.querySelector('.report-controls')
