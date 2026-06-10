@@ -244,18 +244,18 @@ The final `sales` table should only contain committed, validated data.
 
 ## Sales Summary Report
 
-The first report is a sales summary table grouped by product and project. If the same product has sales linked to multiple projects, each project appears as a separate row. The first column is `Project ID`; the product column contains only the product name.
+The first report is a sales summary table grouped by product and project. If the same product has sales linked to multiple projects, each project appears as a separate row. The visible table starts with the product column and does not display the project ID.
 
 The report supports yearly and monthly timeframes. The backend exposes the years and months that have sales data, and the frontend lets the user choose from those available periods. Selecting only a year returns a yearly report; selecting a year and month returns a monthly report.
 
 Columns:
 
-- `Project ID`
 - `Product`
-- Source groups for `Store`, `Ecommerce`, and `Event`, each with `Quantity` and `Amount`
+- Source groups for `Store`, `Ecommerce`, and `Event`, each with `Quantity`, `Amount`, and `Avg Price`
 - `Surface` source group only when the selected report period contains surface sales
 - `Total Quantity`
 - `Total Amount`
+- `Avg Price`
 - `Model`
 - `Fee`
 - `Profit`
@@ -446,7 +446,7 @@ Frontend tests:
 - Component tests for reusable tables and forms.
 - Import page tests for displaying matched product name beside imported product description.
 - Import page tests for disabled commit button when metadata or validation is incomplete.
-- Sales report page tests for period selectors, period-scoped product filtering, grouped source headers, average price columns, summary footer totals, project ID column, and dynamic surface source visibility.
+- Sales report page tests for period selectors, period-scoped product filtering, grouped source headers, average price columns, summary footer totals, hidden project ID column, and dynamic surface source visibility.
 - Project form tests for transaction-line cost editing and transaction-derived total cost updates.
 
 End-to-end tests should be added once the MVP screens are stable enough to avoid brittle early tests.

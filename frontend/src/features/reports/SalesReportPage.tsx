@@ -32,7 +32,6 @@ const REPORT_COLUMN_WIDTHS = {
   ownerProfit: 120,
   product: 160,
   profit: 88,
-  projectId: 80,
   sourceAmount: 104,
   sourceAveragePrice: 104,
   sourceQuantity: 64,
@@ -45,7 +44,6 @@ const REPORT_SOURCE_GROUP_WIDTH =
   REPORT_COLUMN_WIDTHS.sourceAmount +
   REPORT_COLUMN_WIDTHS.sourceAveragePrice
 const REPORT_STATIC_WIDTH =
-  REPORT_COLUMN_WIDTHS.projectId +
   REPORT_COLUMN_WIDTHS.product +
   REPORT_COLUMN_WIDTHS.totalQuantity +
   REPORT_COLUMN_WIDTHS.totalAmount +
@@ -202,13 +200,6 @@ export function SalesReportPage() {
   const isLoading = reportQuery.isLoading || periodsQuery.isLoading
   const columns = useMemo<ColumnsType<SalesReportRow>>(
     () => [
-      {
-        align: 'right',
-        dataIndex: 'projectId',
-        key: 'projectId',
-        title: 'Project ID',
-        width: REPORT_COLUMN_WIDTHS.projectId,
-      },
       {
         dataIndex: 'productName',
         key: 'productName',
@@ -429,7 +420,6 @@ export function SalesReportPage() {
           return (
             <Table.Summary fixed>
               <Table.Summary.Row>
-                <Table.Summary.Cell index={cellIndex++} />
                 <Table.Summary.Cell index={cellIndex++}>
                   <strong>Totals</strong>
                 </Table.Summary.Cell>

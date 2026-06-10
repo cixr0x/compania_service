@@ -104,7 +104,7 @@ describe('SalesReportPage', () => {
     vi.clearAllMocks()
   })
 
-  it('renders the yearly sales report with grouped source columns and project id first', async () => {
+  it('renders the yearly sales report with grouped source columns and no project id column', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation((path: string) => {
       if (path === '/reports/sales-summary/periods') {
@@ -160,9 +160,9 @@ describe('SalesReportPage', () => {
     expect(table.closest('.ant-table-wrapper')).toBeInTheDocument()
     expect(table.closest('.sales-report-table')).toBeInTheDocument()
     expect(table.closest('.ant-table')).toHaveClass('ant-table-small')
-    expect(table).toHaveStyle({ width: '1768px' })
-    expect(columnHeaders[0]).toHaveTextContent('Project ID')
-    expect(columnHeaders[1]).toHaveTextContent('Product')
+    expect(table).toHaveStyle({ width: '1688px' })
+    expect(within(table).queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument()
+    expect(columnHeaders[0]).toHaveTextContent('Product')
     const storeHeader = within(table).getByRole('columnheader', { name: 'Store' })
     const ecommerceHeader = within(table).getByRole('columnheader', {
       name: 'Ecommerce',
@@ -191,7 +191,7 @@ describe('SalesReportPage', () => {
     expect(within(table).getAllByRole('columnheader', { name: 'Avg Price' })).toHaveLength(4)
 
     const reportRow = screen.getByText('Maple Shelf').closest('tr')!
-    expect(within(reportRow).getByText('501')).toBeVisible()
+    expect(within(reportRow).queryByText('501')).not.toBeInTheDocument()
     expect(within(reportRow).getByText('Maple Shelf')).toBeVisible()
     expect(
       within(reportRow).getByRole('img', { name: 'Maple Shelf thumbnail' }),
@@ -264,7 +264,7 @@ describe('SalesReportPage', () => {
     ).toBeVisible()
     expect(
       screen.getByRole('columnheader', { name: 'Surface' }).closest('table'),
-    ).toHaveStyle({ width: '2040px' })
+    ).toHaveStyle({ width: '1960px' })
     expect(screen.getByText('Event Kit')).toBeVisible()
 
     const productSelect = screen.getByRole('combobox', { name: 'Product' })
