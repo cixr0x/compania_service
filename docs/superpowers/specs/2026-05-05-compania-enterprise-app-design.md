@@ -381,8 +381,11 @@ Sales report page:
 
 - Year selector populated from report periods that have sales data.
 - Month selector populated with months that have sales data for the selected year, plus a full-year option.
-- Year and month selectors are displayed together in the same filter row without an extra report category header above the page title.
-- Report table with grouped source headers, using `Quantity` and `Amount` under each source group.
+- Product selector populated only with products present in the currently selected year/month period, plus an all-products option. The product filter is applied to the currently loaded report rows.
+- Year, month, and product selectors are displayed together in the same filter row without an extra report category header above the page title.
+- Report table with grouped source headers, using `Quantity`, `Amount`, and `Avg Price` under each source group. Row average price is amount divided by quantity for that product/project/source.
+- The total columns include total quantity, total amount, and overall average price for each row.
+- The report table displays a summary footer for the currently visible rows. Quantity, amount, fee, profit, and owner profit columns are summed; average price summary cells are calculated as summed amount divided by summed quantity for the visible rows.
 - Report column widths should stay compact but wide enough to avoid wrapping source and total headers; the horizontal scroll width should be derived from the number of visible source groups.
 - `Surface` source group hidden unless the selected period has surface sales.
 - Profit is read from the persisted sales profit values, calculated at sale write time as amount minus fee; model values are read from each sale's linked project. Total cost and income are not displayed in the sales report.
@@ -443,7 +446,7 @@ Frontend tests:
 - Component tests for reusable tables and forms.
 - Import page tests for displaying matched product name beside imported product description.
 - Import page tests for disabled commit button when metadata or validation is incomplete.
-- Sales report page tests for period selectors, grouped source headers, project ID column, and dynamic surface source visibility.
+- Sales report page tests for period selectors, period-scoped product filtering, grouped source headers, average price columns, summary footer totals, project ID column, and dynamic surface source visibility.
 - Project form tests for transaction-line cost editing and transaction-derived total cost updates.
 
 End-to-end tests should be added once the MVP screens are stable enough to avoid brittle early tests.

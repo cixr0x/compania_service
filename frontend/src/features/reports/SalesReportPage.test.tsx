@@ -13,19 +13,38 @@ vi.mock('../../api/client', () => ({
 const yearlyReport = {
   rows: [
     {
-      ecommerce: { amount: 150, quantity: 1 },
-      event: { amount: 0, quantity: 0 },
+      ecommerce: { amount: 150, averagePrice: 150, quantity: 1 },
+      event: { amount: 0, averagePrice: 0, quantity: 0 },
       fee: 7,
       model: 'Furniture',
       ownerProfit: 85.75,
+      productId: 42,
       productImage: 'https://example.test/maple-shelf.jpg',
       productName: 'Maple Shelf',
       profit: 343,
       projectId: 501,
-      store: { amount: 200, quantity: 2 },
-      surface: { amount: 0, quantity: 0 },
+      store: { amount: 200, averagePrice: 100, quantity: 2 },
+      surface: { amount: 0, averagePrice: 0, quantity: 0 },
       totalAmount: 350,
+      totalAveragePrice: 116.67,
       totalQuantity: 3,
+    },
+    {
+      ecommerce: { amount: 50, averagePrice: 25, quantity: 2 },
+      event: { amount: 300, averagePrice: 100, quantity: 3 },
+      fee: 30,
+      model: 'Ladrillo',
+      ownerProfit: 210,
+      productId: 43,
+      productImage: null,
+      productName: 'Walnut Table',
+      profit: 420,
+      projectId: 502,
+      store: { amount: 100, averagePrice: 100, quantity: 1 },
+      surface: { amount: 0, averagePrice: 0, quantity: 0 },
+      totalAmount: 450,
+      totalAveragePrice: 75,
+      totalQuantity: 6,
     },
   ],
   sources: ['store', 'ecommerce', 'event'],
@@ -34,17 +53,19 @@ const yearlyReport = {
 const monthlyReport = {
   rows: [
     {
-      ecommerce: { amount: 0, quantity: 0 },
-      event: { amount: 0, quantity: 0 },
+      ecommerce: { amount: 0, averagePrice: 0, quantity: 0 },
+      event: { amount: 0, averagePrice: 0, quantity: 0 },
       fee: 0,
       model: '',
       ownerProfit: 40,
+      productId: 88,
       productName: 'Event Kit',
       profit: 80,
       projectId: 701,
-      store: { amount: 0, quantity: 0 },
-      surface: { amount: 80, quantity: 4 },
+      store: { amount: 0, averagePrice: 0, quantity: 0 },
+      surface: { amount: 80, averagePrice: 20, quantity: 4 },
       totalAmount: 80,
+      totalAveragePrice: 20,
       totalQuantity: 4,
     },
   ],
@@ -113,19 +134,25 @@ describe('SalesReportPage', () => {
     })
     const yearSelect = screen.getByRole('combobox', { name: 'Year' })
     const monthSelect = screen.getByRole('combobox', { name: 'Month' })
+    const productSelect = screen.getByRole('combobox', { name: 'Product' })
     const controlsRow = reportRegion.querySelector('.report-controls')
 
     expect(controlsRow).toBeInTheDocument()
     expect(controlsRow).toContainElement(yearSelect)
     expect(controlsRow).toContainElement(monthSelect)
+    expect(controlsRow).toContainElement(productSelect)
     expect(yearSelect.closest('.ant-space-item')?.parentElement).toBe(
       monthSelect.closest('.ant-space-item')?.parentElement,
+    )
+    expect(yearSelect.closest('.ant-space-item')?.parentElement).toBe(
+      productSelect.closest('.ant-space-item')?.parentElement,
     )
 
     await waitFor(() => {
       expect(yearSelect.closest('.ant-select')).toHaveTextContent('2026')
     })
     expect(monthSelect.closest('.ant-select')).toHaveTextContent('Full year')
+    expect(productSelect.closest('.ant-select')).toHaveTextContent('All products')
 
     const columnHeaders = await screen.findAllByRole('columnheader')
     const table = columnHeaders[0].closest('table')!
@@ -133,7 +160,7 @@ describe('SalesReportPage', () => {
     expect(table.closest('.ant-table-wrapper')).toBeInTheDocument()
     expect(table.closest('.sales-report-table')).toBeInTheDocument()
     expect(table.closest('.ant-table')).toHaveClass('ant-table-small')
-    expect(table).toHaveStyle({ width: '1352px' })
+    expect(table).toHaveStyle({ width: '1768px' })
     expect(columnHeaders[0]).toHaveTextContent('Project ID')
     expect(columnHeaders[1]).toHaveTextContent('Product')
     const storeHeader = within(table).getByRole('columnheader', { name: 'Store' })
@@ -142,13 +169,13 @@ describe('SalesReportPage', () => {
     })
     const eventHeader = within(table).getByRole('columnheader', { name: 'Event' })
 
-    expect(storeHeader).toHaveAttribute('colspan', '2')
+    expect(storeHeader).toHaveAttribute('colspan', '3')
     expect(storeHeader).toHaveClass('channel-header-store')
     expect(
       ecommerceHeader,
-    ).toHaveAttribute('colspan', '2')
+    ).toHaveAttribute('colspan', '3')
     expect(ecommerceHeader).toHaveClass('channel-header-ecommerce')
-    expect(eventHeader).toHaveAttribute('colspan', '2')
+    expect(eventHeader).toHaveAttribute('colspan', '3')
     expect(eventHeader).toHaveClass('channel-header-event')
     expect(
       within(table).queryByRole('columnheader', { name: 'Surface' }),
@@ -161,6 +188,7 @@ describe('SalesReportPage', () => {
     ).not.toBeInTheDocument()
     expect(within(table).getAllByRole('columnheader', { name: 'Quantity' })).toHaveLength(3)
     expect(within(table).getAllByRole('columnheader', { name: 'Amount' })).toHaveLength(3)
+    expect(within(table).getAllByRole('columnheader', { name: 'Avg Price' })).toHaveLength(4)
 
     const reportRow = screen.getByText('Maple Shelf').closest('tr')!
     expect(within(reportRow).getByText('501')).toBeVisible()
@@ -169,13 +197,32 @@ describe('SalesReportPage', () => {
       within(reportRow).getByRole('img', { name: 'Maple Shelf thumbnail' }),
     ).toHaveAttribute('src', 'https://example.test/maple-shelf.jpg')
     expect(within(reportRow).queryByText('1,000,000.00')).not.toBeInTheDocument()
-    expect(within(reportRow).getAllByText('$0.00')).toHaveLength(1)
-    expect(within(reportRow).getByText('$150.00')).toBeVisible()
+    expect(within(reportRow).getAllByText('$0.00')).toHaveLength(2)
+    expect(within(reportRow).getAllByText('$150.00')).toHaveLength(2)
     expect(within(reportRow).getByText('$200.00')).toBeVisible()
+    expect(within(reportRow).getByText('$116.67')).toBeVisible()
     expect(within(reportRow).getByText('$350.00')).toBeVisible()
     expect(within(reportRow).getByText('$7.00')).toBeVisible()
     expect(within(reportRow).getByText('$343.00')).toBeVisible()
     expect(within(reportRow).getByText('$85.75')).toBeVisible()
+
+    const totalsRow = screen.getByText('Totals').closest('tr')!
+    expect(within(totalsRow).getByText('$800.00')).toBeVisible()
+    expect(within(totalsRow).getByText('$88.89')).toBeVisible()
+    expect(within(totalsRow).getByText('$37.00')).toBeVisible()
+    expect(within(totalsRow).getByText('$763.00')).toBeVisible()
+    expect(within(totalsRow).getByText('$295.75')).toBeVisible()
+
+    await selectAntOption(user, productSelect, 'Maple Shelf')
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole('row', { name: /Walnut Table/ }),
+      ).not.toBeInTheDocument()
+    })
+    const filteredTotalsRow = screen.getByText('Totals').closest('tr')!
+    expect(filteredTotalsRow).toHaveTextContent('$350.00')
+    expect(filteredTotalsRow).toHaveTextContent('$116.67')
   })
 
   it('uses Ant Select controls to load a selected month and adds surface only when returned', async () => {
@@ -217,8 +264,14 @@ describe('SalesReportPage', () => {
     ).toBeVisible()
     expect(
       screen.getByRole('columnheader', { name: 'Surface' }).closest('table'),
-    ).toHaveStyle({ width: '1520px' })
+    ).toHaveStyle({ width: '2040px' })
     expect(screen.getByText('Event Kit')).toBeVisible()
+
+    const productSelect = screen.getByRole('combobox', { name: 'Product' })
+    expect(productSelect.closest('.ant-select')).toHaveTextContent('All products')
+    await user.click(productSelect)
+    expect(await screen.findByTitle('Event Kit')).toBeInTheDocument()
+    expect(screen.queryByTitle('Maple Shelf')).not.toBeInTheDocument()
   })
 
   it('resets the month Ant Select when the selected year changes', async () => {

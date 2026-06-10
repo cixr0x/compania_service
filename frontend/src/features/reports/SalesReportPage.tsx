@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Empty, Select, Space, Spin, Table, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -33,17 +33,22 @@ const REPORT_COLUMN_WIDTHS = {
   profit: 88,
   projectId: 80,
   sourceAmount: 104,
+  sourceAveragePrice: 104,
   sourceQuantity: 64,
   totalAmount: 120,
+  totalAveragePrice: 104,
   totalQuantity: 100,
 }
 const REPORT_SOURCE_GROUP_WIDTH =
-  REPORT_COLUMN_WIDTHS.sourceQuantity + REPORT_COLUMN_WIDTHS.sourceAmount
+  REPORT_COLUMN_WIDTHS.sourceQuantity +
+  REPORT_COLUMN_WIDTHS.sourceAmount +
+  REPORT_COLUMN_WIDTHS.sourceAveragePrice
 const REPORT_STATIC_WIDTH =
   REPORT_COLUMN_WIDTHS.projectId +
   REPORT_COLUMN_WIDTHS.product +
   REPORT_COLUMN_WIDTHS.totalQuantity +
   REPORT_COLUMN_WIDTHS.totalAmount +
+  REPORT_COLUMN_WIDTHS.totalAveragePrice +
   REPORT_COLUMN_WIDTHS.model +
   REPORT_COLUMN_WIDTHS.fee +
   REPORT_COLUMN_WIDTHS.profit +
@@ -71,9 +76,79 @@ function getReportTableWidth(sources: SalesReportSource[]) {
   return REPORT_STATIC_WIDTH + sources.length * REPORT_SOURCE_GROUP_WIDTH
 }
 
+function roundCurrency(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+function getAveragePrice(amount: number, quantity: number) {
+  return quantity === 0 ? 0 : roundCurrency(amount / quantity)
+}
+
+function getSourceAveragePrice(
+  row: SalesReportRow,
+  source: SalesReportSource,
+) {
+  return (
+    row[source].averagePrice ??
+    getAveragePrice(row[source].amount, row[source].quantity)
+  )
+}
+
+function getReportTotals(rows: SalesReportRow[], sources: SalesReportSource[]) {
+  const sourceTotals = Object.fromEntries(
+    sources.map((source) => [
+      source,
+      { amount: 0, averagePrice: 0, quantity: 0 },
+    ]),
+  ) as Record<SalesReportSource, SalesReportRow[SalesReportSource]>
+  const totals = {
+    fee: 0,
+    ownerProfit: 0,
+    profit: 0,
+    sourceTotals,
+    totalAmount: 0,
+    totalAveragePrice: 0,
+    totalQuantity: 0,
+  }
+
+  for (const row of rows) {
+    for (const source of sources) {
+      totals.sourceTotals[source].amount += row[source].amount
+      totals.sourceTotals[source].quantity += row[source].quantity
+    }
+
+    totals.totalQuantity += row.totalQuantity
+    totals.totalAmount += row.totalAmount
+    totals.fee += row.fee
+    totals.profit += row.profit
+    totals.ownerProfit += row.ownerProfit
+  }
+
+  for (const source of sources) {
+    const sourceTotal = totals.sourceTotals[source]
+    sourceTotal.amount = roundCurrency(sourceTotal.amount)
+    sourceTotal.averagePrice = getAveragePrice(
+      sourceTotal.amount,
+      sourceTotal.quantity,
+    )
+  }
+
+  totals.totalAmount = roundCurrency(totals.totalAmount)
+  totals.totalAveragePrice = getAveragePrice(
+    totals.totalAmount,
+    totals.totalQuantity,
+  )
+  totals.fee = roundCurrency(totals.fee)
+  totals.profit = roundCurrency(totals.profit)
+  totals.ownerProfit = roundCurrency(totals.ownerProfit)
+
+  return totals
+}
+
 export function SalesReportPage() {
   const [selectedYear, setSelectedYear] = useState<string | null>(null)
   const [selectedMonth, setSelectedMonth] = useState('')
+  const [selectedProductId, setSelectedProductId] = useState('')
   const periodsQuery = useQuery({
     queryKey: ['reports', 'sales-summary-periods'],
     queryFn: () => getJson<SalesReportPeriod[]>('/reports/sales-summary/periods'),
@@ -93,7 +168,40 @@ export function SalesReportPage() {
   const report = reportQuery.data
   const sources = report?.sources ?? DEFAULT_REPORT_SOURCES
   const rows = report?.rows ?? []
+  const productOptions = useMemo(() => {
+    const optionsByProduct = new Map<number, string>()
+
+    for (const row of rows) {
+      optionsByProduct.set(row.productId, row.productName)
+    }
+
+    return [...optionsByProduct.entries()]
+      .sort(([, leftName], [, rightName]) => leftName.localeCompare(rightName))
+      .map(([productId, productName]) => ({
+        label: productName,
+        value: String(productId),
+      }))
+  }, [rows])
+  const filteredRows = useMemo(
+    () =>
+      selectedProductId
+        ? rows.filter((row) => String(row.productId) === selectedProductId)
+        : rows,
+    [rows, selectedProductId],
+  )
+  const reportTotals = useMemo(
+    () => getReportTotals(filteredRows, sources),
+    [filteredRows, sources],
+  )
   const isLoading = reportQuery.isLoading || periodsQuery.isLoading
+  useEffect(() => {
+    if (
+      selectedProductId &&
+      !rows.some((row) => String(row.productId) === selectedProductId)
+    ) {
+      setSelectedProductId('')
+    }
+  }, [rows, selectedProductId])
   const columns = useMemo<ColumnsType<SalesReportRow>>(
     () => [
       {
@@ -136,6 +244,15 @@ export function SalesReportPage() {
               title: 'Amount',
               width: REPORT_COLUMN_WIDTHS.sourceAmount,
             },
+            {
+              align: 'right' as const,
+              key: `${source}-average-price`,
+              onHeaderCell: () => ({ className: headerClassName }),
+              render: (_value: unknown, row: SalesReportRow) =>
+                formatCurrency(getSourceAveragePrice(row, source)),
+              title: 'Avg Price',
+              width: REPORT_COLUMN_WIDTHS.sourceAveragePrice,
+            },
           ],
           key: source,
           onHeaderCell: () => ({ className: headerClassName }),
@@ -156,6 +273,15 @@ export function SalesReportPage() {
         render: (value: SalesReportRow['totalAmount']) => formatCurrency(value),
         title: 'Total Amount',
         width: REPORT_COLUMN_WIDTHS.totalAmount,
+      },
+      {
+        align: 'right',
+        dataIndex: 'totalAveragePrice',
+        key: 'totalAveragePrice',
+        render: (value: SalesReportRow['totalAveragePrice']) =>
+          formatCurrency(value),
+        title: 'Avg Price',
+        width: REPORT_COLUMN_WIDTHS.totalAveragePrice,
       },
       {
         dataIndex: 'model',
@@ -213,6 +339,7 @@ export function SalesReportPage() {
               onChange={(value) => {
                 setSelectedYear(value)
                 setSelectedMonth('')
+                setSelectedProductId('')
               }}
               options={
                 periods.length === 0
@@ -232,7 +359,10 @@ export function SalesReportPage() {
             <Select
               aria-label="Month"
               disabled={!selectedPeriod}
-              onChange={(value) => setSelectedMonth(value)}
+              onChange={(value) => {
+                setSelectedMonth(value)
+                setSelectedProductId('')
+              }}
               options={[
                 { label: 'Full year', value: '' },
                 ...(selectedPeriod?.months.map((month) => ({
@@ -242,6 +372,23 @@ export function SalesReportPage() {
               ]}
               style={{ minWidth: 180 }}
               value={selectedMonth}
+            />
+          </label>
+
+          <label className="form-field">
+            Product
+            <Select
+              aria-label="Product"
+              disabled={rows.length === 0}
+              onChange={(value) => setSelectedProductId(value)}
+              optionFilterProp="label"
+              options={[
+                { label: 'All products', value: '' },
+                ...productOptions,
+              ]}
+              showSearch
+              style={{ minWidth: 220 }}
+              value={selectedProductId}
             />
           </label>
         </Space>
@@ -258,7 +405,7 @@ export function SalesReportPage() {
       <Table<SalesReportRow>
         className="report-table sales-report-table"
         columns={columns}
-        dataSource={rows}
+        dataSource={filteredRows}
         loading={{
           indicator: <Spin />,
           spinning: isLoading,
@@ -271,9 +418,77 @@ export function SalesReportPage() {
           ),
         }}
         pagination={false}
-        rowKey={(row) => `${row.projectId}-${row.productName}`}
+        rowKey={(row) => `${row.projectId}-${row.productId}`}
         scroll={{ x: getReportTableWidth(sources) }}
         size="small"
+        summary={() => {
+          if (filteredRows.length === 0) {
+            return null
+          }
+
+          let cellIndex = 0
+
+          return (
+            <Table.Summary fixed>
+              <Table.Summary.Row>
+                <Table.Summary.Cell index={cellIndex++} />
+                <Table.Summary.Cell index={cellIndex++}>
+                  <strong>Totals</strong>
+                </Table.Summary.Cell>
+                {sources.flatMap((source) => {
+                  const sourceTotal = reportTotals.sourceTotals[source]
+
+                  return [
+                    <Table.Summary.Cell
+                      align="right"
+                      index={cellIndex++}
+                      key={`${source}-quantity-total`}
+                    >
+                      <strong>{sourceTotal.quantity}</strong>
+                    </Table.Summary.Cell>,
+                    <Table.Summary.Cell
+                      align="right"
+                      index={cellIndex++}
+                      key={`${source}-amount-total`}
+                    >
+                      <strong>{formatCurrency(sourceTotal.amount)}</strong>
+                    </Table.Summary.Cell>,
+                    <Table.Summary.Cell
+                      align="right"
+                      index={cellIndex++}
+                      key={`${source}-average-total`}
+                    >
+                      <strong>
+                        {formatCurrency(sourceTotal.averagePrice)}
+                      </strong>
+                    </Table.Summary.Cell>,
+                  ]
+                })}
+                <Table.Summary.Cell index={cellIndex++} align="right">
+                  <strong>{reportTotals.totalQuantity}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={cellIndex++} align="right">
+                  <strong>{formatCurrency(reportTotals.totalAmount)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={cellIndex++} align="right">
+                  <strong>
+                    {formatCurrency(reportTotals.totalAveragePrice)}
+                  </strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={cellIndex++} />
+                <Table.Summary.Cell index={cellIndex++} align="right">
+                  <strong>{formatCurrency(reportTotals.fee)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={cellIndex++} align="right">
+                  <strong>{formatCurrency(reportTotals.profit)}</strong>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={cellIndex++} align="right">
+                  <strong>{formatCurrency(reportTotals.ownerProfit)}</strong>
+                </Table.Summary.Cell>
+              </Table.Summary.Row>
+            </Table.Summary>
+          )
+        }}
       />
     </section>
   )

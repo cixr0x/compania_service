@@ -15,15 +15,21 @@ type SourceTotals = {
   quantity: number;
 };
 
-type SalesSummaryRow = Record<ReportSource, SourceTotals> & {
+type SalesSummarySourceTotals = SourceTotals & {
+  averagePrice: number;
+};
+
+type SalesSummaryRow = Record<ReportSource, SalesSummarySourceTotals> & {
   fee: number;
   model: string;
   ownerProfit: number;
+  productId: number;
   productImage: string | null;
   productName: string;
   profit: number;
   projectId: number;
   totalAmount: number;
+  totalAveragePrice: number;
   totalQuantity: number;
 };
 
@@ -130,6 +136,7 @@ export class ReportsService {
         rowsByProductProject.get(key) ??
         createEmptyRow({
           model: sale.project.model?.name ?? '',
+          productId: sale.product.id,
           productImage: normalizeImageUrl(sale.product.image),
           productName: sale.product.name,
           projectId: sale.idProject,
@@ -276,30 +283,38 @@ function createEmptySourceTotals(): SourceTotals {
   return { amount: 0, quantity: 0 };
 }
 
+function createEmptySalesSourceTotals(): SalesSummarySourceTotals {
+  return { ...createEmptySourceTotals(), averagePrice: 0 };
+}
+
 function createEmptyRow({
   model,
+  productId,
   productImage,
   productName,
   projectId,
 }: {
   model: string;
+  productId: number;
   productImage: string | null;
   productName: string;
   projectId: number;
 }): SalesSummaryAccumulator {
   return {
-    ecommerce: createEmptySourceTotals(),
-    event: createEmptySourceTotals(),
+    ecommerce: createEmptySalesSourceTotals(),
+    event: createEmptySalesSourceTotals(),
     fee: 0,
     model,
     ownerProfit: 0,
+    productId,
     productImage,
     productName,
     profit: 0,
     projectId,
-    store: createEmptySourceTotals(),
-    surface: createEmptySourceTotals(),
+    store: createEmptySalesSourceTotals(),
+    surface: createEmptySalesSourceTotals(),
     totalAmount: 0,
+    totalAveragePrice: 0,
     totalQuantity: 0,
   };
 }
@@ -349,12 +364,20 @@ function createEmptyStakeholderProjectRow({
 
 function recomputeFinancials(row: SalesSummaryAccumulator) {
   row.totalAmount = roundCurrency(row.totalAmount);
+  row.totalAveragePrice = calculateAveragePrice(
+    row.totalAmount,
+    row.totalQuantity,
+  );
   row.fee = roundCurrency(row.fee);
   row.profit = roundCurrency(row.profit);
   row.ownerProfit = roundCurrency(row.ownerProfit);
 
   for (const source of ALL_REPORT_SOURCES) {
     row[source].amount = roundCurrency(row[source].amount);
+    row[source].averagePrice = calculateAveragePrice(
+      row[source].amount,
+      row[source].quantity,
+    );
   }
 }
 
@@ -393,4 +416,8 @@ function sumNumbers(...values: unknown[]): number {
 
 function roundCurrency(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function calculateAveragePrice(amount: number, quantity: number): number {
+  return quantity === 0 ? 0 : roundCurrency(amount / quantity);
 }

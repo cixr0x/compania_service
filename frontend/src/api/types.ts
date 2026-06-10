@@ -150,6 +150,7 @@ export type SalesReportSource = ImportSource
 
 export type SalesReportSourceTotals = {
   amount: number
+  averagePrice: number
   quantity: number
 }
 
@@ -157,11 +158,13 @@ export type SalesReportRow = Record<SalesReportSource, SalesReportSourceTotals> 
   fee: number
   model: string
   ownerProfit: number
+  productId: number
   productImage: string | null
   productName: string
   profit: number
   projectId: number
   totalAmount: number
+  totalAveragePrice: number
   totalQuantity: number
 }
 

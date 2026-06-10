@@ -123,33 +123,37 @@ describe('ReportsService', () => {
     expect(result.sources).toEqual(['store', 'ecommerce', 'event']);
     expect(result.rows).toEqual([
       {
-        ecommerce: { amount: 150, quantity: 1 },
-        event: { amount: 0, quantity: 0 },
+        ecommerce: { amount: 150, averagePrice: 150, quantity: 1 },
+        event: { amount: 0, averagePrice: 0, quantity: 0 },
         fee: 7,
         model: 'Ladrillo',
         ownerProfit: 82.5,
+        productId: 42,
         productImage: 'https://example.test/maple-shelf.jpg',
         productName: 'Maple Shelf',
         profit: 330,
         projectId: 501,
-        store: { amount: 200, quantity: 2 },
-        surface: { amount: 0, quantity: 0 },
+        store: { amount: 200, averagePrice: 100, quantity: 2 },
+        surface: { amount: 0, averagePrice: 0, quantity: 0 },
         totalAmount: 350,
+        totalAveragePrice: 116.67,
         totalQuantity: 3,
       },
       {
-        ecommerce: { amount: 0, quantity: 0 },
-        event: { amount: 300, quantity: 3 },
+        ecommerce: { amount: 0, averagePrice: 0, quantity: 0 },
+        event: { amount: 300, averagePrice: 100, quantity: 3 },
         fee: 10,
         model: 'Consigna',
         ownerProfit: 65,
+        productId: 42,
         productImage: 'https://example.test/maple-shelf.jpg',
         productName: 'Maple Shelf',
         profit: 260,
         projectId: 502,
-        store: { amount: 0, quantity: 0 },
-        surface: { amount: 0, quantity: 0 },
+        store: { amount: 0, averagePrice: 0, quantity: 0 },
+        surface: { amount: 0, averagePrice: 0, quantity: 0 },
         totalAmount: 300,
+        totalAveragePrice: 100,
         totalQuantity: 3,
       },
     ]);
@@ -183,7 +187,12 @@ describe('ReportsService', () => {
     const result = await service.getSalesSummary({ year: 2026 });
 
     expect(result.sources).toEqual(['store', 'ecommerce', 'event', 'surface']);
-    expect(result.rows[0].surface).toEqual({ amount: 80, quantity: 4 });
+    expect(result.rows[0].surface).toEqual({
+      amount: 80,
+      averagePrice: 20,
+      quantity: 4,
+    });
+    expect(result.rows[0].totalAveragePrice).toBe(20);
   });
 
   it('builds an all-time stakeholder project report for one project stakeholder', async () => {
