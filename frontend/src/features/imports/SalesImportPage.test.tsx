@@ -325,6 +325,115 @@ describe('SalesImportPage', () => {
     }
   })
 
+  it('clears project selection errors after selected projects are revalidated', async () => {
+    const user = userEvent.setup()
+    const multiProjectRow: ImportStageRow = {
+      ...stagedRows[0],
+      idProject: null,
+      project: null,
+      product: {
+        ...stagedRows[0].product!,
+        projects: [starterProject, consignaProject],
+      },
+    }
+    const updatedRow: ImportStageRow = {
+      ...multiProjectRow,
+      idProject: 502,
+      project: consignaProject,
+      errors: [],
+    }
+    const validatedRow: ImportStageRow = {
+      ...updatedRow,
+      errors: [],
+    }
+    const projectErrors: ImportError[] = [
+      {
+        idImportBatch: 1,
+        idImportError: 21,
+        idImportStage: 10,
+        rowNumber: 2,
+        field: 'idProject',
+        message: 'Select a project for matched product SKU-STARTER',
+        createdAt: '2026-05-05T10:01:00.000Z',
+      },
+    ]
+    let currentRows = [multiProjectRow]
+    let currentErrors = projectErrors
+    let currentBatch: ImportBatch = {
+      ...importBatch,
+      status: 'has_errors',
+      _count: { stageRows: 1, errors: 1 },
+    }
+    vi.mocked(getJson).mockImplementation((path: string) => {
+      if (path === '/import-batches/1') {
+        return Promise.resolve(currentBatch)
+      }
+
+      if (path === '/import-batches/1/stage') {
+        return Promise.resolve(currentRows)
+      }
+
+      if (path === '/import-batches/1/errors') {
+        return Promise.resolve(currentErrors)
+      }
+
+      return Promise.reject(new Error(`Unexpected GET ${path}`))
+    })
+    vi.mocked(patchJson).mockImplementation(async () => {
+      currentRows = [updatedRow]
+      return updatedRow
+    })
+    vi.mocked(postJson).mockImplementation(async (path: string) => {
+      if (path === '/import-batches/1/validate') {
+        currentRows = [validatedRow]
+        currentErrors = []
+        currentBatch = {
+          ...currentBatch,
+          status: 'validated',
+          _count: { stageRows: 1, errors: 0 },
+        }
+        return currentBatch
+      }
+
+      return Promise.reject(new Error(`Unexpected POST ${path}`))
+    })
+
+    renderSalesImportPage()
+
+    const stagedRowsRegion = await screen.findByRole('region', {
+      name: 'Staged Rows',
+    })
+    const projectSelect = await within(stagedRowsRegion).findByRole(
+      'combobox',
+      { name: 'Project for row 2' },
+    )
+
+    expect(
+      await screen.findByText('Select a project for matched product SKU-STARTER'),
+    ).toBeVisible()
+
+    await selectAntOption(user, projectSelect, 'Project #502 - Consigna')
+    await waitFor(() => {
+      expect(patchJson).toHaveBeenCalledWith('/import-batches/1/stage/10', {
+        idProject: 502,
+      })
+    })
+
+    await user.click(
+      screen.getByRole('button', { name: /validate\/revalidate/i }),
+    )
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith('/import-batches/1/validate', {})
+    })
+    expect(
+      await screen.findByText('No import errors for this batch.'),
+    ).toBeVisible()
+    expect(
+      screen.queryByText('Select a project for matched product SKU-STARTER'),
+    ).not.toBeInTheDocument()
+  })
+
   it('formats staged sale amounts with a dollar prefix, commas, and two decimal places', async () => {
     mockImportQueries([{ ...stagedRows[0], amount: '1000000' }], [])
 

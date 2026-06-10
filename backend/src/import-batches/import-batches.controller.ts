@@ -4,7 +4,6 @@ import {
   Get,
   Param,
   Patch,
-  ParseIntPipe,
   Post,
   UploadedFile,
   UseInterceptors,
@@ -12,6 +11,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { IdParamDto } from '../common/dto/id-param.dto';
 import { CreateImportBatchDto } from './dto/create-import-batch.dto';
+import { ImportStageRowParamDto } from './dto/import-stage-row-param.dto';
 import { UpdateImportBatchDto } from './dto/update-import-batch.dto';
 import { UpdateImportStageRowDto } from './dto/update-import-stage-row.dto';
 import { ImportBatchesService } from './import-batches.service';
@@ -51,11 +51,14 @@ export class ImportBatchesController {
 
   @Patch(':id/stage/:stageId')
   updateStageRow(
-    @Param() params: IdParamDto,
-    @Param('stageId', ParseIntPipe) stageId: number,
+    @Param() params: ImportStageRowParamDto,
     @Body() dto: UpdateImportStageRowDto,
   ) {
-    return this.importBatchesService.updateStageRow(params.id, stageId, dto);
+    return this.importBatchesService.updateStageRow(
+      params.id,
+      params.stageId,
+      dto,
+    );
   }
 
   @Get(':id/errors')
