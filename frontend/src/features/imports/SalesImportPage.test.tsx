@@ -270,6 +270,61 @@ describe('SalesImportPage', () => {
     })
   })
 
+  it('keeps revalidation disabled while a staged project selection is being saved', async () => {
+    const user = userEvent.setup()
+    const multiProjectRow: ImportStageRow = {
+      ...stagedRows[0],
+      idProject: null,
+      project: null,
+      product: {
+        ...stagedRows[0].product!,
+        projects: [starterProject, consignaProject],
+      },
+    }
+    const updatedRow = {
+      ...multiProjectRow,
+      idProject: 502,
+      project: consignaProject,
+    }
+    let resolvePatch: (row: ImportStageRow) => void = () => undefined
+    mockImportQueries([multiProjectRow], rowErrors, {
+      ...importBatch,
+      status: 'has_errors',
+      _count: { stageRows: 1, errors: 1 },
+    })
+    vi.mocked(patchJson).mockReturnValue(
+      new Promise<ImportStageRow>((resolve) => {
+        resolvePatch = resolve
+      }),
+    )
+
+    renderSalesImportPage()
+
+    const stagedRowsRegion = await screen.findByRole('region', {
+      name: 'Staged Rows',
+    })
+    const projectSelect = await within(stagedRowsRegion).findByRole(
+      'combobox',
+      { name: 'Project for row 2' },
+    )
+
+    await selectAntOption(user, projectSelect, 'Project #502 - Consigna')
+    await waitFor(() => {
+      expect(patchJson).toHaveBeenCalledWith('/import-batches/1/stage/10', {
+        idProject: 502,
+      })
+    })
+
+    const revalidateButton = screen.getByRole('button', {
+      name: /validate\/revalidate/i,
+    })
+    try {
+      expect(revalidateButton).toBeDisabled()
+    } finally {
+      resolvePatch(updatedRow)
+    }
+  })
+
   it('formats staged sale amounts with a dollar prefix, commas, and two decimal places', async () => {
     mockImportQueries([{ ...stagedRows[0], amount: '1000000' }], [])
 

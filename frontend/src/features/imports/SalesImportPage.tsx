@@ -609,7 +609,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
                   Upload
                 </Button>
                 <Button
-                  disabled={!hasActiveBatch || validateMutation.isPending}
+                  disabled={!hasActiveBatch || isAnyOperationPending}
                   loading={validateMutation.isPending}
                   onClick={() => validateMutation.mutate()}
                 >
