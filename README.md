@@ -54,11 +54,13 @@ Run migration commands after `backend\.env` contains the real MySQL `DATABASE_UR
 
 ## Database Connection
 
-`backend/.env` is gitignored and is the local place to enter the real MySQL connection details. The required runtime value is:
+`backend/.env` is gitignored and is the local place to enter the development MySQL connection details. The required runtime value is:
 
 ```powershell
 DATABASE_URL="mysql://<mysql_user>:<mysql_password>@<mysql_host>:3306/<database_name>"
 ```
+
+The current local development database is `compania_dev`. Keep production credentials out of `backend/.env`; use a separate gitignored file such as `backend/.env.production.local` for operator reference when needed. Apply migrations to the database selected by `backend/.env`.
 
 After filling it in, run:
 
