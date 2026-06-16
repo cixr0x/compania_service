@@ -126,12 +126,11 @@ describe('ProjectsService', () => {
         adminCost: 2.25,
         costAdjustment: -1.5,
         adjustmentDescription: 'Damaged packaging discount',
-        isActive: true,
       },
     });
   });
 
-  it('defaults omitted unit fields to zero and active status to true when creating projects', async () => {
+  it('defaults omitted unit fields to zero without forcing active status when creating projects', async () => {
     const service = new ProjectsService(prisma);
     await service.create({
       idModel: 9,
@@ -147,9 +146,11 @@ describe('ProjectsService', () => {
         productionCost: 0,
         adminCost: 0,
         costAdjustment: 0,
-        isActive: true,
       },
     });
+    expect(projectCreate.mock.calls[0]?.[0].data).not.toHaveProperty(
+      'isActive',
+    );
   });
 
   it('allows creating multiple active projects for the same product', async () => {

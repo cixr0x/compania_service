@@ -1,2 +1,0 @@
-ALTER TABLE `project`
-MODIFY COLUMN `is_active` BOOLEAN NOT NULL DEFAULT true;

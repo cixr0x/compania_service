@@ -71,7 +71,6 @@ export class ProjectsService {
   ): Prisma.ProjectUncheckedCreateInput {
     return {
       ...dto,
-      isActive: dto.isActive ?? true,
       units: dto.units ?? 0,
       unitCost: dto.unitCost ?? 0,
       productionCost: dto.productionCost ?? 0,
