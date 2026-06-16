@@ -88,7 +88,7 @@ Application settings store configurable values by unique code. Settings are expo
 - `admin_cost`: legacy numeric administrative cost retained in the table for now but no longer edited by the UI or used for total project cost calculations.
 - `cost_adjustment`: legacy signed numeric adjustment retained in the table for now but no longer edited by the UI or used for total project cost calculations.
 - `adjustment_description`: legacy optional adjustment text retained in the table for now.
-- `is_active`: boolean flag stored as project metadata.
+- `is_active`: boolean flag stored as project metadata. New projects default to active.
 - `active_product_id`: legacy internal nullable key retained only while the database is migrated away from active-project uniqueness enforcement.
 
 Derived values:

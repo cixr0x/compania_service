@@ -126,12 +126,12 @@ describe('ProjectsService', () => {
         adminCost: 2.25,
         costAdjustment: -1.5,
         adjustmentDescription: 'Damaged packaging discount',
-        isActive: false,
+        isActive: true,
       },
     });
   });
 
-  it('defaults omitted unit fields to zero when creating projects', async () => {
+  it('defaults omitted unit fields to zero and active status to true when creating projects', async () => {
     const service = new ProjectsService(prisma);
     await service.create({
       idModel: 9,
@@ -147,7 +147,7 @@ describe('ProjectsService', () => {
         productionCost: 0,
         adminCost: 0,
         costAdjustment: 0,
-        isActive: false,
+        isActive: true,
       },
     });
   });

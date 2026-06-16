@@ -42,7 +42,7 @@ model Project {
   idProject             Int                  @id @default(autoincrement()) @map("id_project")
   idProduct             Int                  @map("id_product")
   idModel               Int                  @map("id_model")
-  isActive              Boolean              @default(false) @map("is_active")
+  isActive              Boolean              @default(true) @map("is_active")
   units                 Int
   unitCost              Decimal              @map("unit_cost") @db.Decimal(12, 2)
   productionCost        Decimal              @default(0) @map("production_cost") @db.Decimal(12, 2)

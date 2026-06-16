@@ -168,6 +168,20 @@ function buildEntityPayload(
   )
 }
 
+function buildCreateDefaultValues(config: EntityConfig | null): EntityRow {
+  if (!config) {
+    return {}
+  }
+
+  return Object.fromEntries(
+    config.fields.flatMap((field) =>
+      field.defaultValue === undefined
+        ? []
+        : [[field.name, field.defaultValue]],
+    ),
+  )
+}
+
 function getOptionSources(config: EntityConfig | null) {
   if (!config) {
     return []
@@ -636,8 +650,16 @@ export function EntityEditPage() {
     return null
   }, [config?.title, detailQuery.isError])
 
+  const createDefaultValues = useMemo(
+    () => buildCreateDefaultValues(config),
+    [config],
+  )
   const formValues =
-    isCreate || isDirty ? draftValues : (detailQuery.data ?? {})
+    isCreate
+      ? { ...createDefaultValues, ...draftValues }
+      : isDirty
+        ? draftValues
+        : (detailQuery.data ?? {})
   const displayedFormValues =
     config?.path === 'sales'
       ? withSalesCalculatedValues(

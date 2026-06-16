@@ -27,6 +27,7 @@ export type EntityField = {
   suffix?: string
   options?: { label: string; value: string }[]
   computeValue?: (values: EntityRow) => unknown
+  defaultValue?: unknown
   persistComputed?: boolean
   optionSource?: {
     labelField: string
@@ -460,7 +461,9 @@ export const entityConfigs = {
         required: true,
         valueType: 'number',
       }),
-      checkbox('isActive', 'Active'),
+      checkbox('isActive', 'Active', {
+        defaultValue: true,
+      }),
       number('units', 'Units', {
         min: 0,
         step: 1,

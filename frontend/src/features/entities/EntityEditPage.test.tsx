@@ -798,7 +798,7 @@ describe('EntityEditPage', () => {
       screen.getByRole('combobox', { name: 'Model' }),
       'Ladrillo',
     )
-    await user.click(screen.getByLabelText('Active'))
+    expect(screen.getByLabelText('Active')).toBeChecked()
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '1,000,000.00')
     expect(screen.queryByLabelText('Production Cost')).not.toBeInTheDocument()
@@ -887,7 +887,7 @@ describe('EntityEditPage', () => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
         idModel: 7,
         idProduct: 42,
-        isActive: false,
+        isActive: true,
         units: 10,
       })
     })
@@ -945,7 +945,7 @@ describe('EntityEditPage', () => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
         idModel: 9,
         idProduct: 42,
-        isActive: false,
+        isActive: true,
       })
     })
     expect(putJson).not.toHaveBeenCalled()
@@ -1014,7 +1014,7 @@ describe('EntityEditPage', () => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
         idModel: 9,
         idProduct: 42,
-        isActive: false,
+        isActive: true,
       })
     })
     expect(putJson).not.toHaveBeenCalled()
@@ -1135,7 +1135,7 @@ describe('EntityEditPage', () => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
         idModel: 7,
         idProduct: 42,
-        isActive: false,
+        isActive: true,
       })
       expect(putJson).toHaveBeenCalledWith(
         '/project-transactions/projects/501',
@@ -1423,7 +1423,6 @@ describe('EntityEditPage', () => {
       screen.getByRole('combobox', { name: 'Model' }),
       'Ladrillo',
     )
-    await user.click(screen.getByLabelText('Active'))
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '1,000,000.00')
 
