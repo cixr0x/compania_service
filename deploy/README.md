@@ -48,8 +48,12 @@ cd /opt/compania_service/frontend
 cp .env.production.example .env.production
 nano .env.production
 npm ci
-npm run build
+VITE_API_BASE_URL=/api npm run build
 ```
+
+Production frontend builds default to same-origin `/api`, but the deployment
+command sets it explicitly so the bundle cannot inherit a local API URL from an
+operator environment.
 
 Install the backend service:
 
@@ -109,7 +113,7 @@ sudo systemctl restart compania-backend
 
 cd /opt/compania_service/frontend
 sudo -u compania npm ci
-sudo -u compania npm run build
+sudo -u compania env VITE_API_BASE_URL=/api npm run build
 sudo systemctl reload nginx
 ```
 

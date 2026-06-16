@@ -471,6 +471,11 @@ Frontend example variables:
 
 - `VITE_API_BASE_URL`
 
+Production frontend builds use same-origin `/api` as the default API base URL
+because Nginx serves the webapp and proxies `/api` to the backend. Local
+development keeps `http://localhost:3000/api` as the default when no
+`VITE_API_BASE_URL` value is supplied.
+
 ## Documentation Maintenance
 
 This file is the canonical project design document. Design changes should update this document in the same change set as the related implementation.

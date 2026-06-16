@@ -90,7 +90,10 @@ npm.cmd run build
 ```powershell
 Set-Location frontend
 npm.cmd ci
+$env:VITE_API_BASE_URL="/api"
 npm.cmd run build
+Remove-Item Env:VITE_API_BASE_URL
 ```
 
 The backend exposes a health check at `/api/health` for service and reverse proxy verification.
+Production frontend builds default to same-origin `/api`; setting `VITE_API_BASE_URL="/api"` explicitly prevents accidentally embedding a local development API URL.

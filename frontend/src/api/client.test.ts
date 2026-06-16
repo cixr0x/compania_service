@@ -36,6 +36,17 @@ describe('buildApiUrl', () => {
     expect(api.defaults.baseURL).toBe('http://localhost:3000/api')
   })
 
+  it('falls back to same-origin API path in production builds', async () => {
+    vi.stubEnv('PROD', true)
+    vi.stubEnv('VITE_API_BASE_URL', '')
+    vi.resetModules()
+
+    const { API_BASE_URL, api } = await import('./client')
+
+    expect(API_BASE_URL).toBe('/api')
+    expect(api.defaults.baseURL).toBe('/api')
+  })
+
   it('returns response data from JSON helpers', async () => {
     const { api, deleteJson, getJson, patchJson, postJson, putJson } =
       await import('./client')

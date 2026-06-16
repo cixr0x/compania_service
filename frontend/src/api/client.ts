@@ -1,6 +1,7 @@
 import axios from 'axios'
 
-const DEFAULT_API_BASE_URL = 'http://localhost:3000/api'
+const LOCAL_API_BASE_URL = 'http://localhost:3000/api'
+const PRODUCTION_API_BASE_URL = '/api'
 
 export function buildApiUrl(baseUrl: string, path: string): string {
   const trimmedBaseUrl = baseUrl.replace(/\/+$/, '')
@@ -11,7 +12,11 @@ export function buildApiUrl(baseUrl: string, path: string): string {
 
 function resolveApiBaseUrl(configuredBaseUrl: string | undefined): string {
   const trimmedBaseUrl = configuredBaseUrl?.trim() ?? ''
-  return buildApiUrl(trimmedBaseUrl || DEFAULT_API_BASE_URL, '')
+  const defaultBaseUrl = import.meta.env.PROD
+    ? PRODUCTION_API_BASE_URL
+    : LOCAL_API_BASE_URL
+
+  return buildApiUrl(trimmedBaseUrl || defaultBaseUrl, '')
 }
 
 export const API_BASE_URL = resolveApiBaseUrl(
