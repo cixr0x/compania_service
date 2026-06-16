@@ -116,6 +116,8 @@ The `consigna` rule must reject or fail validation if the product has no usable 
 
 - Add a required Model select to project create/edit forms.
 - Project tables display the model name or code instead of the model ID.
+- The `units`, `unitCost`, `totalCost`, and `realUnitCost` form fields are shown only when the selected project model code is `ladrillo`. When the selected model is not `ladrillo`, those fields are hidden and are not submitted by the frontend.
+- `unitCost` is not required when creating a project. The backend accepts omitted `units` and `unitCost` values and stores them as zero defaults to satisfy the existing non-null project columns.
 - Project cost transaction and stakeholder split detail sections are shown only when the selected project model code is `ladrillo`. When another model is selected, those sections are hidden and their row validation/submission restrictions are not applied.
 
 ### Sales

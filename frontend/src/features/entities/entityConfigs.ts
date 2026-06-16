@@ -163,6 +163,37 @@ function getRelatedEntityImage(row: EntityRow, relationName: string) {
   return getEntityImage(row[relationName])
 }
 
+function getModelCode(value: unknown): string | null {
+  const row = asEntityRow(value)
+  const code = row?.code
+
+  if (typeof code === 'string' && code.trim() !== '') {
+    return code.trim().toLowerCase()
+  }
+
+  const name = row?.name
+  return typeof name === 'string' && name.trim() !== ''
+    ? name.trim().toLowerCase()
+    : null
+}
+
+function getProjectFormModelCode(row: EntityRow) {
+  const selectedModelCode = row.selectedModelCode
+
+  if (
+    typeof selectedModelCode === 'string' &&
+    selectedModelCode.trim() !== ''
+  ) {
+    return selectedModelCode.trim().toLowerCase()
+  }
+
+  return getModelCode(row.model)
+}
+
+function isLadrilloProject(row: EntityRow) {
+  return getProjectFormModelCode(row) === 'ladrillo'
+}
+
 function getProjectProductName(row: EntityRow) {
   const project = asEntityRow(row.project)
   return (
@@ -433,20 +464,24 @@ export const entityConfigs = {
       number('units', 'Units', {
         min: 0,
         step: 1,
+        visibleWhen: isLadrilloProject,
       }),
       number('unitCost', 'Unit Cost', {
         min: 0,
         prefix: '$',
         step: 0.01,
         valueFormat: 'money',
+        visibleWhen: isLadrilloProject,
       }),
       computed('totalCost', 'Total Cost', getProjectTotalCost, {
         prefix: '$',
         valueFormat: 'money',
+        visibleWhen: isLadrilloProject,
       }),
       computed('realUnitCost', 'Real Unit Cost', getProjectRealUnitCost, {
         prefix: '$',
         valueFormat: 'money',
+        visibleWhen: isLadrilloProject,
       }),
     ],
   },

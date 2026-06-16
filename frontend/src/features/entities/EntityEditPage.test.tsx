@@ -841,12 +841,56 @@ describe('EntityEditPage', () => {
       screen.getByRole('combobox', { name: 'Product' }),
       'Maple Shelf',
     )
-    await user.type(screen.getByLabelText('Units'), '10')
-    await user.type(screen.getByLabelText('Unit Cost'), '100')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(postJson).not.toHaveBeenCalled()
     expect(screen.getByText('Model is required.')).toBeVisible()
+  })
+
+  it('creates a ladrillo project without requiring unit cost', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products') {
+        return [{ id: 42, name: 'Maple Shelf' }]
+      }
+
+      if (path === '/models') {
+        return [{ code: 'ladrillo', idModel: 7, name: 'Ladrillo' }]
+      }
+
+      if (path === '/stakeholders?pageSize=100') {
+        return []
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
+    vi.mocked(postJson).mockResolvedValue({ idProject: 501 })
+
+    renderEntityEditPage('/projects/new', '/:entityName/:id')
+
+    await selectAntOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Product' }),
+      'Maple Shelf',
+    )
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Model' }),
+      'Ladrillo',
+    )
+    await user.type(screen.getByLabelText('Units'), '10')
+
+    expect(screen.getByLabelText('Unit Cost')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => {
+      expect(postJson).toHaveBeenCalledWith('/projects', {
+        idModel: 7,
+        idProduct: 42,
+        isActive: false,
+        units: 10,
+      })
+    })
   })
 
   it('hides project transactions and stakeholder split for non-ladrillo projects and saves without detail writes', async () => {
@@ -883,9 +927,11 @@ describe('EntityEditPage', () => {
       screen.getByRole('combobox', { name: 'Model' }),
       'Consigna',
     )
-    await user.type(screen.getByLabelText('Units'), '10')
-    await user.type(screen.getByLabelText('Unit Cost'), '100')
 
+    expect(screen.queryByLabelText('Units')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Unit Cost')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Total Cost')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Real Unit Cost')).not.toBeInTheDocument()
     expect(
       screen.queryByRole('group', { name: 'Project Cost Transactions' }),
     ).not.toBeInTheDocument()
@@ -900,8 +946,6 @@ describe('EntityEditPage', () => {
         idModel: 9,
         idProduct: 42,
         isActive: false,
-        unitCost: 100,
-        units: 10,
       })
     })
     expect(putJson).not.toHaveBeenCalled()
@@ -962,8 +1006,8 @@ describe('EntityEditPage', () => {
       screen.getByRole('combobox', { name: 'Model' }),
       'Consigna',
     )
-    await user.type(screen.getByLabelText('Units'), '10')
-    await user.type(screen.getByLabelText('Unit Cost'), '100')
+    expect(screen.queryByLabelText('Units')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Unit Cost')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     await waitFor(() => {
@@ -971,8 +1015,6 @@ describe('EntityEditPage', () => {
         idModel: 9,
         idProduct: 42,
         isActive: false,
-        unitCost: 100,
-        units: 10,
       })
     })
     expect(putJson).not.toHaveBeenCalled()
@@ -1022,9 +1064,7 @@ describe('EntityEditPage', () => {
       name: 'Product',
     })
     expect(productSelect.closest('.ant-select')).toBeInTheDocument()
-    const totalCostInput = screen.getByLabelText('Total Cost')
-    expect(totalCostInput).toHaveValue('0.00')
-    expect(totalCostInput).toHaveAttribute('readonly')
+    expect(screen.queryByLabelText('Total Cost')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Production Cost')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Admin Cost')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Cost Adjustment')).not.toBeInTheDocument()
@@ -1035,6 +1075,9 @@ describe('EntityEditPage', () => {
       screen.getByRole('combobox', { name: 'Model' }),
       'Ladrillo',
     )
+    const totalCostInput = screen.getByLabelText('Total Cost')
+    expect(totalCostInput).toHaveValue('0.00')
+    expect(totalCostInput).toHaveAttribute('readonly')
     const costSection = screen.getByRole('group', {
       name: 'Project Cost Transactions',
     })

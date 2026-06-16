@@ -37,4 +37,24 @@ describe('CreateProjectDto', () => {
 
     expect(errors.map((error) => error.property)).toContain('idModel');
   });
+
+  it('does not require unit cost when creating a project', async () => {
+    const errors = await validatePayload({
+      idModel: 5,
+      idProduct: 10,
+      units: 25,
+    });
+
+    expect(errors.map((error) => error.property)).not.toContain('unitCost');
+  });
+
+  it('does not require unit fields when creating a project', async () => {
+    const errors = await validatePayload({
+      idModel: 5,
+      idProduct: 10,
+    });
+
+    expect(errors.map((error) => error.property)).not.toContain('units');
+    expect(errors.map((error) => error.property)).not.toContain('unitCost');
+  });
 });

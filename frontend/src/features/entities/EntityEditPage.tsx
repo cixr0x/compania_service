@@ -648,6 +648,10 @@ export function EntityEditPage() {
       : config?.path === 'projects'
         ? {
             ...formValues,
+            selectedModelCode: getProjectFormModelCode(
+              formValues,
+              optionRowsByPath.models,
+            ),
             transactionTotal: projectTransactionState.totalCost,
           }
       : formValues

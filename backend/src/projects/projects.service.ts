@@ -72,6 +72,8 @@ export class ProjectsService {
     return {
       ...dto,
       isActive: dto.isActive ?? false,
+      units: dto.units ?? 0,
+      unitCost: dto.unitCost ?? 0,
       productionCost: dto.productionCost ?? 0,
       adminCost: dto.adminCost ?? 0,
       costAdjustment: dto.costAdjustment ?? 0,

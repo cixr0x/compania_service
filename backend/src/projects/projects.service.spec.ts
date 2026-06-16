@@ -131,6 +131,27 @@ describe('ProjectsService', () => {
     });
   });
 
+  it('defaults omitted unit fields to zero when creating projects', async () => {
+    const service = new ProjectsService(prisma);
+    await service.create({
+      idModel: 9,
+      idProduct: 42,
+    });
+
+    expect(projectCreate).toHaveBeenCalledWith({
+      data: {
+        idModel: 9,
+        idProduct: 42,
+        units: 0,
+        unitCost: 0,
+        productionCost: 0,
+        adminCost: 0,
+        costAdjustment: 0,
+        isActive: false,
+      },
+    });
+  });
+
   it('allows creating multiple active projects for the same product', async () => {
     projectFindFirst.mockResolvedValue({ idProject: 500 });
 

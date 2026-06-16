@@ -25,13 +25,15 @@ export class CreateProjectDto {
 
   @Type(() => Number)
   @IsInt()
-  @Min(1)
-  units!: number;
+  @Min(0)
+  @IsOptional()
+  units?: number;
 
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  unitCost!: number;
+  @IsOptional()
+  unitCost?: number;
 
   @Type(() => Number)
   @IsNumber()
