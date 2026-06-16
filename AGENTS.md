@@ -1,5 +1,14 @@
 After finishing implementing any change, commit and push.
 
+## Deployment
+
+When the user requests a deployment, deploy through Git by default:
+
+- Verify local changes are committed and pushed to the remote branch first.
+- On the VM, pull the latest changes from the repository checkout.
+- Build and restart/reload services from the VM checkout.
+- Do not deploy by copying local files directly unless the user explicitly asks for that fallback.
+
 ## Frontend UI Direction
 
 Use Ant Design as the default UI framework for frontend application work. Prefer Ant Design components, layout primitives, feedback components, and design tokens over custom controls or one-off CSS.
