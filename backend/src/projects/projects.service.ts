@@ -9,7 +9,6 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 
 const projectInclude = {
-  model: true,
   product: true,
   stakeholders: { include: { stakeholder: true } },
   transactions: true,
@@ -71,6 +70,8 @@ export class ProjectsService {
   ): Prisma.ProjectUncheckedCreateInput {
     return {
       ...dto,
+      feeType: dto.feeType,
+      feeValue: dto.feeValue,
       units: dto.units ?? 0,
       unitCost: dto.unitCost ?? 0,
       productionCost: dto.productionCost ?? 0,

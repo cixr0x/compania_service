@@ -23,7 +23,6 @@ describe('ProductsService', () => {
       idStore: null,
       idEvent: null,
       idSurface: null,
-      idModel: null,
       ownership: '15.00',
       tag: 'starter',
     });
@@ -52,28 +51,6 @@ describe('ProductsService', () => {
         idSurface: undefined,
         ownership: 15,
         tag: 'starter',
-      },
-    });
-  });
-
-  it('creates a product with a fee amount', async () => {
-    jest.spyOn(prisma.product, 'create').mockResolvedValue({
-      id: 1,
-      name: 'Starter Kit',
-      feeAmount: '125.50',
-    });
-
-    const service = new ProductsService(prisma);
-    await service.create({
-      name: 'Starter Kit',
-      feeAmount: 125.5,
-    });
-
-    expect(prisma.product.create).toHaveBeenCalledWith({
-      data: {
-        name: 'Starter Kit',
-        feeAmount: 125.5,
-        ownership: 0,
       },
     });
   });
@@ -112,27 +89,6 @@ describe('ProductsService', () => {
     expect(prisma.product.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: { name: 'Changed' },
-    });
-  });
-
-  it('updates a product fee amount when provided', async () => {
-    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
-      id: 1,
-      name: 'Starter Kit',
-      feeAmount: '125.50',
-    });
-    jest.spyOn(prisma.product, 'update').mockResolvedValue({
-      id: 1,
-      name: 'Starter Kit',
-      feeAmount: '150.75',
-    });
-
-    const service = new ProductsService(prisma);
-    await service.update(1, { feeAmount: 150.75 });
-
-    expect(prisma.product.update).toHaveBeenCalledWith({
-      where: { id: 1 },
-      data: { feeAmount: 150.75 },
     });
   });
 

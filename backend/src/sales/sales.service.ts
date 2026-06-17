@@ -90,7 +90,6 @@ export class SalesService {
       ? (dto.fee ?? 0)
       : await this.feeCalculator.calculateFee({
           amount: dto.amount,
-          idProduct: dto.idProduct,
           idProject: dto.idProject,
           quantity: dto.quantity,
         });
@@ -133,7 +132,6 @@ export class SalesService {
     ) {
       data.fee = await this.feeCalculator.calculateFee({
         amount: dto.amount ?? current.amount,
-        idProduct: dto.idProduct ?? current.idProduct,
         idProject: dto.idProject ?? current.idProject,
         quantity: dto.quantity ?? current.quantity,
       });

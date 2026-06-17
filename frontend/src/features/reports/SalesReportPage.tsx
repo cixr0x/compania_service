@@ -28,7 +28,6 @@ const EMPTY_PERIODS: SalesReportPeriod[] = []
 const EMPTY_REPORT_ROWS: SalesReportRow[] = []
 const REPORT_COLUMN_WIDTHS = {
   fee: 90,
-  model: 90,
   ownerProfit: 120,
   product: 160,
   profit: 88,
@@ -48,7 +47,6 @@ const REPORT_STATIC_WIDTH =
   REPORT_COLUMN_WIDTHS.totalQuantity +
   REPORT_COLUMN_WIDTHS.totalAmount +
   REPORT_COLUMN_WIDTHS.totalAveragePrice +
-  REPORT_COLUMN_WIDTHS.model +
   REPORT_COLUMN_WIDTHS.fee +
   REPORT_COLUMN_WIDTHS.profit +
   REPORT_COLUMN_WIDTHS.ownerProfit
@@ -273,14 +271,6 @@ export function SalesReportPage() {
         width: REPORT_COLUMN_WIDTHS.totalAveragePrice,
       },
       {
-        dataIndex: 'model',
-        ellipsis: true,
-        key: 'model',
-        render: (value: SalesReportRow['model']) => value || '-',
-        title: 'Model',
-        width: REPORT_COLUMN_WIDTHS.model,
-      },
-      {
         align: 'right',
         dataIndex: 'fee',
         key: 'fee',
@@ -463,7 +453,6 @@ export function SalesReportPage() {
                     {formatCurrency(reportTotals.totalAveragePrice)}
                   </strong>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={cellIndex++} />
                 <Table.Summary.Cell index={cellIndex++} align="right">
                   <strong>{formatCurrency(reportTotals.fee)}</strong>
                 </Table.Summary.Cell>

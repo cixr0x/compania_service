@@ -50,7 +50,7 @@ describe('ImportBatchesService', () => {
       .mockImplementation(async (callback) => callback(prisma));
     jest
       .spyOn(feeCalculator, 'calculateFee')
-      .mockImplementation(async (row) => (row.idProduct === 7 ? 7.63 : 1.2));
+      .mockImplementation(async (row) => (row.idProject === 70 ? 7.63 : 1.2));
     jest
       .spyOn(financialsCalculator, 'calculateFinancials')
       .mockImplementation(async (row) =>
@@ -275,7 +275,6 @@ describe('ImportBatchesService', () => {
     expect(feeCalculator.calculateFee).toHaveBeenCalledWith(
       {
         amount: 30.5,
-        idProduct: 7,
         idProject: 70,
         quantity: 2,
       },
@@ -300,7 +299,6 @@ describe('ImportBatchesService', () => {
     expect(feeCalculator.calculateFee).toHaveBeenCalledWith(
       {
         amount: 12,
-        idProduct: 8,
         idProject: 80,
         quantity: 1,
       },

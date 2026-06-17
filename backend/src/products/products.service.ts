@@ -20,7 +20,6 @@ export class ProductsService {
     const pageSize = query.pageSize ?? 25;
     return this.prisma.product.findMany({
       where: query.search ? { name: { contains: query.search } } : undefined,
-      include: { model: true },
       orderBy: { id: 'desc' },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -28,7 +27,7 @@ export class ProductsService {
   }
 
   async findOne(id: number) {
-    const record = await this.prisma.product.findUnique({ where: { id }, include: { model: true } });
+    const record = await this.prisma.product.findUnique({ where: { id } });
     if (!record) throw new NotFoundException(`Product ${id} was not found`);
     return record;
   }

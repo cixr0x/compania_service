@@ -25,12 +25,11 @@ const importStageInclude = {
   product: {
     include: {
       projects: {
-        include: { model: true },
         orderBy: { idProject: 'asc' as const },
       },
     },
   },
-  project: { include: { model: true, product: true } },
+  project: { include: { product: true } },
 };
 
 const mutableTerminalStatuses: ImportStatus[] = ['committed', 'cancelled'];
@@ -356,7 +355,6 @@ export class ImportBatchesService {
           const fee = await this.feeCalculator.calculateFee(
             {
               amount: row.amount,
-              idProduct,
               idProject: row.idProject as number,
               quantity: row.quantity,
             },

@@ -8,12 +8,7 @@ export type ImportStatus =
   | 'committed'
   | 'cancelled'
 
-export type PricingModel = {
-  idModel: number
-  code: string | null
-  name: string
-  description: string | null
-}
+export type ProjectFeeType = 'sale_percentage' | 'fixed_per_unit'
 
 export type Product = {
   id: number
@@ -24,11 +19,8 @@ export type Product = {
   idStore: string | null
   idEvent: string | null
   idSurface: string | null
-  idModel: number | null
   ownership: DecimalValue
-  feeAmount?: DecimalValue | null
   tag: string | null
-  model?: PricingModel | null
   projects?: Project[]
 }
 
@@ -48,7 +40,8 @@ export type Setting = {
 export type Project = {
   idProject: number
   idProduct: number
-  idModel: number
+  feeType: ProjectFeeType
+  feeValue: DecimalValue
   isActive: boolean
   units: number
   unitCost: DecimalValue
@@ -56,7 +49,6 @@ export type Project = {
   adminCost: DecimalValue
   costAdjustment: DecimalValue
   adjustmentDescription: string | null
-  model?: PricingModel
   product?: Product
   stakeholders?: ProjectStakeholder[]
   transactions?: ProjectTransaction[]
@@ -156,7 +148,6 @@ export type SalesReportSourceTotals = {
 
 export type SalesReportRow = Record<SalesReportSource, SalesReportSourceTotals> & {
   fee: number
-  model: string
   ownerProfit: number
   productId: number
   productImage: string | null

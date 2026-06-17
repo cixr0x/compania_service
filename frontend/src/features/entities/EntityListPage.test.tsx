@@ -197,13 +197,13 @@ describe('EntityListPage', () => {
     expect(screen.queryByText('7')).not.toBeInTheDocument()
   })
 
-  it('shows project model names in the projects table', async () => {
+  it('shows project fee configuration in the projects table', async () => {
     vi.mocked(getJson).mockResolvedValue([
       {
-        idModel: 7,
+        feeType: 'sale_percentage',
+        feeValue: '18',
         idProduct: 42,
         idProject: 501,
-        model: { idModel: 7, name: 'Ladrillo' },
         product: { id: 42, name: 'Walnut Desk' },
         transactions: [],
       },
@@ -211,8 +211,11 @@ describe('EntityListPage', () => {
 
     renderEntityList('/projects')
 
-    expect(await screen.findByText('Ladrillo')).toBeVisible()
-    expect(screen.getByRole('columnheader', { name: 'Model' })).toBeVisible()
+    expect(await screen.findByText('Sale % fee')).toBeVisible()
+    expect(screen.getByText('18%')).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Fee Type' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Fee Value' })).toBeVisible()
+    expect(screen.queryByRole('columnheader', { name: 'Model' })).not.toBeInTheDocument()
   })
 
   it('shows product names instead of product IDs in the projects table', async () => {
@@ -467,23 +470,11 @@ describe('EntityListPage', () => {
     expect(within(salesTable).getByText('$45.00')).toBeVisible()
   })
 
-  it('shows model code in the models table', async () => {
-    vi.mocked(getJson).mockResolvedValue([
-      {
-        code: 'retail',
-        description: 'Retail pricing',
-        idModel: 7,
-        name: 'Retail',
-      },
-    ])
-
+  it('does not configure the removed models entity page', async () => {
     renderEntityList('/models')
 
-    expect(await screen.findByRole('heading', { name: 'Models' })).toBeVisible()
-    expect(screen.getByRole('columnheader', { name: 'Code' })).toBeVisible()
-    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeVisible()
-    expect(screen.getByRole('columnheader', { name: 'Description' })).toBeVisible()
-    expect(await screen.findByText('retail')).toBeVisible()
+    expect(await screen.findByRole('heading', { name: 'Unknown Entity' })).toBeVisible()
+    expect(getJson).not.toHaveBeenCalled()
   })
 
   it('shows project product and stakeholder names in the project stakeholder table', async () => {

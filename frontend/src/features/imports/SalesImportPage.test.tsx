@@ -26,7 +26,8 @@ vi.mock('../../api/client', async (importOriginal) => {
 const starterProject = {
   idProject: 501,
   idProduct: 101,
-  idModel: 7,
+  feeType: 'sale_percentage' as const,
+  feeValue: '18',
   isActive: true,
   units: 100,
   unitCost: '10',
@@ -34,24 +35,13 @@ const starterProject = {
   adminCost: '0',
   costAdjustment: '0',
   adjustmentDescription: null,
-  model: {
-    idModel: 7,
-    code: 'ladrillo',
-    name: 'Ladrillo',
-    description: null,
-  },
 }
 
 const consignaProject = {
   ...starterProject,
   idProject: 502,
-  idModel: 8,
-  model: {
-    idModel: 8,
-    code: 'consigna',
-    name: 'Consigna',
-    description: null,
-  },
+  feeType: 'fixed_per_unit' as const,
+  feeValue: '625.25',
 }
 
 const stagedRows: ImportStageRow[] = [
@@ -76,7 +66,6 @@ const stagedRows: ImportStageRow[] = [
       idStore: null,
       idEvent: null,
       idSurface: null,
-      idModel: null,
       ownership: 100,
       projects: [starterProject],
       tag: null,
@@ -228,7 +217,7 @@ describe('SalesImportPage', () => {
     expect(
       within(table).getByRole('img', { name: 'Starter Kit thumbnail' }),
     ).toHaveAttribute('src', 'https://example.test/starter-kit.jpg')
-    expect(within(table).getByText('Project #501 - Ladrillo')).toBeVisible()
+    expect(within(table).getByText('Project #501')).toBeVisible()
     expect(within(table).getByText('Valid').closest('.ant-tag')).toBeInTheDocument()
   })
 
@@ -261,7 +250,7 @@ describe('SalesImportPage', () => {
     )
     expect(within(stagedRowsRegion).getByText('Needs review')).toBeVisible()
 
-    await selectAntOption(user, projectSelect, 'Project #502 - Consigna')
+    await selectAntOption(user, projectSelect, 'Project #502')
 
     await waitFor(() => {
       expect(patchJson).toHaveBeenCalledWith('/import-batches/1/stage/10', {
@@ -308,7 +297,7 @@ describe('SalesImportPage', () => {
       { name: 'Project for row 2' },
     )
 
-    await selectAntOption(user, projectSelect, 'Project #502 - Consigna')
+    await selectAntOption(user, projectSelect, 'Project #502')
     await waitFor(() => {
       expect(patchJson).toHaveBeenCalledWith('/import-batches/1/stage/10', {
         idProject: 502,
@@ -412,7 +401,7 @@ describe('SalesImportPage', () => {
       await screen.findByText('Select a project for matched product SKU-STARTER'),
     ).toBeVisible()
 
-    await selectAntOption(user, projectSelect, 'Project #502 - Consigna')
+    await selectAntOption(user, projectSelect, 'Project #502')
     await waitFor(() => {
       expect(patchJson).toHaveBeenCalledWith('/import-batches/1/stage/10', {
         idProject: 502,

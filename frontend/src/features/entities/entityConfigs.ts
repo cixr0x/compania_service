@@ -1,6 +1,6 @@
 import type { DataTableColumn } from '../../components/DataTable'
 import { getChannelHeaderClass } from '../../utils/channelHeaders'
-import { parseMoneyNumber } from '../../utils/money'
+import { formatCurrency, parseMoneyNumber } from '../../utils/money'
 
 export type EntityRow = Record<string, unknown>
 
@@ -57,7 +57,6 @@ export type EntityConfig = {
 
 export type EntityName =
   | 'products'
-  | 'models'
   | 'projects'
   | 'stakeholders'
   | 'project-stakeholders'
@@ -164,37 +163,6 @@ function getRelatedEntityImage(row: EntityRow, relationName: string) {
   return getEntityImage(row[relationName])
 }
 
-function getModelCode(value: unknown): string | null {
-  const row = asEntityRow(value)
-  const code = row?.code
-
-  if (typeof code === 'string' && code.trim() !== '') {
-    return code.trim().toLowerCase()
-  }
-
-  const name = row?.name
-  return typeof name === 'string' && name.trim() !== ''
-    ? name.trim().toLowerCase()
-    : null
-}
-
-function getProjectFormModelCode(row: EntityRow) {
-  const selectedModelCode = row.selectedModelCode
-
-  if (
-    typeof selectedModelCode === 'string' &&
-    selectedModelCode.trim() !== ''
-  ) {
-    return selectedModelCode.trim().toLowerCase()
-  }
-
-  return getModelCode(row.model)
-}
-
-function isLadrilloProject(row: EntityRow) {
-  return getProjectFormModelCode(row) === 'ladrillo'
-}
-
 function getProjectProductName(row: EntityRow) {
   const project = asEntityRow(row.project)
   return (
@@ -236,6 +204,30 @@ function sumMoneyValues(...values: unknown[]): number {
 
 function roundCurrency(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+const PROJECT_FEE_TYPE_OPTIONS = [
+  { label: 'Sale % fee', value: 'sale_percentage' },
+  { label: 'Fixed amount per unit', value: 'fixed_per_unit' },
+]
+
+function getProjectFeeTypeLabel(value: unknown) {
+  const feeType = typeof value === 'string' ? value : ''
+
+  return (
+    PROJECT_FEE_TYPE_OPTIONS.find((option) => option.value === feeType)?.label ??
+    '-'
+  )
+}
+
+function getProjectFeeValueDisplay(row: EntityRow) {
+  const feeValue = parseMoneyNumber(row.feeValue) ?? 0
+
+  if (row.feeType === 'fixed_per_unit') {
+    return formatCurrency(feeValue)
+  }
+
+  return `${Number.isInteger(feeValue) ? feeValue : feeValue.toFixed(2)}%`
 }
 
 function getProjectTransactions(row: EntityRow) {
@@ -281,19 +273,6 @@ function getSaleOwnerProfit(row: EntityRow) {
   return roundCurrency(getSaleProfit(row) * (ownerPercentage / 100))
 }
 
-function getSaleProductModelName(row: EntityRow) {
-  const project = asEntityRow(row.project)
-  const model = asEntityRow(project?.model)
-  const name = model?.name
-  const code = model?.code
-
-  if (typeof name === 'string' && name.trim() !== '') {
-    return name.trim()
-  }
-
-  return typeof code === 'string' && code.trim() !== '' ? code.trim() : ''
-}
-
 function isOnlySelectedProductProject(row: EntityRow) {
   return parseMoneyNumber(row.selectedProductProjectCount) === 1
 }
@@ -337,9 +316,6 @@ export const entityConfigs = {
         headerClassName: getChannelHeaderClass('surface'),
       }),
       column('ownership', 'Ownership'),
-      column('feeAmount', 'Fee Amount', {
-        valueFormat: 'money',
-      }),
       column('tag', 'Tag'),
     ],
     fields: [
@@ -378,37 +354,8 @@ export const entityConfigs = {
         step: 0.01,
         suffix: '%',
       }),
-      number('feeAmount', 'Fee Amount', {
-        min: 0,
-        prefix: '$',
-        section: 'Commercial attributes',
-        step: 0.01,
-        valueFormat: 'money',
-      }),
       text('tag', 'Tag', {
         section: 'Commercial attributes',
-      }),
-    ],
-  },
-  models: {
-    title: 'Models',
-    singularTitle: 'Model',
-    path: 'models',
-    idField: 'idModel',
-    formLayout: 'compact',
-    columns: [
-      column('idModel', 'ID'),
-      column('code', 'Code'),
-      column('name', 'Name'),
-      column('description', 'Description'),
-    ],
-    fields: [
-      text('code', 'Code'),
-      text('name', 'Name', {
-        required: true,
-      }),
-      textarea('description', 'Description', {
-        span: 'full',
       }),
     ],
   },
@@ -425,10 +372,15 @@ export const entityConfigs = {
         valueType: 'string',
         width: 240,
       }),
-      column('idModel', 'Model', {
-        valueGetter: (row) => getRelatedEntityName(row, 'model'),
+      column('feeType', 'Fee Type', {
+        valueGetter: (row) => getProjectFeeTypeLabel(row.feeType),
         valueType: 'string',
-        width: 140,
+        width: 170,
+      }),
+      column('feeValue', 'Fee Value', {
+        valueGetter: getProjectFeeValueDisplay,
+        valueType: 'string',
+        width: 130,
       }),
       column('isActive', 'Active'),
       column('units', 'Units'),
@@ -452,14 +404,14 @@ export const entityConfigs = {
         requiredOnCreate: true,
         valueType: 'number',
       }),
-      select('idModel', 'Model', undefined, {
-        optionSource: {
-          labelField: 'name',
-          path: 'models',
-          valueField: 'idModel',
-        },
+      select('feeType', 'Fee Type', PROJECT_FEE_TYPE_OPTIONS, {
+        defaultValue: 'sale_percentage',
         required: true,
-        valueType: 'number',
+      }),
+      number('feeValue', 'Fee Value', {
+        min: 0,
+        required: true,
+        step: 0.01,
       }),
       checkbox('isActive', 'Active', {
         defaultValue: true,
@@ -467,24 +419,20 @@ export const entityConfigs = {
       number('units', 'Units', {
         min: 0,
         step: 1,
-        visibleWhen: isLadrilloProject,
       }),
       number('unitCost', 'Unit Cost', {
         min: 0,
         prefix: '$',
         step: 0.01,
         valueFormat: 'money',
-        visibleWhen: isLadrilloProject,
       }),
       computed('totalCost', 'Total Cost', getProjectTotalCost, {
         prefix: '$',
         valueFormat: 'money',
-        visibleWhen: isLadrilloProject,
       }),
       computed('realUnitCost', 'Real Unit Cost', getProjectRealUnitCost, {
         prefix: '$',
         valueFormat: 'money',
-        visibleWhen: isLadrilloProject,
       }),
     ],
   },
@@ -625,7 +573,6 @@ export const entityConfigs = {
         required: true,
         valueType: 'number',
       }),
-      computed('productModel', 'Model', getSaleProductModelName),
       select('idProject', 'Project', undefined, {
         optionSource: {
           labelField: 'idProject',

@@ -21,7 +21,6 @@ type SalesSummarySourceTotals = SourceTotals & {
 
 type SalesSummaryRow = Record<ReportSource, SalesSummarySourceTotals> & {
   fee: number;
-  model: string;
   ownerProfit: number;
   productId: number;
   productImage: string | null;
@@ -81,7 +80,6 @@ type SalesSummaryPeriod = {
 
 const salesReportInclude = {
   product: true,
-  project: { include: { model: true } },
 };
 
 @Injectable()
@@ -135,7 +133,6 @@ export class ReportsService {
       const row =
         rowsByProductProject.get(key) ??
         createEmptyRow({
-          model: sale.project.model?.name ?? '',
           productId: sale.product.id,
           productImage: normalizeImageUrl(sale.product.image),
           productName: sale.product.name,
@@ -288,13 +285,11 @@ function createEmptySalesSourceTotals(): SalesSummarySourceTotals {
 }
 
 function createEmptyRow({
-  model,
   productId,
   productImage,
   productName,
   projectId,
 }: {
-  model: string;
   productId: number;
   productImage: string | null;
   productName: string;
@@ -304,7 +299,6 @@ function createEmptyRow({
     ecommerce: createEmptySalesSourceTotals(),
     event: createEmptySalesSourceTotals(),
     fee: 0,
-    model,
     ownerProfit: 0,
     productId,
     productImage,

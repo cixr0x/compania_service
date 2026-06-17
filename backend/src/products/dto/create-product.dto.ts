@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
 import {
-  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -44,24 +43,12 @@ export class CreateProductDto {
   @MaxLength(255)
   idSurface?: string;
 
-  @Type(() => Number)
-  @IsOptional()
-  @IsInt()
-  @Min(1)
-  idModel?: number;
-
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   @Max(100)
   ownership?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(0)
-  feeAmount?: number;
 
   @IsOptional()
   @IsString()

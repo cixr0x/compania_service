@@ -10,7 +10,6 @@ import {
   ProjectOutlined,
   SettingOutlined,
   ShoppingCartOutlined,
-  TagsOutlined,
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons'
@@ -65,7 +64,6 @@ const navigationSections: NavigationSection[] = [
   {
     label: 'Admin',
     items: [
-      { label: 'Models', path: '/models', icon: <TagsOutlined /> },
       { label: 'Settings', path: '/settings', icon: <SettingOutlined /> },
     ],
   },

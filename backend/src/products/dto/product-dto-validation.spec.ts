@@ -5,7 +5,7 @@ import { CreateProductDto } from './create-product.dto';
 import { UpdateProductDto } from './update-product.dto';
 
 describe('Product DTO validation', () => {
-  it('allows omitting legacy model id when creating a product', async () => {
+  it('accepts an owner-retained profit percentage when creating a product', async () => {
     const dto = plainToInstance(CreateProductDto, {
       name: 'Maple Shelf',
       ownership: 15,
@@ -13,28 +13,28 @@ describe('Product DTO validation', () => {
 
     const errors = await validate(dto);
 
-    expect(errors.map((error) => error.property)).not.toContain('idModel');
+    expect(errors.map((error) => error.property)).not.toContain('ownership');
+    expect(dto.ownership).toBe(15);
   });
 
-  it('allows omitting model id when updating a product', async () => {
+  it('allows omitting ownership when updating a product', async () => {
     const dto = plainToInstance(UpdateProductDto, {
       name: 'Maple Shelf',
     });
 
     const errors = await validate(dto);
 
-    expect(errors.map((error) => error.property)).not.toContain('idModel');
+    expect(errors.map((error) => error.property)).not.toContain('ownership');
   });
 
-  it('accepts a numeric product fee amount', async () => {
+  it('rejects ownership percentages over 100', async () => {
     const dto = plainToInstance(CreateProductDto, {
-      name: 'Consigna Product',
-      feeAmount: '125.50',
+      name: 'Maple Shelf',
+      ownership: 125,
     });
 
     const errors = await validate(dto);
 
-    expect(errors.map((error) => error.property)).not.toContain('feeAmount');
-    expect(dto.feeAmount).toBe(125.5);
+    expect(errors.map((error) => error.property)).toContain('ownership');
   });
 });

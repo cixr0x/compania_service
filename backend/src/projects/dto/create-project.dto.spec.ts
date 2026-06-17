@@ -5,7 +5,8 @@ import { CreateProjectDto } from './create-project.dto';
 
 describe('CreateProjectDto', () => {
   const validPayload = {
-    idModel: 5,
+    feeType: 'sale_percentage',
+    feeValue: 18,
     idProduct: 10,
     units: 25,
     unitCost: 12.5,
@@ -28,19 +29,31 @@ describe('CreateProjectDto', () => {
     expect(errors.map((error) => error.property)).not.toContain('adminCost');
   });
 
-  it('requires a pricing model when creating a project', async () => {
+  it('requires fee configuration when creating a project', async () => {
     const errors = await validatePayload({
       idProduct: 10,
       units: 25,
       unitCost: 12.5,
     });
+    const errorProperties = errors.map((error) => error.property);
 
-    expect(errors.map((error) => error.property)).toContain('idModel');
+    expect(errorProperties).toContain('feeType');
+    expect(errorProperties).toContain('feeValue');
+  });
+
+  it('rejects unsupported project fee types', async () => {
+    const errors = await validatePayload({
+      ...validPayload,
+      feeType: 'ladrillo',
+    });
+
+    expect(errors.map((error) => error.property)).toContain('feeType');
   });
 
   it('does not require unit cost when creating a project', async () => {
     const errors = await validatePayload({
-      idModel: 5,
+      feeType: 'fixed_per_unit',
+      feeValue: 125.5,
       idProduct: 10,
       units: 25,
     });
@@ -50,7 +63,8 @@ describe('CreateProjectDto', () => {
 
   it('does not require unit fields when creating a project', async () => {
     const errors = await validatePayload({
-      idModel: 5,
+      feeType: 'fixed_per_unit',
+      feeValue: 125.5,
       idProduct: 10,
     });
 

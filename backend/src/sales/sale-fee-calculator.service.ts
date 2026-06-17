@@ -4,12 +4,11 @@ import { PrismaService } from '../prisma/prisma.service';
 
 type FeeCalculationInput = {
   amount: unknown;
-  idProduct: number;
   idProject: number;
   quantity: unknown;
 };
 
-type FeeCalculationClient = Pick<PrismaService, 'product' | 'project'>;
+type FeeCalculationClient = Pick<PrismaService, 'project'>;
 
 @Injectable()
 export class SaleFeeCalculatorService {
@@ -19,65 +18,46 @@ export class SaleFeeCalculatorService {
     input: FeeCalculationInput,
     client: FeeCalculationClient = this.prisma,
   ) {
-    const product = await client.product.findUnique({
-      where: { id: input.idProduct },
-      select: {
-        id: true,
-        feeAmount: true,
-      },
-    });
     const project = await client.project.findUnique({
       where: { idProject: input.idProject },
       select: {
+        feeType: true,
+        feeValue: true,
         idProject: true,
-        model: { select: { code: true } },
       },
     });
-
-    if (!product) {
-      throw new BadRequestException(`Product ${input.idProduct} was not found`);
-    }
 
     if (!project) {
       throw new BadRequestException(`Project ${input.idProject} was not found`);
     }
 
-    const modelCode = project.model?.code?.trim().toLowerCase();
-    if (!modelCode) {
+    const feeType = project.feeType?.trim().toLowerCase();
+    const feeValue = toFiniteNumber(project.feeValue);
+
+    if (!feeType) {
       throw new BadRequestException(
-        `Project ${input.idProject} does not have a pricing model code`,
+        `Project ${input.idProject} does not have a fee type`,
+      );
+    }
+
+    if (feeValue === null) {
+      throw new BadRequestException(
+        `Project ${input.idProject} does not have a valid fee value`,
       );
     }
 
     const amount = toFiniteNumber(input.amount) ?? 0;
     const quantity = toFiniteNumber(input.quantity) ?? 0;
 
-    if (modelCode === 'consigna256') {
-      return roundCurrency(amount * 0.25);
+    if (feeType === 'sale_percentage') {
+      return roundCurrency(amount * (feeValue / 100));
     }
 
-    if (modelCode === 'interno') {
-      return roundCurrency(amount * 0.1);
+    if (feeType === 'fixed_per_unit') {
+      return roundCurrency(quantity * feeValue);
     }
 
-    if (modelCode === 'consigna') {
-      const feeAmount = toFiniteNumber(product.feeAmount);
-      if (feeAmount === null) {
-        throw new BadRequestException(
-          `Product ${input.idProduct} requires a fee amount for consigna`,
-        );
-      }
-
-      return roundCurrency(quantity * feeAmount);
-    }
-
-    if (modelCode === 'ladrillo') {
-      return roundCurrency(amount * 0.18);
-    }
-
-    throw new BadRequestException(
-      `Unsupported pricing model code ${modelCode}`,
-    );
+    throw new BadRequestException(`Unsupported project fee type ${feeType}`);
   }
 }
 

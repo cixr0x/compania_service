@@ -6,17 +6,6 @@ datasource db {
   provider = "mysql"
 }
 
-model PricingModel {
-  idModel     Int       @id @default(autoincrement()) @map("id_model")
-  code        String?   @unique @db.VarChar(100)
-  name        String    @db.VarChar(255)
-  description String?   @db.Text
-  products    Product[]
-  projects    Project[]
-
-  @@map("model")
-}
-
 model Product {
   id           Int           @id @default(autoincrement())
   name         String        @db.VarChar(255)
@@ -26,11 +15,8 @@ model Product {
   idStore      String?       @unique @map("id_store") @db.VarChar(255)
   idEvent      String?       @unique @map("id_event") @db.VarChar(255)
   idSurface    String?       @unique @map("id_surface") @db.VarChar(255)
-  idModel      Int?          @map("id_model")
   ownership    Decimal       @default(0) @db.Decimal(7, 2)
-  feeAmount    Decimal?      @map("fee_amount") @db.Decimal(12, 2)
   tag          String?       @db.VarChar(255)
-  model        PricingModel? @relation(fields: [idModel], references: [idModel], onDelete: SetNull)
   projects     Project[]
   sales        Sale[]
   importStages ImportStage[]
@@ -41,7 +27,8 @@ model Product {
 model Project {
   idProject             Int                  @id @default(autoincrement()) @map("id_project")
   idProduct             Int                  @map("id_product")
-  idModel               Int                  @map("id_model")
+  feeType               String               @default("sale_percentage") @map("fee_type") @db.VarChar(50)
+  feeValue              Decimal              @default(0) @map("fee_value") @db.Decimal(12, 2)
   isActive              Boolean              @default(false) @map("is_active")
   units                 Int
   unitCost              Decimal              @map("unit_cost") @db.Decimal(12, 2)
@@ -50,7 +37,6 @@ model Project {
   costAdjustment        Decimal              @default(0) @map("cost_adjustment") @db.Decimal(12, 2)
   adjustmentDescription String?              @map("adjustment_description") @db.Text
   product               Product              @relation(fields: [idProduct], references: [id], onDelete: Restrict)
-  model                 PricingModel         @relation(fields: [idModel], references: [idModel], onDelete: Restrict)
   stakeholders          ProjectStakeholder[]
   sales                 Sale[]
   transactions          ProjectTransaction[]

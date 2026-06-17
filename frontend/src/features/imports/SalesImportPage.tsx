@@ -129,11 +129,7 @@ function formatProjectOption(project?: Project | null) {
     return '-'
   }
 
-  const modelName = project.model?.name ?? project.model?.code ?? null
-
-  return modelName
-    ? `Project #${project.idProject} - ${modelName}`
-    : `Project #${project.idProject}`
+  return `Project #${project.idProject}`
 }
 
 export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {

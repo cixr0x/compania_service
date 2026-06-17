@@ -133,7 +133,6 @@ describe('SalesService', () => {
     });
     expect(feeCalculator.calculateFee).toHaveBeenCalledWith({
       amount: 120,
-      idProduct: 7,
       idProject: 51,
       quantity: 2,
     });
@@ -218,7 +217,6 @@ describe('SalesService', () => {
     });
     expect(feeCalculator.calculateFee).toHaveBeenCalledWith({
       amount: '120.00',
-      idProduct: 7,
       idProject: 51,
       quantity: 3,
     });
@@ -260,7 +258,6 @@ describe('SalesService', () => {
     });
     expect(feeCalculator.calculateFee).toHaveBeenCalledWith({
       amount: 130,
-      idProduct: 7,
       idProject: 51,
       quantity: 2,
     });

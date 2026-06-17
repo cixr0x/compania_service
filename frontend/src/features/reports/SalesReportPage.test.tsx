@@ -16,7 +16,6 @@ const yearlyReport = {
       ecommerce: { amount: 150, averagePrice: 150, quantity: 1 },
       event: { amount: 0, averagePrice: 0, quantity: 0 },
       fee: 7,
-      model: 'Furniture',
       ownerProfit: 85.75,
       productId: 42,
       productImage: 'https://example.test/maple-shelf.jpg',
@@ -33,7 +32,6 @@ const yearlyReport = {
       ecommerce: { amount: 50, averagePrice: 25, quantity: 2 },
       event: { amount: 300, averagePrice: 100, quantity: 3 },
       fee: 30,
-      model: 'Ladrillo',
       ownerProfit: 210,
       productId: 43,
       productImage: null,
@@ -56,7 +54,6 @@ const monthlyReport = {
       ecommerce: { amount: 0, averagePrice: 0, quantity: 0 },
       event: { amount: 0, averagePrice: 0, quantity: 0 },
       fee: 0,
-      model: '',
       ownerProfit: 40,
       productId: 88,
       productName: 'Event Kit',
@@ -160,7 +157,7 @@ describe('SalesReportPage', () => {
     expect(table.closest('.ant-table-wrapper')).toBeInTheDocument()
     expect(table.closest('.sales-report-table')).toBeInTheDocument()
     expect(table.closest('.ant-table')).toHaveClass('ant-table-small')
-    expect(table).toHaveStyle({ width: '1688px' })
+    expect(table).toHaveStyle({ width: '1598px' })
     expect(within(table).queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument()
     expect(columnHeaders[0]).toHaveTextContent('Product')
     const storeHeader = within(table).getByRole('columnheader', { name: 'Store' })
@@ -264,7 +261,7 @@ describe('SalesReportPage', () => {
     ).toBeVisible()
     expect(
       screen.getByRole('columnheader', { name: 'Surface' }).closest('table'),
-    ).toHaveStyle({ width: '1960px' })
+    ).toHaveStyle({ width: '1870px' })
     expect(screen.getByText('Event Kit')).toBeVisible()
 
     const productSelect = screen.getByRole('combobox', { name: 'Product' })

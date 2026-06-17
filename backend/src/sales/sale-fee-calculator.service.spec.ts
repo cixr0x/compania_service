@@ -3,9 +3,6 @@ import { SaleFeeCalculatorService } from './sale-fee-calculator.service';
 
 describe('SaleFeeCalculatorService', () => {
   const prisma = {
-    product: {
-      findUnique: jest.fn(),
-    },
     project: {
       findUnique: jest.fn(),
     },
@@ -16,19 +13,16 @@ describe('SaleFeeCalculatorService', () => {
   });
 
   it.each([
-    ['consigna256', 100, 2, null, 25],
-    ['interno', 100, 2, null, 10],
-    ['consigna', 100, 2, 7.5, 15],
+    ['sale_percentage', 25, 100, 2, 25],
+    ['sale_percentage', 10, 100, 2, 10],
+    ['fixed_per_unit', 7.5, 100, 2, 15],
   ])(
-    'calculates sale fee for %s model',
-    async (code, amount, quantity, feeAmount, expectedFee) => {
-      jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
-        id: 7,
-        feeAmount,
-      });
+    'calculates sale fee for %s project fee type',
+    async (feeType, feeValue, amount, quantity, expectedFee) => {
       jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
+        feeType,
+        feeValue,
         idProject: 51,
-        model: { code },
       });
 
       const calculator = new SaleFeeCalculatorService(prisma);
@@ -36,7 +30,6 @@ describe('SaleFeeCalculatorService', () => {
       await expect(
         calculator.calculateFee({
           amount,
-          idProduct: 7,
           idProject: 51,
           quantity,
         }),
@@ -44,14 +37,11 @@ describe('SaleFeeCalculatorService', () => {
     },
   );
 
-  it('calculates ladrillo fee as 18 percent of the sale amount', async () => {
-    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
-      id: 7,
-      feeAmount: null,
-    });
+  it('selects project fee fields only', async () => {
     jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
+      feeType: 'sale_percentage',
+      feeValue: 18,
       idProject: 51,
-      model: { code: 'ladrillo' },
     });
 
     const calculator = new SaleFeeCalculatorService(prisma);
@@ -59,25 +49,21 @@ describe('SaleFeeCalculatorService', () => {
     await expect(
       calculator.calculateFee({
         amount: 100,
-        idProduct: 7,
         idProject: 51,
         quantity: 2,
       }),
     ).resolves.toBe(18);
     expect(prisma.project.findUnique).toHaveBeenCalledWith({
       where: { idProject: 51 },
-      select: { idProject: true, model: { select: { code: true } } },
+      select: { feeType: true, feeValue: true, idProject: true },
     });
   });
 
-  it('rejects consigna fee calculation when product fee amount is missing', async () => {
-    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
-      id: 7,
-      feeAmount: null,
-    });
+  it('rejects unsupported project fee types', async () => {
     jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
+      feeType: 'legacy_model',
+      feeValue: 18,
       idProject: 51,
-      model: { code: 'consigna' },
     });
 
     const calculator = new SaleFeeCalculatorService(prisma);
@@ -85,12 +71,11 @@ describe('SaleFeeCalculatorService', () => {
     await expect(
       calculator.calculateFee({
         amount: 100,
-        idProduct: 7,
         idProject: 51,
         quantity: 2,
       }),
     ).rejects.toThrow(
-      new BadRequestException('Product 7 requires a fee amount for consigna'),
+      new BadRequestException('Unsupported project fee type legacy_model'),
     );
   });
 });

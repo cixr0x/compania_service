@@ -355,67 +355,29 @@ function getSelectedProject(values: EntityRow, projects: EntityRow[] | undefined
     : null
 }
 
-function getModelCode(value: unknown): string | null {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return null
-  }
-
-  const model = value as { code?: unknown; name?: unknown }
-  const code = model.code
-
-  if (typeof code === 'string' && code.trim() !== '') {
-    return code.trim().toLowerCase()
-  }
-
-  const name = model.name
-  return typeof name === 'string' && name.trim() !== ''
-    ? name.trim().toLowerCase()
-    : null
-}
-
-function getProjectModelCode(project: EntityRow | null) {
-  return getModelCode(project?.model)
-}
-
-function getProjectFormModelCode(
-  values: EntityRow,
-  models: EntityRow[] | undefined,
-) {
-  const selectedModelId = getNumericId(values.idModel)
-  const optionModel = models?.find(
-    (model) => getNumericId(model.idModel) === selectedModelId,
-  )
-
-  return getModelCode(optionModel ?? values.model)
-}
-
 function getBooleanValue(value: unknown) {
   return value === true || value === 'true' || value === 1 || value === '1'
 }
 
 function calculateSaleFee(
   values: EntityRow,
-  product: EntityRow | null,
   project: EntityRow | null,
 ) {
   const amount = parseMoneyNumber(values.amount) ?? 0
   const quantity = parseMoneyNumber(values.quantity) ?? 0
-  const modelCode = getProjectModelCode(project)
+  const feeType = typeof project?.feeType === 'string' ? project.feeType : ''
+  const feeValue = parseMoneyNumber(project?.feeValue)
 
-  if (modelCode === 'consigna256') {
-    return roundCurrency(amount * 0.25)
+  if (feeValue === null) {
+    return parseMoneyNumber(values.fee) ?? 0
   }
 
-  if (modelCode === 'ladrillo') {
-    return roundCurrency(amount * 0.18)
+  if (feeType === 'sale_percentage') {
+    return roundCurrency(amount * (feeValue / 100))
   }
 
-  if (modelCode === 'interno') {
-    return roundCurrency(amount * 0.1)
-  }
-
-  if (modelCode === 'consigna') {
-    return roundCurrency(quantity * (parseMoneyNumber(product?.feeAmount) ?? 0))
+  if (feeType === 'fixed_per_unit') {
+    return roundCurrency(quantity * feeValue)
   }
 
   return parseMoneyNumber(values.fee) ?? 0
@@ -441,7 +403,7 @@ function withSalesCalculatedValues(
   const product = getSelectedProduct(values, products)
   const project = getSelectedProject(values, projects)
   const productProjects = getProjectsForProduct(getNumericId(values.idProduct), projects)
-  const calculatedFee = calculateSaleFee(values, product, project)
+  const calculatedFee = calculateSaleFee(values, project)
   const feeOverride = getBooleanValue(values.feeOverride)
   const fee =
     feeOverride && values.fee !== null && values.fee !== undefined
@@ -579,11 +541,8 @@ export function EntityEditPage() {
 
       const shouldSaveProjectSplit =
         projectSplitState.hasRows || projectSplitState.isDirty
-      const shouldManageProjectDetails =
-        getProjectFormModelCode(body, optionRowsByPath.models) === 'ladrillo'
 
       if (
-        shouldManageProjectDetails &&
         shouldSaveProjectSplit &&
         !projectSplitState.isValid
       ) {
@@ -593,7 +552,7 @@ export function EntityEditPage() {
         )
       }
 
-      if (shouldManageProjectDetails && !projectTransactionState.isValid) {
+      if (!projectTransactionState.isValid) {
         throw new Error(
           projectTransactionState.errorMessage ??
             'Project cost transactions are not ready to save.',
@@ -604,7 +563,7 @@ export function EntityEditPage() {
         ? await postJson<EntityRow, EntityRow>('/projects', body)
         : await patchJson<EntityRow, EntityRow>(`/projects/${id}`, body)
 
-      if (shouldManageProjectDetails && projectTransactionState.isDirty) {
+      if (projectTransactionState.isDirty) {
         const projectId = getProjectId(savedProject, id)
 
         if (projectId === null) {
@@ -617,7 +576,7 @@ export function EntityEditPage() {
         )
       }
 
-      if (shouldManageProjectDetails && shouldSaveProjectSplit) {
+      if (shouldSaveProjectSplit) {
         const projectId = getProjectId(savedProject, id)
 
         if (projectId === null) {
@@ -670,17 +629,11 @@ export function EntityEditPage() {
       : config?.path === 'projects'
         ? {
             ...formValues,
-            selectedModelCode: getProjectFormModelCode(
-              formValues,
-              optionRowsByPath.models,
-            ),
             transactionTotal: projectTransactionState.totalCost,
           }
       : formValues
   const shouldManageProjectDetails =
-    config?.path === 'projects' &&
-    getProjectFormModelCode(displayedFormValues, optionRowsByPath.models) ===
-      'ladrillo'
+    config?.path === 'projects'
   const formConfig = useMemo(
     () => resolveDynamicOptions(config, optionRowsByPath, displayedFormValues),
     [config, displayedFormValues, optionRowsByPath],
