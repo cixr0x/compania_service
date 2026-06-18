@@ -7,7 +7,7 @@ Type=simple
 User=compania
 WorkingDirectory=/opt/compania_service/backend
 EnvironmentFile=/opt/compania_service/backend/.env
-ExecStart=/usr/bin/node dist/main
+ExecStart=/usr/bin/node dist/src/main.js
 Restart=always
 RestartSec=5
 
