@@ -1,5 +1,18 @@
 After finishing implementing any change, commit and push.
 
+## Fixed Local Ports
+
+Use the fixed Codex startup commands for local development:
+
+- Backend service: from `backend/`, run `npm run dev:codex`
+- Frontend UI: from `frontend/`, run `npm run dev:codex`
+- Backend URL: `http://127.0.0.1:3000/api`
+- Frontend URL: `http://127.0.0.1:5174`
+
+Do not choose another port automatically. If one of these ports is busy, report the owning process and ask before stopping it or using a different port.
+
+Do not run DDL or DML SQL commands without user confirmation.
+
 ## Deployment
 
 When the user requests a deployment, deploy through Git by default:
