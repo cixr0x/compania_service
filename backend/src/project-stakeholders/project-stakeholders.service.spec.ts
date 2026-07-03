@@ -145,13 +145,21 @@ describe('ProjectStakeholdersService', () => {
 
     expect(prisma.projectStakeholder.findMany).toHaveBeenCalledWith({
       include: {
-        project: { include: { product: true } },
+        project: {
+          select: expect.objectContaining({
+            name: true,
+            product: true,
+          }),
+        },
         stakeholder: true,
       },
       orderBy: { idProjectStakeholder: 'desc' },
       skip: 0,
       take: 25,
     });
+    expect(
+      prisma.projectStakeholder.findMany.mock.calls[0][0].include.project.select,
+    ).not.toHaveProperty('createdDate');
   });
 
   it('checks the destination project total when moving a stakeholder row to another project', async () => {

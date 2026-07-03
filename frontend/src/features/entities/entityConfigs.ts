@@ -163,11 +163,15 @@ function getRelatedEntityImage(row: EntityRow, relationName: string) {
   return getEntityImage(row[relationName])
 }
 
+function getProjectDisplayNameFromProject(row: EntityRow) {
+  return getEntityName(row) ?? getRelatedEntityName(row, 'product')
+}
+
 function getProjectProductName(row: EntityRow) {
   const project = asEntityRow(row.project)
   return (
-    (project ? getRelatedEntityName(project, 'product') : null) ??
-    getRelatedEntityName(row, 'product')
+    (project ? getProjectDisplayNameFromProject(project) : null) ??
+    getProjectDisplayNameFromProject(row)
   )
 }
 
@@ -181,18 +185,17 @@ function getProjectProductImage(row: EntityRow) {
 }
 
 function formatProjectOption(row: EntityRow) {
-  const product = row.product
-  const productName =
-    typeof product === 'object' &&
-    product !== null &&
-    'name' in product &&
-    typeof product.name === 'string'
-      ? product.name
-      : null
+  const projectName = getEntityName(row)
+  const projectId = String(row.idProject)
+  const productName = getRelatedEntityName(row, 'product')
+
+  if (projectName) {
+    return `${projectName} (#${projectId})`
+  }
 
   return productName
-    ? `Project #${String(row.idProject)} - ${productName}`
-    : `Project #${String(row.idProject)}`
+    ? `Project #${projectId} - ${productName}`
+    : `Project #${projectId}`
 }
 
 function sumMoneyValues(...values: unknown[]): number {
@@ -379,6 +382,11 @@ export const entityConfigs = {
     idField: 'idProject',
     columns: [
       column('idProject', 'ID'),
+      column('name', 'Name', {
+        valueGetter: (row) => getEntityName(row) ?? '-',
+        valueType: 'string',
+        width: 220,
+      }),
       column('idProduct', 'Product', {
         thumbnailGetter: (row) => getRelatedEntityImage(row, 'product'),
         valueGetter: (row) => getRelatedEntityName(row, 'product'),
@@ -408,6 +416,7 @@ export const entityConfigs = {
       }),
     ],
     fields: [
+      text('name', 'Name'),
       select('idProduct', 'Product', undefined, {
         optionSource: {
           labelField: 'name',

@@ -316,9 +316,14 @@ function getProjectParticipationProduct(row: EntityRow): EntityRow | null {
 }
 
 function formatProjectParticipation(row: EntityRow): string {
+  const project =
+    row.project && typeof row.project === 'object' && !Array.isArray(row.project)
+      ? (row.project as EntityRow)
+      : null
+  const projectName = getNestedEntityName(project)
   const productName = getNestedEntityName(getProjectParticipationProduct(row))
 
-  return productName ?? '-'
+  return projectName ?? productName ?? '-'
 }
 
 function roundCurrency(value: number) {

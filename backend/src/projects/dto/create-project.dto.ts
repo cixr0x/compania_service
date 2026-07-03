@@ -18,6 +18,10 @@ export class CreateProjectDto {
   @Min(1)
   idProduct!: number;
 
+  @IsOptional()
+  @IsString()
+  name?: string;
+
   @IsIn(PROJECT_FEE_MODELS)
   feeModel!: ProjectFeeModel;
 

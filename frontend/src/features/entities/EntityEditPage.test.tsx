@@ -750,6 +750,8 @@ describe('EntityEditPage', () => {
     expect(screen.getByTitle('Walnut Desk')).toBeInTheDocument()
     expect(screen.queryByTitle('42')).not.toBeInTheDocument()
     await clickAntOptionByTitle(user, 'Maple Shelf')
+    expect(screen.getByLabelText('Name')).toBeVisible()
+    await user.type(screen.getByLabelText('Name'), 'Wholesale launch')
     expect(screen.getByRole('combobox', { name: 'Fee Model' })).toHaveAttribute(
       'aria-required',
       'true',
@@ -769,6 +771,7 @@ describe('EntityEditPage', () => {
         feeValue: 18,
         idProduct: 42,
         isActive: true,
+        name: 'Wholesale launch',
         unitCost: 1000000,
         units: 10,
       })

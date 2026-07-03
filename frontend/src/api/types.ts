@@ -40,6 +40,7 @@ export type Setting = {
 export type Project = {
   idProject: number
   idProduct: number
+  name: string
   feeModel: ProjectFeeModel
   feeValue: DecimalValue
   isActive: boolean

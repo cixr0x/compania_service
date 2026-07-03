@@ -53,12 +53,20 @@ describe('SalesService', () => {
     expect(prisma.sale.findMany).toHaveBeenCalledWith({
       include: {
         product: true,
-        project: { include: { product: true } },
+        project: {
+          select: expect.objectContaining({
+            name: true,
+            product: true,
+          }),
+        },
       },
       orderBy: { idSale: 'desc' },
       skip: 0,
       take: 25,
     });
+    expect(
+      prisma.sale.findMany.mock.calls[0][0].include.project.select,
+    ).not.toHaveProperty('createdDate');
   });
 
   it('filters list responses by product, project, and sale month', async () => {
@@ -76,7 +84,12 @@ describe('SalesService', () => {
     expect(prisma.sale.findMany).toHaveBeenCalledWith({
       include: {
         product: true,
-        project: { include: { product: true } },
+        project: {
+          select: expect.objectContaining({
+            name: true,
+            product: true,
+          }),
+        },
       },
       orderBy: { idSale: 'desc' },
       skip: 10,

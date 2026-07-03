@@ -129,6 +129,11 @@ function formatProjectOption(project?: Project | null) {
     return '-'
   }
 
+  const projectName = project.name?.trim()
+  if (projectName) {
+    return `${projectName} (#${project.idProject})`
+  }
+
   return `Project #${project.idProject}`
 }
 

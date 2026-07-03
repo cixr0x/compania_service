@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { publicProjectSummarySelect } from '../projects/project-public-select';
 import { CreateStakeholderDto } from './dto/create-stakeholder.dto';
 import { UpdateStakeholderDto } from './dto/update-stakeholder.dto';
 
@@ -8,9 +9,7 @@ const stakeholderDetailInclude = {
   projects: {
     include: {
       project: {
-        include: {
-          product: true,
-        },
+        select: publicProjectSummarySelect,
       },
     },
     orderBy: { idProjectStakeholder: 'desc' as const },

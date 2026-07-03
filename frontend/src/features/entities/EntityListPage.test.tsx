@@ -200,10 +200,12 @@ describe('EntityListPage', () => {
   it('shows project fee configuration in the projects table', async () => {
     vi.mocked(getJson).mockResolvedValue([
       {
+        createdDate: '2026-07-03T12:00:00.000Z',
         feeModel: 'percentage',
         feeValue: '18',
         idProduct: 42,
         idProject: 501,
+        name: 'Wholesale launch',
         product: { id: 42, name: 'Walnut Desk' },
         transactions: [],
       },
@@ -211,10 +213,13 @@ describe('EntityListPage', () => {
 
     renderEntityList('/projects')
 
+    expect(await screen.findByText('Wholesale launch')).toBeVisible()
     expect(await screen.findByText('Percentage fee')).toBeVisible()
     expect(screen.getByText('18%')).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Name' })).toBeVisible()
     expect(screen.getByRole('columnheader', { name: 'Fee Model' })).toBeVisible()
     expect(screen.getByRole('columnheader', { name: 'Fee' })).toBeVisible()
+    expect(screen.queryByText('2026-07-03T12:00:00.000Z')).not.toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Model' })).not.toBeInTheDocument()
   })
 

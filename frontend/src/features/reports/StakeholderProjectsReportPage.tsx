@@ -59,6 +59,11 @@ function buildReportPath(projectId: number, stakeholderId: number) {
 }
 
 function formatProjectOption(project: Project) {
+  const projectName = project.name?.trim()
+  if (projectName) {
+    return `${projectName} (#${project.idProject})`
+  }
+
   const productName = project.product?.name?.trim()
   return productName
     ? `Project #${project.idProject} - ${productName}`

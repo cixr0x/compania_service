@@ -27,8 +27,10 @@ model Product {
 model Project {
   idProject             Int                  @id @default(autoincrement()) @map("id_project")
   idProduct             Int                  @map("id_product")
+  name                  String               @db.VarChar(255)
   feeModel              String               @default("percentage") @map("fee_model") @db.VarChar(50)
   feeValue              Decimal              @default(0) @map("fee_value") @db.Decimal(12, 2)
+  createdDate           DateTime             @default(now()) @map("created_date")
   isActive              Boolean              @default(false) @map("is_active")
   units                 Int
   unitCost              Decimal              @map("unit_cost") @db.Decimal(12, 2)

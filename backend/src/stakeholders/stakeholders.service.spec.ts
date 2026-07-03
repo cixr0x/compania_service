@@ -53,15 +53,20 @@ describe('StakeholdersService', () => {
         projects: {
           include: {
             project: {
-              include: {
+              select: expect.objectContaining({
+                name: true,
                 product: true,
-              },
+              }),
             },
           },
           orderBy: { idProjectStakeholder: 'desc' },
         },
       },
     });
+    expect(
+      prisma.stakeholder.findUnique.mock.calls[0][0].include.projects.include
+        .project.select,
+    ).not.toHaveProperty('createdDate');
     expect(result.projects[0].project.product.name).toBe('Maple Shelf');
   });
 });

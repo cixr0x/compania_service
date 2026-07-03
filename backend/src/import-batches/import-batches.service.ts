@@ -15,6 +15,10 @@ import {
 } from './import-validator.service';
 import { parseSaleDate } from '../sales/dto/sale-date-string.validator';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  publicProjectBaseSelect,
+  publicProjectSummarySelect,
+} from '../projects/project-public-select';
 import { SaleFeeCalculatorService } from '../sales/sale-fee-calculator.service';
 import { SaleFinancialsCalculatorService } from '../sales/sale-financials-calculator.service';
 
@@ -26,10 +30,11 @@ const importStageInclude = {
     include: {
       projects: {
         orderBy: { idProject: 'asc' as const },
+        select: publicProjectBaseSelect,
       },
     },
   },
-  project: { include: { product: true } },
+  project: { select: publicProjectSummarySelect },
 };
 
 const mutableTerminalStatuses: ImportStatus[] = ['committed', 'cancelled'];

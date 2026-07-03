@@ -6,12 +6,13 @@ import {
 import { Prisma } from '@prisma/client';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { publicProjectSummarySelect } from '../projects/project-public-select';
 import { CreateProjectStakeholderDto } from './dto/create-project-stakeholder.dto';
 import { ReplaceProjectStakeholderDto } from './dto/replace-project-stakeholder.dto';
 import { UpdateProjectStakeholderDto } from './dto/update-project-stakeholder.dto';
 
 const projectStakeholderInclude = {
-  project: { include: { product: true } },
+  project: { select: publicProjectSummarySelect },
   stakeholder: true,
 };
 

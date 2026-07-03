@@ -71,4 +71,13 @@ describe('CreateProjectDto', () => {
     expect(errors.map((error) => error.property)).not.toContain('units');
     expect(errors.map((error) => error.property)).not.toContain('unitCost');
   });
+
+  it('accepts an optional project name when creating a project', async () => {
+    const errors = await validatePayload({
+      ...validPayload,
+      name: 'Wholesale launch',
+    });
+
+    expect(errors.map((error) => error.property)).not.toContain('name');
+  });
 });

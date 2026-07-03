@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { publicProjectSummarySelect } from '../projects/project-public-select';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { parseSaleDate } from './dto/sale-date-string.validator';
 import { SalesQueryDto } from './dto/sales-query.dto';
@@ -14,7 +15,7 @@ import { SaleFinancialsCalculatorService } from './sale-financials-calculator.se
 
 const saleInclude = {
   product: true,
-  project: { include: { product: true } },
+  project: { select: publicProjectSummarySelect },
 };
 
 @Injectable()

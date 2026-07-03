@@ -53,6 +53,11 @@ function buildEntityListPath(
 }
 
 function formatProjectOption(project: Project) {
+  const projectName = project.name?.trim()
+  if (projectName) {
+    return `${projectName} (#${String(project.idProject)})`
+  }
+
   return project.product?.name
     ? `Project #${String(project.idProject)} - ${project.product.name}`
     : `Project #${String(project.idProject)}`
