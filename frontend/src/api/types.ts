@@ -8,7 +8,7 @@ export type ImportStatus =
   | 'committed'
   | 'cancelled'
 
-export type ProjectFeeType = 'sale_percentage' | 'fixed_per_unit'
+export type ProjectFeeModel = 'percentage' | 'fixed'
 
 export type Product = {
   id: number
@@ -40,7 +40,7 @@ export type Setting = {
 export type Project = {
   idProject: number
   idProduct: number
-  feeType: ProjectFeeType
+  feeModel: ProjectFeeModel
   feeValue: DecimalValue
   isActive: boolean
   units: number

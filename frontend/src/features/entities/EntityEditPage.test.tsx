@@ -425,7 +425,7 @@ describe('EntityEditPage', () => {
       if (path === '/projects') {
         return [
           {
-            feeType: 'fixed_per_unit',
+            feeModel: 'fixed',
             feeValue: 625.25,
             idProject: 501,
             idProduct: 101,
@@ -433,7 +433,7 @@ describe('EntityEditPage', () => {
             product: { id: 101, name: 'Walnut Desk' },
           },
           {
-            feeType: 'sale_percentage',
+            feeModel: 'percentage',
             feeValue: 10,
             idProject: 503,
             idProduct: 102,
@@ -523,21 +523,21 @@ describe('EntityEditPage', () => {
       if (path === '/projects') {
         return [
           {
-            feeType: 'sale_percentage',
+            feeModel: 'percentage',
             feeValue: 18,
             idProject: 501,
             idProduct: 101,
             product: { id: 101, name: 'Walnut Desk' },
           },
           {
-            feeType: 'sale_percentage',
+            feeModel: 'percentage',
             feeValue: 10,
             idProject: 502,
             idProduct: 101,
             product: { id: 101, name: 'Walnut Desk' },
           },
           {
-            feeType: 'fixed_per_unit',
+            feeModel: 'fixed',
             feeValue: 625.25,
             idProject: 503,
             idProduct: 102,
@@ -585,7 +585,7 @@ describe('EntityEditPage', () => {
       if (path === '/projects') {
         return [
           {
-            feeType: 'sale_percentage',
+            feeModel: 'percentage',
             feeValue: 10,
             idProject: 501,
             idProduct: 101,
@@ -663,7 +663,7 @@ describe('EntityEditPage', () => {
       if (path === '/projects') {
         return [
           {
-            feeType: 'sale_percentage',
+            feeModel: 'percentage',
             feeValue: 18,
             idProject: 501,
             idProduct: 101,
@@ -750,11 +750,11 @@ describe('EntityEditPage', () => {
     expect(screen.getByTitle('Walnut Desk')).toBeInTheDocument()
     expect(screen.queryByTitle('42')).not.toBeInTheDocument()
     await clickAntOptionByTitle(user, 'Maple Shelf')
-    expect(screen.getByRole('combobox', { name: 'Fee Type' })).toHaveAttribute(
+    expect(screen.getByRole('combobox', { name: 'Fee Model' })).toHaveAttribute(
       'aria-required',
       'true',
     )
-    await user.type(screen.getByLabelText('Fee Value'), '18')
+    await user.type(screen.getByLabelText('Percentage Fee'), '18')
     expect(screen.getByLabelText('Active')).toBeChecked()
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '1,000,000.00')
@@ -765,7 +765,7 @@ describe('EntityEditPage', () => {
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
-        feeType: 'sale_percentage',
+        feeModel: 'percentage',
         feeValue: 18,
         idProduct: 42,
         isActive: true,
@@ -775,7 +775,7 @@ describe('EntityEditPage', () => {
     })
   })
 
-  it('renders project fee type controls when creating a project', async () => {
+  it('renders project Fee Model controls when creating a project', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
       if (path === '/products') {
@@ -791,13 +791,13 @@ describe('EntityEditPage', () => {
 
     renderEntityEditPage('/projects/new', '/:entityName/:id')
 
-    const feeTypeSelect = await screen.findByRole('combobox', { name: 'Fee Type' })
-    expect(feeTypeSelect).toHaveAttribute('aria-required', 'true')
-    expect(feeTypeSelect.closest('.ant-select')).toHaveTextContent('Sale % fee')
-    expect(screen.getByLabelText('Fee Value')).toBeVisible()
+    const feeModelSelect = await screen.findByRole('combobox', { name: 'Fee Model' })
+    expect(feeModelSelect).toHaveAttribute('aria-required', 'true')
+    expect(feeModelSelect.closest('.ant-select')).toHaveTextContent('Percentage fee')
+    expect(screen.getByLabelText('Percentage Fee')).toBeVisible()
 
-    await user.click(feeTypeSelect)
-    expect(await screen.findByTitle('Fixed amount per unit')).toBeInTheDocument()
+    await user.click(feeModelSelect)
+    expect(await screen.findByTitle('Fixed fee per unit')).toBeInTheDocument()
   })
 
   it('creates a project without requiring unit cost', async () => {
@@ -822,7 +822,7 @@ describe('EntityEditPage', () => {
       await screen.findByRole('combobox', { name: 'Product' }),
       'Maple Shelf',
     )
-    await user.type(screen.getByLabelText('Fee Value'), '18')
+    await user.type(screen.getByLabelText('Percentage Fee'), '18')
     await user.type(screen.getByLabelText('Units'), '10')
 
     expect(screen.getByLabelText('Unit Cost')).toBeVisible()
@@ -830,7 +830,7 @@ describe('EntityEditPage', () => {
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
-        feeType: 'sale_percentage',
+        feeModel: 'percentage',
         feeValue: 18,
         idProduct: 42,
         isActive: true,
@@ -889,7 +889,7 @@ describe('EntityEditPage', () => {
     expect(screen.queryByLabelText('Cost Adjustment')).not.toBeInTheDocument()
 
     await selectAntOption(user, productSelect, 'Maple Shelf')
-    await user.type(screen.getByLabelText('Fee Value'), '18')
+    await user.type(screen.getByLabelText('Percentage Fee'), '18')
     const totalCostInput = screen.getByLabelText('Total Cost')
     expect(totalCostInput).toHaveValue('0.00')
     expect(totalCostInput).toHaveAttribute('readonly')
@@ -948,7 +948,7 @@ describe('EntityEditPage', () => {
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
-        feeType: 'sale_percentage',
+        feeModel: 'percentage',
         feeValue: 18,
         idProduct: 42,
         isActive: true,
@@ -980,7 +980,7 @@ describe('EntityEditPage', () => {
 
       if (path === '/projects/77') {
         return {
-          feeType: 'sale_percentage',
+          feeModel: 'percentage',
           feeValue: 18,
           idProduct: 42,
           idProject: 77,
@@ -1210,7 +1210,7 @@ describe('EntityEditPage', () => {
       name: 'Product',
     })
     await selectAntOption(user, productSelect, 'Maple Shelf')
-    await user.type(screen.getByLabelText('Fee Value'), '18')
+    await user.type(screen.getByLabelText('Percentage Fee'), '18')
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '1,000,000.00')
 
@@ -1282,7 +1282,7 @@ describe('EntityEditPage', () => {
 
     await waitFor(() => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
-        feeType: 'sale_percentage',
+        feeModel: 'percentage',
         feeValue: 18,
         idProduct: 42,
         isActive: true,
@@ -1315,7 +1315,7 @@ describe('EntityEditPage', () => {
 
       if (path === '/projects/77') {
         return {
-          feeType: 'sale_percentage',
+          feeModel: 'percentage',
           feeValue: 18,
           idProduct: 42,
           idProject: 77,
@@ -1385,7 +1385,7 @@ describe('EntityEditPage', () => {
 
     await waitFor(() => {
       expect(patchJson).toHaveBeenCalledWith('/projects/77', {
-        feeType: 'sale_percentage',
+        feeModel: 'percentage',
         feeValue: 18,
         idProduct: 42,
         isActive: true,

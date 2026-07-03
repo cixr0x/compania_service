@@ -5,7 +5,7 @@ import { CreateProjectDto } from './create-project.dto';
 
 describe('CreateProjectDto', () => {
   const validPayload = {
-    feeType: 'sale_percentage',
+    feeModel: 'percentage',
     feeValue: 18,
     idProduct: 10,
     units: 25,
@@ -37,22 +37,22 @@ describe('CreateProjectDto', () => {
     });
     const errorProperties = errors.map((error) => error.property);
 
-    expect(errorProperties).toContain('feeType');
+    expect(errorProperties).toContain('feeModel');
     expect(errorProperties).toContain('feeValue');
   });
 
-  it('rejects unsupported project fee types', async () => {
+  it('rejects unsupported project fee models', async () => {
     const errors = await validatePayload({
       ...validPayload,
-      feeType: 'ladrillo',
+      feeModel: 'ladrillo',
     });
 
-    expect(errors.map((error) => error.property)).toContain('feeType');
+    expect(errors.map((error) => error.property)).toContain('feeModel');
   });
 
   it('does not require unit cost when creating a project', async () => {
     const errors = await validatePayload({
-      feeType: 'fixed_per_unit',
+      feeModel: 'fixed',
       feeValue: 125.5,
       idProduct: 10,
       units: 25,
@@ -63,7 +63,7 @@ describe('CreateProjectDto', () => {
 
   it('does not require unit fields when creating a project', async () => {
     const errors = await validatePayload({
-      feeType: 'fixed_per_unit',
+      feeModel: 'fixed',
       feeValue: 125.5,
       idProduct: 10,
     });

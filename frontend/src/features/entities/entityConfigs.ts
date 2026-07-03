@@ -206,28 +206,41 @@ function roundCurrency(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
-const PROJECT_FEE_TYPE_OPTIONS = [
-  { label: 'Sale % fee', value: 'sale_percentage' },
-  { label: 'Fixed amount per unit', value: 'fixed_per_unit' },
+const PROJECT_FEE_MODEL_OPTIONS = [
+  { label: 'Percentage fee', value: 'percentage' },
+  { label: 'Fixed fee per unit', value: 'fixed' },
 ]
 
-function getProjectFeeTypeLabel(value: unknown) {
-  const feeType = typeof value === 'string' ? value : ''
+function getProjectFeeModelLabel(value: unknown) {
+  const feeModel = typeof value === 'string' ? value : ''
 
   return (
-    PROJECT_FEE_TYPE_OPTIONS.find((option) => option.value === feeType)?.label ??
-    '-'
+    PROJECT_FEE_MODEL_OPTIONS.find((option) => option.value === feeModel)
+      ?.label ?? '-'
   )
 }
 
-function getProjectFeeValueDisplay(row: EntityRow) {
-  const feeValue = parseMoneyNumber(row.feeValue) ?? 0
+function getProjectFeeDisplay(row: EntityRow) {
+  const feeModel = typeof row.feeModel === 'string' ? row.feeModel : ''
+  const feeValue = parseMoneyNumber(row.feeValue)
 
-  if (row.feeType === 'fixed_per_unit') {
+  if (feeValue === null) {
+    return '-'
+  }
+
+  if (feeModel === 'fixed') {
     return formatCurrency(feeValue)
   }
 
   return `${Number.isInteger(feeValue) ? feeValue : feeValue.toFixed(2)}%`
+}
+
+function isPercentageFeeModel(row: EntityRow) {
+  return row.feeModel !== 'fixed'
+}
+
+function isFixedFeeModel(row: EntityRow) {
+  return row.feeModel === 'fixed'
 }
 
 function getProjectTransactions(row: EntityRow) {
@@ -372,13 +385,13 @@ export const entityConfigs = {
         valueType: 'string',
         width: 240,
       }),
-      column('feeType', 'Fee Type', {
-        valueGetter: (row) => getProjectFeeTypeLabel(row.feeType),
+      column('feeModel', 'Fee Model', {
+        valueGetter: (row) => getProjectFeeModelLabel(row.feeModel),
         valueType: 'string',
         width: 170,
       }),
-      column('feeValue', 'Fee Value', {
-        valueGetter: getProjectFeeValueDisplay,
+      column('feeAmount', 'Fee', {
+        valueGetter: getProjectFeeDisplay,
         valueType: 'string',
         width: 130,
       }),
@@ -404,14 +417,24 @@ export const entityConfigs = {
         requiredOnCreate: true,
         valueType: 'number',
       }),
-      select('feeType', 'Fee Type', PROJECT_FEE_TYPE_OPTIONS, {
-        defaultValue: 'sale_percentage',
+      select('feeModel', 'Fee Model', PROJECT_FEE_MODEL_OPTIONS, {
+        defaultValue: 'percentage',
         required: true,
       }),
-      number('feeValue', 'Fee Value', {
+      number('feeValue', 'Percentage Fee', {
         min: 0,
         required: true,
         step: 0.01,
+        suffix: '%',
+        visibleWhen: isPercentageFeeModel,
+      }),
+      number('feeValue', 'Fixed Fee Per Unit', {
+        min: 0,
+        prefix: '$',
+        required: true,
+        step: 0.01,
+        valueFormat: 'money',
+        visibleWhen: isFixedFeeModel,
       }),
       checkbox('isActive', 'Active', {
         defaultValue: true,

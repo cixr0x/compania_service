@@ -3,7 +3,7 @@ import { ProjectsService } from './projects.service';
 
 type ProjectCreateMock = (args: {
   data: {
-    feeType: string;
+    feeModel: string;
     feeValue: number;
     idProduct: number;
     units: number;
@@ -79,7 +79,7 @@ describe('ProjectsService', () => {
   it('creates projects with production cost and active flag', async () => {
     const service = new ProjectsService(prisma);
     await service.create({
-      feeType: 'sale_percentage',
+      feeModel: 'percentage',
       feeValue: 18,
       idProduct: 42,
       units: 10,
@@ -93,7 +93,7 @@ describe('ProjectsService', () => {
     expect(projectFindFirst).not.toHaveBeenCalled();
     expect(projectCreate).toHaveBeenCalledWith({
       data: {
-        feeType: 'sale_percentage',
+        feeModel: 'percentage',
         feeValue: 18,
         idProduct: 42,
         units: 10,
@@ -109,7 +109,7 @@ describe('ProjectsService', () => {
   it('creates projects with signed cost adjustment details', async () => {
     const service = new ProjectsService(prisma);
     await service.create({
-      feeType: 'fixed_per_unit',
+      feeModel: 'fixed',
       feeValue: 125.5,
       idProduct: 42,
       units: 10,
@@ -122,7 +122,7 @@ describe('ProjectsService', () => {
 
     expect(projectCreate).toHaveBeenCalledWith({
       data: {
-        feeType: 'fixed_per_unit',
+        feeModel: 'fixed',
         feeValue: 125.5,
         idProduct: 42,
         units: 10,
@@ -138,14 +138,14 @@ describe('ProjectsService', () => {
   it('defaults omitted unit fields to zero without forcing active status when creating projects', async () => {
     const service = new ProjectsService(prisma);
     await service.create({
-      feeType: 'sale_percentage',
+      feeModel: 'percentage',
       feeValue: 18,
       idProduct: 42,
     });
 
     expect(projectCreate).toHaveBeenCalledWith({
       data: {
-        feeType: 'sale_percentage',
+        feeModel: 'percentage',
         feeValue: 18,
         idProduct: 42,
         units: 0,
@@ -166,7 +166,7 @@ describe('ProjectsService', () => {
     const service = new ProjectsService(prisma);
 
     await service.create({
-      feeType: 'sale_percentage',
+      feeModel: 'percentage',
       feeValue: 18,
       idProduct: 42,
       units: 10,
@@ -179,7 +179,7 @@ describe('ProjectsService', () => {
     expect(projectFindFirst).not.toHaveBeenCalled();
     expect(projectCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
-        feeType: 'sale_percentage',
+        feeModel: 'percentage',
         feeValue: 18,
         idProduct: 42,
         isActive: true,

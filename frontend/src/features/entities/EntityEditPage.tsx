@@ -365,18 +365,18 @@ function calculateSaleFee(
 ) {
   const amount = parseMoneyNumber(values.amount) ?? 0
   const quantity = parseMoneyNumber(values.quantity) ?? 0
-  const feeType = typeof project?.feeType === 'string' ? project.feeType : ''
+  const feeModel = typeof project?.feeModel === 'string' ? project.feeModel : ''
   const feeValue = parseMoneyNumber(project?.feeValue)
 
   if (feeValue === null) {
     return parseMoneyNumber(values.fee) ?? 0
   }
 
-  if (feeType === 'sale_percentage') {
+  if (feeModel === 'percentage') {
     return roundCurrency(amount * (feeValue / 100))
   }
 
-  if (feeType === 'fixed_per_unit') {
+  if (feeModel === 'fixed') {
     return roundCurrency(quantity * feeValue)
   }
 

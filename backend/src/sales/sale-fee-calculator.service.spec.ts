@@ -13,14 +13,14 @@ describe('SaleFeeCalculatorService', () => {
   });
 
   it.each([
-    ['sale_percentage', 25, 100, 2, 25],
-    ['sale_percentage', 10, 100, 2, 10],
-    ['fixed_per_unit', 7.5, 100, 2, 15],
+    ['percentage', 25, 100, 2, 25],
+    ['percentage', 10, 100, 2, 10],
+    ['fixed', 7.5, 100, 2, 15],
   ])(
-    'calculates sale fee for %s project fee type',
-    async (feeType, feeValue, amount, quantity, expectedFee) => {
+    'calculates sale fee for %s project fee model',
+    async (feeModel, feeValue, amount, quantity, expectedFee) => {
       jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
-        feeType,
+        feeModel,
         feeValue,
         idProject: 51,
       });
@@ -39,7 +39,7 @@ describe('SaleFeeCalculatorService', () => {
 
   it('selects project fee fields only', async () => {
     jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
-      feeType: 'sale_percentage',
+      feeModel: 'percentage',
       feeValue: 18,
       idProject: 51,
     });
@@ -55,13 +55,13 @@ describe('SaleFeeCalculatorService', () => {
     ).resolves.toBe(18);
     expect(prisma.project.findUnique).toHaveBeenCalledWith({
       where: { idProject: 51 },
-      select: { feeType: true, feeValue: true, idProject: true },
+      select: { feeModel: true, feeValue: true, idProject: true },
     });
   });
 
-  it('rejects unsupported project fee types', async () => {
+  it('rejects unsupported project fee models', async () => {
     jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
-      feeType: 'legacy_model',
+      feeModel: 'legacy_model',
       feeValue: 18,
       idProject: 51,
     });
@@ -75,7 +75,7 @@ describe('SaleFeeCalculatorService', () => {
         quantity: 2,
       }),
     ).rejects.toThrow(
-      new BadRequestException('Unsupported project fee type legacy_model'),
+      new BadRequestException('Unsupported project fee model legacy_model'),
     );
   });
 });

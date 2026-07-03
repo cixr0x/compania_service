@@ -9,8 +9,8 @@ import {
   Min,
 } from 'class-validator';
 
-export const PROJECT_FEE_TYPES = ['sale_percentage', 'fixed_per_unit'] as const;
-export type ProjectFeeType = (typeof PROJECT_FEE_TYPES)[number];
+export const PROJECT_FEE_MODELS = ['percentage', 'fixed'] as const;
+export type ProjectFeeModel = (typeof PROJECT_FEE_MODELS)[number];
 
 export class CreateProjectDto {
   @Type(() => Number)
@@ -18,8 +18,8 @@ export class CreateProjectDto {
   @Min(1)
   idProduct!: number;
 
-  @IsIn(PROJECT_FEE_TYPES)
-  feeType!: ProjectFeeType;
+  @IsIn(PROJECT_FEE_MODELS)
+  feeModel!: ProjectFeeModel;
 
   @Type(() => Number)
   @IsNumber()

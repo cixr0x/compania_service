@@ -21,7 +21,7 @@ export class SaleFeeCalculatorService {
     const project = await client.project.findUnique({
       where: { idProject: input.idProject },
       select: {
-        feeType: true,
+        feeModel: true,
         feeValue: true,
         idProject: true,
       },
@@ -31,12 +31,12 @@ export class SaleFeeCalculatorService {
       throw new BadRequestException(`Project ${input.idProject} was not found`);
     }
 
-    const feeType = project.feeType?.trim().toLowerCase();
+    const feeModel = project.feeModel?.trim().toLowerCase();
     const feeValue = toFiniteNumber(project.feeValue);
 
-    if (!feeType) {
+    if (!feeModel) {
       throw new BadRequestException(
-        `Project ${input.idProject} does not have a fee type`,
+        `Project ${input.idProject} does not have a fee model`,
       );
     }
 
@@ -49,15 +49,15 @@ export class SaleFeeCalculatorService {
     const amount = toFiniteNumber(input.amount) ?? 0;
     const quantity = toFiniteNumber(input.quantity) ?? 0;
 
-    if (feeType === 'sale_percentage') {
+    if (feeModel === 'percentage') {
       return roundCurrency(amount * (feeValue / 100));
     }
 
-    if (feeType === 'fixed_per_unit') {
+    if (feeModel === 'fixed') {
       return roundCurrency(quantity * feeValue);
     }
 
-    throw new BadRequestException(`Unsupported project fee type ${feeType}`);
+    throw new BadRequestException(`Unsupported project fee model ${feeModel}`);
   }
 }
 

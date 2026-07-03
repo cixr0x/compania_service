@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -68,10 +69,12 @@ export class ProjectsService {
   private toCreateData(
     dto: CreateProjectDto,
   ): Prisma.ProjectUncheckedCreateInput {
+    const { feeModel, feeValue, ...rest } = dto;
+
     return {
-      ...dto,
-      feeType: dto.feeType,
-      feeValue: dto.feeValue,
+      ...rest,
+      feeModel: normalizeFeeModel(feeModel),
+      feeValue: validateFeeValue(feeValue),
       units: dto.units ?? 0,
       unitCost: dto.unitCost ?? 0,
       productionCost: dto.productionCost ?? 0,
@@ -81,6 +84,35 @@ export class ProjectsService {
   }
 
   private toUpdateData(dto: UpdateProjectDto): Prisma.ProjectUncheckedUpdateInput {
-    return { ...dto };
+    const { feeModel, feeValue, ...rest } = dto;
+    const data: Prisma.ProjectUncheckedUpdateInput = { ...rest };
+
+    if (feeModel !== undefined) {
+      data.feeModel = normalizeFeeModel(feeModel);
+    }
+
+    if (feeValue !== undefined) {
+      data.feeValue = validateFeeValue(feeValue);
+    }
+
+    return data;
   }
+}
+
+function normalizeFeeModel(value: string) {
+  const feeModel = value.trim().toLowerCase();
+
+  if (feeModel !== 'percentage' && feeModel !== 'fixed') {
+    throw new BadRequestException(`Unsupported project fee model ${feeModel}`);
+  }
+
+  return feeModel;
+}
+
+function validateFeeValue(value: number) {
+  if (!Number.isFinite(value)) {
+    throw new BadRequestException('Project fee value must be a finite number');
+  }
+
+  return value;
 }

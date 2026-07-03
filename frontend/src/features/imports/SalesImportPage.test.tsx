@@ -26,7 +26,7 @@ vi.mock('../../api/client', async (importOriginal) => {
 const starterProject = {
   idProject: 501,
   idProduct: 101,
-  feeType: 'sale_percentage' as const,
+  feeModel: 'percentage' as const,
   feeValue: '18',
   isActive: true,
   units: 100,
@@ -40,7 +40,7 @@ const starterProject = {
 const consignaProject = {
   ...starterProject,
   idProject: 502,
-  feeType: 'fixed_per_unit' as const,
+  feeModel: 'fixed' as const,
   feeValue: '625.25',
 }
 

@@ -200,7 +200,7 @@ describe('EntityListPage', () => {
   it('shows project fee configuration in the projects table', async () => {
     vi.mocked(getJson).mockResolvedValue([
       {
-        feeType: 'sale_percentage',
+        feeModel: 'percentage',
         feeValue: '18',
         idProduct: 42,
         idProject: 501,
@@ -211,10 +211,10 @@ describe('EntityListPage', () => {
 
     renderEntityList('/projects')
 
-    expect(await screen.findByText('Sale % fee')).toBeVisible()
+    expect(await screen.findByText('Percentage fee')).toBeVisible()
     expect(screen.getByText('18%')).toBeVisible()
-    expect(screen.getByRole('columnheader', { name: 'Fee Type' })).toBeVisible()
-    expect(screen.getByRole('columnheader', { name: 'Fee Value' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Fee Model' })).toBeVisible()
+    expect(screen.getByRole('columnheader', { name: 'Fee' })).toBeVisible()
     expect(screen.queryByRole('columnheader', { name: 'Model' })).not.toBeInTheDocument()
   })
 
