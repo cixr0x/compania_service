@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ImportSource } from '../common/constants/import-sources';
 import { PrismaService } from '../prisma/prisma.service';
+import { STAKEHOLDER_PROJECT_TRANSACTION_TYPES } from '../stakeholder-project-transactions/dto/replace-stakeholder-project-transaction.dto';
 import { SalesSummaryQueryDto } from './dto/sales-summary-query.dto';
 import { StakeholderProjectReportQueryDto } from './dto/stakeholder-project-report-query.dto';
 
@@ -40,6 +41,8 @@ type SalesSummaryResponse = {
 };
 
 type StakeholderProjectStakeholderRow = {
+  adjustmentCount: number;
+  adjustments: number;
   balance: number;
   income: number;
   investment: number;
@@ -76,6 +79,11 @@ type StakeholderProjectsResponse = {
 type SalesSummaryPeriod = {
   months: number[];
   year: number;
+};
+
+type StakeholderProjectTransactionInput = {
+  amount: unknown;
+  transactionType?: string | null;
 };
 
 const salesReportInclude = {
@@ -209,7 +217,9 @@ export class ReportsService {
     }
 
     row.projectTotalCost = roundCurrency(
-      sumNumbers(...project.transactions.map((transaction) => transaction.amount)),
+      sumNumbers(
+        ...project.transactions.map((transaction) => transaction.amount),
+      ),
     );
     const rawUnitPrice =
       project.units === 0 ? 0 : row.projectTotalCost / project.units;
@@ -232,27 +242,21 @@ export class ReportsService {
     const stakeholderRow = project.stakeholders[0];
     const stakePercentage = toNumber(stakeholderRow.stakePercentage);
     const stakeRatio = stakePercentage / 100;
-    const investment = roundCurrency(
-      sumNumbers(
-        ...stakeholderRow.transactions.map((transaction) => transaction.amount),
-      ),
-    );
-    const payments = roundCurrency(
-      sumNumbers(
-        ...stakeholderRow.transactions.map((transaction) => {
-          const amount = toNumber(transaction.amount);
-          return amount > 0 ? amount : 0;
-        }),
-      ),
+    const transactionTotals = calculateStakeholderTransactionTotals(
+      stakeholderRow.transactions,
     );
     const income = roundCurrency(
       row.calculatedCost * stakeRatio + row.profit * stakeRatio,
     );
     row.stakeholder = {
-      balance: roundCurrency(income - payments),
+      adjustmentCount: transactionTotals.adjustmentCount,
+      adjustments: transactionTotals.adjustments,
+      balance: roundCurrency(
+        income - transactionTotals.payments + transactionTotals.adjustments,
+      ),
       income,
-      investment,
-      payments,
+      investment: transactionTotals.investment,
+      payments: transactionTotals.payments,
       stakePercentage,
       stakeholderId: stakeholderRow.stakeholder.idStakeholder,
       stakeholderName: stakeholderRow.stakeholder.name,
@@ -260,7 +264,9 @@ export class ReportsService {
 
     return {
       row,
-      sources: hasSurfaceSales ? [...ALL_REPORT_SOURCES] : [...BASE_REPORT_SOURCES],
+      sources: hasSurfaceSales
+        ? [...ALL_REPORT_SOURCES]
+        : [...BASE_REPORT_SOURCES],
     };
   }
 }
@@ -336,6 +342,8 @@ function createEmptyStakeholderProjectRow({
     projectProgress: 0,
     projectTotalCost: 0,
     stakeholder: {
+      adjustmentCount: 0,
+      adjustments: 0,
       balance: 0,
       income: 0,
       investment: 0,
@@ -381,6 +389,57 @@ function stripAccumulator(row: SalesSummaryAccumulator): SalesSummaryRow {
 
 function isReportSource(source: string): source is ReportSource {
   return ALL_REPORT_SOURCES.includes(source as ReportSource);
+}
+
+function calculateStakeholderTransactionTotals(
+  transactions: StakeholderProjectTransactionInput[],
+) {
+  let adjustmentCount = 0;
+  let adjustments = 0;
+  let investmentAmount = 0;
+  let payments = 0;
+
+  for (const transaction of transactions) {
+    const amount = toNumber(transaction.amount);
+    const transactionType = normalizeStakeholderProjectTransactionType(
+      transaction.transactionType,
+    );
+
+    if (transactionType === 'payment') {
+      payments += amount;
+      continue;
+    }
+
+    if (transactionType === 'adjustment') {
+      adjustmentCount += 1;
+      adjustments += amount;
+      continue;
+    }
+
+    investmentAmount += Math.abs(amount);
+  }
+
+  return {
+    adjustmentCount,
+    adjustments: roundCurrency(adjustments),
+    investment: roundCurrency(payments - investmentAmount),
+    payments: roundCurrency(payments),
+  };
+}
+
+function normalizeStakeholderProjectTransactionType(
+  value: unknown,
+): (typeof STAKEHOLDER_PROJECT_TRANSACTION_TYPES)[number] {
+  if (
+    typeof value === 'string' &&
+    STAKEHOLDER_PROJECT_TRANSACTION_TYPES.includes(
+      value as (typeof STAKEHOLDER_PROJECT_TRANSACTION_TYPES)[number],
+    )
+  ) {
+    return value as (typeof STAKEHOLDER_PROJECT_TRANSACTION_TYPES)[number];
+  }
+
+  return 'investment';
 }
 
 function toNumber(value: unknown): number {

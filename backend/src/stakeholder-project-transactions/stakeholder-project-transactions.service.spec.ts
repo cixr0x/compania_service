@@ -38,27 +38,25 @@ describe('StakeholderProjectTransactionsService', () => {
           idProject: 501,
           idStakeholder: 10,
           idStakeholderProjectTransaction: 2,
+          transactionType: 'payment',
         },
       ]);
 
     const service = new StakeholderProjectTransactionsService(prisma);
     await service.findByProjectStakeholder(501, 10);
 
-    expect(
-      prisma.stakeholderProjectTransaction.findMany,
-    ).toHaveBeenCalledWith({
-      orderBy: [
-        { date: 'asc' },
-        { idStakeholderProjectTransaction: 'asc' },
-      ],
+    expect(prisma.stakeholderProjectTransaction.findMany).toHaveBeenCalledWith({
+      orderBy: [{ date: 'asc' }, { idStakeholderProjectTransaction: 'asc' }],
       where: { idProject: 501, idStakeholder: 10 },
     });
   });
 
   it('replaces all stakeholder project transactions atomically', async () => {
-    jest.spyOn(transactionPrisma.projectStakeholder, 'findUnique').mockResolvedValue({
-      idProjectStakeholder: 900,
-    });
+    jest
+      .spyOn(transactionPrisma.projectStakeholder, 'findUnique')
+      .mockResolvedValue({
+        idProjectStakeholder: 900,
+      });
     jest
       .spyOn(transactionPrisma.stakeholderProjectTransaction, 'deleteMany')
       .mockResolvedValue({ count: 2 });
@@ -75,6 +73,7 @@ describe('StakeholderProjectTransactionsService', () => {
           idProject: 501,
           idStakeholder: 10,
           idStakeholderProjectTransaction: 10,
+          transactionType: 'payment',
         },
         {
           amount: '-15.00',
@@ -83,18 +82,35 @@ describe('StakeholderProjectTransactionsService', () => {
           idProject: 501,
           idStakeholder: 10,
           idStakeholderProjectTransaction: 11,
+          transactionType: 'adjustment',
         },
       ]);
 
     const service = new StakeholderProjectTransactionsService(prisma);
-    const result = await service.replaceProjectStakeholderTransactions(501, 10, [
-      { amount: 100, date: '2026-05-05', description: 'Distribution' },
-      { amount: -15, date: '2026-05-06', description: 'Correction' },
-    ]);
+    const result = await service.replaceProjectStakeholderTransactions(
+      501,
+      10,
+      [
+        {
+          amount: 100,
+          date: '2026-05-05',
+          description: 'Distribution',
+          transactionType: 'payment',
+        },
+        {
+          amount: -15,
+          date: '2026-05-06',
+          description: 'Correction',
+          transactionType: 'adjustment',
+        },
+      ],
+    );
 
     expect(prisma.$transaction).toHaveBeenCalled();
     expect(transactionPrisma.$queryRaw).toHaveBeenCalled();
-    expect(transactionPrisma.projectStakeholder.findUnique).toHaveBeenCalledWith({
+    expect(
+      transactionPrisma.projectStakeholder.findUnique,
+    ).toHaveBeenCalledWith({
       select: { idProjectStakeholder: true },
       where: { idProject_idStakeholder: { idProject: 501, idStakeholder: 10 } },
     });
@@ -113,6 +129,7 @@ describe('StakeholderProjectTransactionsService', () => {
           description: 'Distribution',
           idProject: 501,
           idStakeholder: 10,
+          transactionType: 'payment',
         },
         {
           amount: -15,
@@ -120,16 +137,14 @@ describe('StakeholderProjectTransactionsService', () => {
           description: 'Correction',
           idProject: 501,
           idStakeholder: 10,
+          transactionType: 'adjustment',
         },
       ],
     });
     expect(
       transactionPrisma.stakeholderProjectTransaction.findMany,
     ).toHaveBeenCalledWith({
-      orderBy: [
-        { date: 'asc' },
-        { idStakeholderProjectTransaction: 'asc' },
-      ],
+      orderBy: [{ date: 'asc' }, { idStakeholderProjectTransaction: 'asc' }],
       where: { idProject: 501, idStakeholder: 10 },
     });
     expect(result).toEqual([
@@ -140,6 +155,7 @@ describe('StakeholderProjectTransactionsService', () => {
         idProject: 501,
         idStakeholder: 10,
         idStakeholderProjectTransaction: 10,
+        transactionType: 'payment',
       },
       {
         amount: '-15.00',
@@ -148,14 +164,17 @@ describe('StakeholderProjectTransactionsService', () => {
         idProject: 501,
         idStakeholder: 10,
         idStakeholderProjectTransaction: 11,
+        transactionType: 'adjustment',
       },
     ]);
   });
 
   it('deletes all transactions when replacement payload is empty', async () => {
-    jest.spyOn(transactionPrisma.projectStakeholder, 'findUnique').mockResolvedValue({
-      idProjectStakeholder: 900,
-    });
+    jest
+      .spyOn(transactionPrisma.projectStakeholder, 'findUnique')
+      .mockResolvedValue({
+        idProjectStakeholder: 900,
+      });
     jest
       .spyOn(transactionPrisma.stakeholderProjectTransaction, 'deleteMany')
       .mockResolvedValue({ count: 2 });
@@ -186,9 +205,7 @@ describe('StakeholderProjectTransactionsService', () => {
     await expect(
       service.replaceProjectStakeholderTransactions(501, 10, []),
     ).rejects.toThrow(
-      new NotFoundException(
-        'Stakeholder 10 is not assigned to project 501',
-      ),
+      new NotFoundException('Stakeholder 10 is not assigned to project 501'),
     );
     expect(
       transactionPrisma.stakeholderProjectTransaction.deleteMany,

@@ -300,6 +300,14 @@ function StakeholderDetail({
   projectId: number
   stakeholder: StakeholderProjectStakeholderRow
 }) {
+  const hasAdjustments = stakeholder.adjustmentCount > 0
+  const adjustmentTone =
+    stakeholder.adjustments < 0
+      ? 'negative'
+      : stakeholder.adjustments > 0
+        ? 'positive'
+        : undefined
+
   return (
     <>
       <section
@@ -332,6 +340,13 @@ function StakeholderDetail({
             tone="income"
             value={formatCurrency(stakeholder.income)}
           />
+          {hasAdjustments ? (
+            <Metric
+              label="Adjustments"
+              tone={adjustmentTone}
+              value={formatCurrency(stakeholder.adjustments)}
+            />
+          ) : null}
           <Metric
             label="Balance"
             tone="warning"

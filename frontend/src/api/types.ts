@@ -9,6 +9,10 @@ export type ImportStatus =
   | 'cancelled'
 
 export type ProjectFeeModel = 'percentage' | 'fixed'
+export type StakeholderProjectTransactionType =
+  | 'investment'
+  | 'payment'
+  | 'adjustment'
 
 export type Product = {
   id: number
@@ -79,6 +83,7 @@ export type StakeholderProjectTransaction = {
   date: IsoDateTime
   description: string
   amount: DecimalValue
+  transactionType: StakeholderProjectTransactionType
 }
 
 export type Sale = {
@@ -178,6 +183,8 @@ export type StakeholderProjectsReportSourceTotals = {
 }
 
 export type StakeholderProjectStakeholderRow = {
+  adjustmentCount: number
+  adjustments: number
   balance: number
   income: number
   investment: number

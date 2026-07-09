@@ -8,22 +8,46 @@ import {
   SaveOutlined,
 } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Alert, Button, Empty, Form, Input, Space, Table, Typography } from 'antd'
+import {
+  Alert,
+  Button,
+  Empty,
+  Form,
+  Input,
+  Select,
+  Space,
+  Table,
+  Typography,
+} from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { formatApiErrorMessage, getJson, putJson } from '../../api/client'
-import type { StakeholderProjectTransaction } from '../../api/types'
+import type {
+  StakeholderProjectTransaction,
+  StakeholderProjectTransactionType,
+} from '../../api/types'
 import { formatMoney, parseMoneyNumber } from '../../utils/money'
 
 const EMPTY_TRANSACTION_ROW = {
   amount: '',
   date: '',
   description: '',
+  transactionType: 'investment' as StakeholderProjectTransactionType,
 }
+
+const TRANSACTION_TYPE_OPTIONS: {
+  label: string
+  value: StakeholderProjectTransactionType
+}[] = [
+  { label: 'Investment', value: 'investment' },
+  { label: 'Payment', value: 'payment' },
+  { label: 'Adjustment', value: 'adjustment' },
+]
 
 type TransactionPayloadRow = {
   amount: number
   date: string
   description: string
+  transactionType: StakeholderProjectTransactionType
 }
 
 type TransactionDraftRow = {
@@ -31,6 +55,7 @@ type TransactionDraftRow = {
   amount: string
   date: string
   description: string
+  transactionType: StakeholderProjectTransactionType
 }
 
 type EditingTransactionRow = TransactionDraftRow & {
@@ -69,6 +94,21 @@ function getTodayDateValue() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function normalizeTransactionType(
+  value: unknown,
+): StakeholderProjectTransactionType {
+  return TRANSACTION_TYPE_OPTIONS.some((option) => option.value === value)
+    ? (value as StakeholderProjectTransactionType)
+    : 'investment'
+}
+
+function getTransactionTypeLabel(value: StakeholderProjectTransactionType) {
+  return (
+    TRANSACTION_TYPE_OPTIONS.find((option) => option.value === value)?.label ??
+    'Investment'
+  )
+}
+
 function buildDraftRow(
   row: StakeholderProjectTransaction,
   index: number,
@@ -78,6 +118,7 @@ function buildDraftRow(
     amount: formatMoney(row.amount),
     date: normalizeDateValue(row.date),
     description: toInputValue(row.description),
+    transactionType: normalizeTransactionType(row.transactionType),
   }
 }
 
@@ -94,6 +135,7 @@ function buildPayload(rows: TransactionDraftRow[]): TransactionPayloadRow[] {
     amount: parseMoneyNumber(row.amount) ?? 0,
     date: row.date.trim(),
     description: row.description.trim(),
+    transactionType: row.transactionType,
   }))
 }
 
@@ -147,16 +189,13 @@ export function StakeholderProjectTransactionLines({
   )
 
   const transactionsQuery = useQuery({
-    queryKey: [
-      'stakeholder-project-transactions',
-      projectId,
-      stakeholderId,
-    ],
+    queryKey: ['stakeholder-project-transactions', projectId, stakeholderId],
     queryFn: () => getJson<StakeholderProjectTransaction[]>(transactionsPath),
   })
 
   const loadedRows = useMemo(
-    () => sortTransactionRows((transactionsQuery.data ?? []).map(buildDraftRow)),
+    () =>
+      sortTransactionRows((transactionsQuery.data ?? []).map(buildDraftRow)),
     [transactionsQuery.data],
   )
   const activeRows = draftRows ?? loadedRows
@@ -178,12 +217,7 @@ export function StakeholderProjectTransactionLines({
       setDraftRows(sortTransactionRows(rows.map(buildDraftRow)))
       setSaveError(null)
       void queryClient.invalidateQueries({
-        queryKey: [
-          'reports',
-          'stakeholder-projects',
-          projectId,
-          stakeholderId,
-        ],
+        queryKey: ['reports', 'stakeholder-projects', projectId, stakeholderId],
       })
     },
   })
@@ -232,7 +266,7 @@ export function StakeholderProjectTransactionLines({
 
   function handleRowChange(
     rowKey: string,
-    field: 'amount' | 'date' | 'description',
+    field: 'amount' | 'date' | 'description' | 'transactionType',
     value: string,
   ) {
     setEditingRows((currentRows) => {
@@ -262,6 +296,7 @@ export function StakeholderProjectTransactionLines({
     const amount = parseMoneyNumber(editedRow.amount)
     const date = editedRow.date.trim()
     const description = editedRow.description.trim()
+    const transactionType = normalizeTransactionType(editedRow.transactionType)
 
     if (amount === null || date === '' || description === '') {
       setRowErrors((currentErrors) => ({
@@ -274,7 +309,13 @@ export function StakeholderProjectTransactionLines({
     const nextRows = sortTransactionRows(
       activeRows.map((row) =>
         row.rowKey === rowKey
-          ? { ...row, amount: formatMoney(amount), date, description }
+          ? {
+              ...row,
+              amount: formatMoney(amount),
+              date,
+              description,
+              transactionType,
+            }
           : row,
       ),
     )
@@ -334,6 +375,31 @@ export function StakeholderProjectTransactionLines({
         )
       },
       title: 'Date',
+      width: 150,
+    },
+    {
+      className: 'stakeholder-transaction-type-cell',
+      dataIndex: 'transactionType',
+      key: 'transactionType',
+      render: (_value: StakeholderProjectTransactionType, row) => {
+        const editingRow = editingRows[row.rowKey]
+
+        return editingRow ? (
+          <Select
+            aria-label="Type"
+            onChange={(value) =>
+              handleRowChange(row.rowKey, 'transactionType', value)
+            }
+            options={TRANSACTION_TYPE_OPTIONS}
+            size="small"
+            value={editingRow.transactionType}
+            style={{ width: '100%' }}
+          />
+        ) : (
+          getTransactionTypeLabel(row.transactionType)
+        )
+      },
+      title: 'Type',
       width: 150,
     },
     {
@@ -490,7 +556,7 @@ export function StakeholderProjectTransactionLines({
             }}
             pagination={false}
             rowKey="rowKey"
-            scroll={{ x: 760 }}
+            scroll={{ x: 910 }}
             size="small"
           />
 

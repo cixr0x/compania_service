@@ -1,6 +1,15 @@
 import { Transform, Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsIn, IsNotEmpty, IsNumber, IsString } from 'class-validator';
 import { IsSaleDateString } from '../../sales/dto/sale-date-string.validator';
+
+export const STAKEHOLDER_PROJECT_TRANSACTION_TYPES = [
+  'investment',
+  'payment',
+  'adjustment',
+] as const;
+
+export type StakeholderProjectTransactionType =
+  (typeof STAKEHOLDER_PROJECT_TRANSACTION_TYPES)[number];
 
 export class ReplaceStakeholderProjectTransactionDto {
   @IsSaleDateString()
@@ -14,4 +23,7 @@ export class ReplaceStakeholderProjectTransactionDto {
   @IsString()
   @IsNotEmpty()
   description!: string;
+
+  @IsIn(STAKEHOLDER_PROJECT_TRANSACTION_TYPES)
+  transactionType!: StakeholderProjectTransactionType;
 }

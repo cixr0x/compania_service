@@ -48,6 +48,7 @@ export class StakeholderProjectTransactionsService {
       description: row.description.trim(),
       idProject,
       idStakeholder,
+      transactionType: row.transactionType,
     }));
 
     return this.prisma.$transaction(async (tx) => {

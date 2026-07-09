@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -24,9 +30,11 @@ const stakeholderProjectsReport = {
     projectProgress: 30,
     projectTotalCost: 110,
     stakeholder: {
-      balance: 80.3,
+      adjustmentCount: 1,
+      adjustments: 10.25,
+      balance: 90.55,
       income: 205.8,
-      investment: 100,
+      investment: 25.5,
       payments: 125.5,
       stakePercentage: 60,
       stakeholderId: 10,
@@ -130,6 +138,7 @@ describe('StakeholderProjectsReportPage', () => {
             idProject: 501,
             idStakeholder: 10,
             idStakeholderProjectTransaction: 99,
+            transactionType: 'payment',
           },
         ])
       }
@@ -201,9 +210,7 @@ describe('StakeholderProjectsReportPage', () => {
     expect(within(sourceTiles).getByText('$150.00')).toBeVisible()
     expect(within(sourceTiles).getByText('Event')).toBeVisible()
     expect(within(sourceTiles).getByText('0 units')).toBeVisible()
-    expect(
-      within(sourceTiles).queryByText('Surface'),
-    ).not.toBeInTheDocument()
+    expect(within(sourceTiles).queryByText('Surface')).not.toBeInTheDocument()
 
     expect(within(projectRegion).getByText('Units left')).toBeVisible()
     expect(within(projectRegion).getByText('7')).toBeVisible()
@@ -225,13 +232,19 @@ describe('StakeholderProjectsReportPage', () => {
     expect(within(stakeholderRegion).getByText('Alicia')).toBeVisible()
     expect(within(stakeholderRegion).getByText('Stake %')).toBeVisible()
     expect(within(stakeholderRegion).getByText('60%')).toBeVisible()
-    expect(within(stakeholderRegion).getByText('Investment Balance')).toBeVisible()
-    expect(within(stakeholderRegion).getByText('$100.00')).toBeVisible()
+    expect(
+      within(stakeholderRegion).getByText('Investment Balance'),
+    ).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$25.50')).toBeVisible()
     expect(within(stakeholderRegion).getByText('Payments')).toBeVisible()
-    expect(within(stakeholderRegion).getAllByText('$125.50').length).toBeGreaterThan(0)
+    expect(
+      within(stakeholderRegion).getAllByText('$125.50').length,
+    ).toBeGreaterThan(0)
     expect(within(stakeholderRegion).getByText('Entitled Income')).toBeVisible()
     expect(within(stakeholderRegion).getByText('$205.80')).toBeVisible()
-    expect(within(stakeholderRegion).getByText('$80.30')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('Adjustments')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$10.25')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$90.55')).toBeVisible()
     expect(
       screen.getByRole('table', {
         name: 'Alicia transaction details',

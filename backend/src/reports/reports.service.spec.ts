@@ -189,48 +189,48 @@ describe('ReportsService', () => {
   });
 
   it('builds an all-time stakeholder project report for one project stakeholder', async () => {
-    jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(
-      {
-        adminCost: '20.00',
-        costAdjustment: '-10.00',
-        idProject: 501,
-        product: {
-          image: 'https://example.test/maple-shelf.jpg',
-          name: 'Maple Shelf',
-        },
-        sales: [
-          {
-            amount: '200.00',
-            fee: '5.00',
-            quantity: 2,
-            source: 'store',
-          },
-          {
-            amount: '150.00',
-            fee: '2.00',
-            quantity: 1,
-            source: 'ecommerce',
-          },
-        ],
-        stakeholders: [
-          {
-            idProjectStakeholder: 900,
-            stakePercentage: '60.00',
-            stakeholder: { idStakeholder: 10, name: 'Alicia' },
-            transactions: [
-              { amount: '125.50' },
-              { amount: '-25.50' },
-            ],
-          },
-        ],
-        transactions: [
-          { amount: '100.00' },
-          { amount: '20.00' },
-          { amount: '-10.00' },
-        ],
-        units: 10,
+    jest.spyOn(prisma.project, 'findFirst').mockResolvedValue({
+      adminCost: '20.00',
+      costAdjustment: '-10.00',
+      idProject: 501,
+      product: {
+        image: 'https://example.test/maple-shelf.jpg',
+        name: 'Maple Shelf',
       },
-    );
+      sales: [
+        {
+          amount: '200.00',
+          fee: '5.00',
+          quantity: 2,
+          source: 'store',
+        },
+        {
+          amount: '150.00',
+          fee: '2.00',
+          quantity: 1,
+          source: 'ecommerce',
+        },
+      ],
+      stakeholders: [
+        {
+          idProjectStakeholder: 900,
+          stakePercentage: '60.00',
+          stakeholder: { idStakeholder: 10, name: 'Alicia' },
+          transactions: [
+            { amount: '100.00', transactionType: 'investment' },
+            { amount: '125.50', transactionType: 'payment' },
+            { amount: '15.25', transactionType: 'adjustment' },
+            { amount: '-5.00', transactionType: 'adjustment' },
+          ],
+        },
+      ],
+      transactions: [
+        { amount: '100.00' },
+        { amount: '20.00' },
+        { amount: '-10.00' },
+      ],
+      units: 10,
+    });
 
     const service = new ReportsService(prisma as PrismaService);
     const result = await service.getStakeholderProjectsReport({
@@ -266,9 +266,11 @@ describe('ReportsService', () => {
       projectProgress: 30,
       projectTotalCost: 110,
       stakeholder: {
-        balance: 80.3,
+        adjustmentCount: 2,
+        adjustments: 10.25,
+        balance: 90.55,
         income: 205.8,
-        investment: 100,
+        investment: 25.5,
         payments: 125.5,
         stakePercentage: 60,
         stakeholderId: 10,

@@ -13,8 +13,7 @@ import { getJson, putJson } from '../../api/client'
 import { StakeholderProjectTransactionLines } from './StakeholderProjectTransactionLines'
 
 vi.mock('../../api/client', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('../../api/client')>()
+  const actual = await importOriginal<typeof import('../../api/client')>()
 
   return {
     ...actual,
@@ -45,7 +44,17 @@ function getTableBodyDescriptions(table: HTMLElement) {
   return within(table)
     .getAllByRole('row')
     .slice(1)
-    .map((row) => within(row).getAllByRole('cell')[1].textContent)
+    .map((row) => within(row).getAllByRole('cell')[2].textContent)
+}
+
+async function selectAntOption(
+  user: ReturnType<typeof userEvent.setup>,
+  combobox: HTMLElement,
+  optionName: string,
+) {
+  await user.click(combobox)
+  const options = await screen.findAllByTitle(optionName)
+  await user.click(options[options.length - 1])
 }
 
 describe('StakeholderProjectTransactionLines', () => {
@@ -68,6 +77,7 @@ describe('StakeholderProjectTransactionLines', () => {
         idProject: 501,
         idStakeholder: 10,
         idStakeholderProjectTransaction: 99,
+        transactionType: 'payment',
       },
     ])
 
@@ -86,6 +96,7 @@ describe('StakeholderProjectTransactionLines', () => {
       }),
     ).toBeVisible()
     expect(within(section).getByText('2026-05-05')).toBeVisible()
+    expect(within(section).getByText('Payment')).toBeVisible()
     expect(within(section).getByText('$125.50')).toBeVisible()
     expect(within(section).getByText('Distribution')).toBeVisible()
     expect(within(section).queryByLabelText('Date')).not.toBeInTheDocument()
@@ -104,6 +115,7 @@ describe('StakeholderProjectTransactionLines', () => {
         idProject: 501,
         idStakeholder: 10,
         idStakeholderProjectTransaction: 100,
+        transactionType: 'payment',
       },
     ])
 
@@ -122,15 +134,29 @@ describe('StakeholderProjectTransactionLines', () => {
     fireEvent.change(within(section).getByLabelText('Amount'), {
       target: { value: '250.00' },
     })
+    await selectAntOption(
+      user,
+      within(section).getByRole('combobox', { name: 'Type' }),
+      'Payment',
+    )
     fireEvent.change(within(section).getByLabelText('Description'), {
       target: { value: 'Capital return' },
     })
-    await user.click(within(section).getByRole('button', { name: 'Save row 1' }))
+    await user.click(
+      within(section).getByRole('button', { name: 'Save row 1' }),
+    )
 
     await waitFor(() => {
       expect(putJson).toHaveBeenCalledWith(
         '/stakeholder-project-transactions/projects/501/stakeholders/10',
-        [{ amount: 250, date: '2026-05-06', description: 'Capital return' }],
+        [
+          {
+            amount: 250,
+            date: '2026-05-06',
+            description: 'Capital return',
+            transactionType: 'payment',
+          },
+        ],
       )
     })
     expect(within(section).queryByLabelText('Amount')).not.toBeInTheDocument()
@@ -148,6 +174,7 @@ describe('StakeholderProjectTransactionLines', () => {
         idProject: 501,
         idStakeholder: 10,
         idStakeholderProjectTransaction: 99,
+        transactionType: 'payment',
       },
     ])
 
@@ -172,7 +199,9 @@ describe('StakeholderProjectTransactionLines', () => {
     fireEvent.change(within(section).getByLabelText('Description'), {
       target: { value: 'Earlier transaction' },
     })
-    await user.click(within(section).getByRole('button', { name: 'Save row 2' }))
+    await user.click(
+      within(section).getByRole('button', { name: 'Save row 2' }),
+    )
 
     await waitFor(() => {
       expect(getTableBodyDescriptions(table)).toEqual([
@@ -215,6 +244,7 @@ describe('StakeholderProjectTransactionLines', () => {
         idProject: 501,
         idStakeholder: 10,
         idStakeholderProjectTransaction: 99,
+        transactionType: 'payment',
       },
     ])
 
@@ -224,7 +254,9 @@ describe('StakeholderProjectTransactionLines', () => {
       name: 'Stakeholder Transactions',
     })
     await within(section).findByText('Distribution')
-    await user.click(within(section).getByRole('button', { name: 'Edit row 1' }))
+    await user.click(
+      within(section).getByRole('button', { name: 'Edit row 1' }),
+    )
     fireEvent.change(within(section).getByLabelText('Date'), {
       target: { value: '2026-05-07' },
     })
@@ -242,7 +274,9 @@ describe('StakeholderProjectTransactionLines', () => {
     expect(within(section).getByText('2026-05-05')).toBeVisible()
     expect(within(section).getByText('$125.50')).toBeVisible()
     expect(within(section).getByText('Distribution')).toBeVisible()
-    expect(within(section).queryByText('Updated distribution')).not.toBeInTheDocument()
+    expect(
+      within(section).queryByText('Updated distribution'),
+    ).not.toBeInTheDocument()
   })
 
   it('persists row removal immediately', async () => {
@@ -255,6 +289,7 @@ describe('StakeholderProjectTransactionLines', () => {
         idProject: 501,
         idStakeholder: 10,
         idStakeholderProjectTransaction: 99,
+        transactionType: 'payment',
       },
     ])
     vi.mocked(putJson).mockResolvedValue([])
@@ -276,7 +311,9 @@ describe('StakeholderProjectTransactionLines', () => {
       )
     })
     expect(
-      within(section).getByText('No stakeholder transactions have been recorded yet.'),
+      within(section).getByText(
+        'No stakeholder transactions have been recorded yet.',
+      ),
     ).toBeVisible()
   })
 })
