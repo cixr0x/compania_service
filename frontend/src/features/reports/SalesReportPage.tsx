@@ -1,6 +1,16 @@
 import { useMemo, useState } from 'react'
+import { DownloadOutlined } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Empty, Select, Space, Spin, Table, Typography } from 'antd'
+import {
+  Alert,
+  Button,
+  Empty,
+  Select,
+  Space,
+  Spin,
+  Table,
+  Typography,
+} from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { getJson } from '../../api/client'
 import type {
@@ -12,6 +22,7 @@ import type {
 import { ProductNameCell } from '../../components/ProductNameCell'
 import { getChannelHeaderClass } from '../../utils/channelHeaders'
 import { formatCurrency } from '../../utils/money'
+import { downloadSalesReportExcel } from './salesReportExport'
 
 const sourceLabels: Record<SalesReportSource, string> = {
   ecommerce: 'Ecommerce',
@@ -81,10 +92,7 @@ function getAveragePrice(amount: number, quantity: number) {
   return quantity === 0 ? 0 : roundCurrency(amount / quantity)
 }
 
-function getSourceAveragePrice(
-  row: SalesReportRow,
-  source: SalesReportSource,
-) {
+function getSourceAveragePrice(row: SalesReportRow, source: SalesReportSource) {
   return (
     row[source].averagePrice ??
     getAveragePrice(row[source].amount, row[source].quantity)
@@ -148,7 +156,8 @@ export function SalesReportPage() {
   const [selectedProductId, setSelectedProductId] = useState('')
   const periodsQuery = useQuery({
     queryKey: ['reports', 'sales-summary-periods'],
-    queryFn: () => getJson<SalesReportPeriod[]>('/reports/sales-summary/periods'),
+    queryFn: () =>
+      getJson<SalesReportPeriod[]>('/reports/sales-summary/periods'),
   })
   const periods = periodsQuery.data ?? EMPTY_PERIODS
   const activeYear = selectedYear ?? String(periods[0]?.year ?? '')
@@ -196,13 +205,23 @@ export function SalesReportPage() {
     [filteredRows, sources],
   )
   const isLoading = reportQuery.isLoading || periodsQuery.isLoading
+  const activeMonthLabel = selectedMonth
+    ? formatMonth(Number(selectedMonth))
+    : 'Full year'
+  const activeProductLabel =
+    productOptions.find((option) => option.value === activeProductId)?.label ??
+    'All products'
+  const canExport = activeYear !== '' && filteredRows.length > 0 && !isLoading
   const columns = useMemo<ColumnsType<SalesReportRow>>(
     () => [
       {
         dataIndex: 'productName',
         key: 'productName',
         ellipsis: true,
-        render: (_value: SalesReportRow['productName'], row: SalesReportRow) => (
+        render: (
+          _value: SalesReportRow['productName'],
+          row: SalesReportRow,
+        ) => (
           <ProductNameCell imageUrl={row.productImage} name={row.productName} />
         ),
         title: 'Product',
@@ -298,14 +317,36 @@ export function SalesReportPage() {
     [sources],
   )
 
+  function handleExportReport() {
+    downloadSalesReportExcel({
+      monthLabel: activeMonthLabel,
+      productLabel: activeProductLabel,
+      rows: filteredRows,
+      sources,
+      totals: reportTotals,
+      year: activeYear,
+    })
+  }
+
   return (
-    <section className="page-panel report-page" aria-labelledby="sales-report-heading">
+    <section
+      className="page-panel report-page"
+      aria-labelledby="sales-report-heading"
+    >
       <div className="page-heading-row">
         <div>
           <Typography.Title id="sales-report-heading" level={2}>
             Sales Report
           </Typography.Title>
         </div>
+        <Button
+          aria-label="Export sales report to Excel"
+          disabled={!canExport}
+          icon={<DownloadOutlined />}
+          onClick={handleExportReport}
+        >
+          Export Excel
+        </Button>
       </div>
 
       <div className="report-controls">

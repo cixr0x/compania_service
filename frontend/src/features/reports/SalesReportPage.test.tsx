@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -124,10 +130,9 @@ describe('SalesReportPage', () => {
     expect(within(reportRegion).queryByText('Reports')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Reports/i }))
     await waitFor(() => {
-      expect(screen.getByRole('link', { name: 'Sales Report' })).toHaveAttribute(
-        'href',
-        '/reports/sales',
-      )
+      expect(
+        screen.getByRole('link', { name: 'Sales Report' }),
+      ).toHaveAttribute('href', '/reports/sales')
     })
     const yearSelect = screen.getByRole('combobox', { name: 'Year' })
     const monthSelect = screen.getByRole('combobox', { name: 'Month' })
@@ -149,7 +154,9 @@ describe('SalesReportPage', () => {
       expect(yearSelect.closest('.ant-select')).toHaveTextContent('2026')
     })
     expect(monthSelect.closest('.ant-select')).toHaveTextContent('Full year')
-    expect(productSelect.closest('.ant-select')).toHaveTextContent('All products')
+    expect(productSelect.closest('.ant-select')).toHaveTextContent(
+      'All products',
+    )
 
     const columnHeaders = await screen.findAllByRole('columnheader')
     const table = columnHeaders[0].closest('table')!
@@ -158,19 +165,23 @@ describe('SalesReportPage', () => {
     expect(table.closest('.sales-report-table')).toBeInTheDocument()
     expect(table.closest('.ant-table')).toHaveClass('ant-table-small')
     expect(table).toHaveStyle({ width: '1598px' })
-    expect(within(table).queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument()
+    expect(
+      within(table).queryByRole('columnheader', { name: 'Project ID' }),
+    ).not.toBeInTheDocument()
     expect(columnHeaders[0]).toHaveTextContent('Product')
-    const storeHeader = within(table).getByRole('columnheader', { name: 'Store' })
+    const storeHeader = within(table).getByRole('columnheader', {
+      name: 'Store',
+    })
     const ecommerceHeader = within(table).getByRole('columnheader', {
       name: 'Ecommerce',
     })
-    const eventHeader = within(table).getByRole('columnheader', { name: 'Event' })
+    const eventHeader = within(table).getByRole('columnheader', {
+      name: 'Event',
+    })
 
     expect(storeHeader).toHaveAttribute('colspan', '3')
     expect(storeHeader).toHaveClass('channel-header-store')
-    expect(
-      ecommerceHeader,
-    ).toHaveAttribute('colspan', '3')
+    expect(ecommerceHeader).toHaveAttribute('colspan', '3')
     expect(ecommerceHeader).toHaveClass('channel-header-ecommerce')
     expect(eventHeader).toHaveAttribute('colspan', '3')
     expect(eventHeader).toHaveClass('channel-header-event')
@@ -183,9 +194,15 @@ describe('SalesReportPage', () => {
     expect(
       within(table).queryByRole('columnheader', { name: 'Income' }),
     ).not.toBeInTheDocument()
-    expect(within(table).getAllByRole('columnheader', { name: 'Quantity' })).toHaveLength(3)
-    expect(within(table).getAllByRole('columnheader', { name: 'Amount' })).toHaveLength(3)
-    expect(within(table).getAllByRole('columnheader', { name: 'Avg Price' })).toHaveLength(4)
+    expect(
+      within(table).getAllByRole('columnheader', { name: 'Quantity' }),
+    ).toHaveLength(3)
+    expect(
+      within(table).getAllByRole('columnheader', { name: 'Amount' }),
+    ).toHaveLength(3)
+    expect(
+      within(table).getAllByRole('columnheader', { name: 'Avg Price' }),
+    ).toHaveLength(4)
 
     const reportRow = screen.getByText('Maple Shelf').closest('tr')!
     expect(within(reportRow).queryByText('501')).not.toBeInTheDocument()
@@ -193,7 +210,9 @@ describe('SalesReportPage', () => {
     expect(
       within(reportRow).getByRole('img', { name: 'Maple Shelf thumbnail' }),
     ).toHaveAttribute('src', 'https://example.test/maple-shelf.jpg')
-    expect(within(reportRow).queryByText('1,000,000.00')).not.toBeInTheDocument()
+    expect(
+      within(reportRow).queryByText('1,000,000.00'),
+    ).not.toBeInTheDocument()
     expect(within(reportRow).getAllByText('$0.00')).toHaveLength(2)
     expect(within(reportRow).getAllByText('$150.00')).toHaveLength(2)
     expect(within(reportRow).getByText('$200.00')).toBeVisible()
@@ -265,10 +284,90 @@ describe('SalesReportPage', () => {
     expect(screen.getByText('Event Kit')).toBeVisible()
 
     const productSelect = screen.getByRole('combobox', { name: 'Product' })
-    expect(productSelect.closest('.ant-select')).toHaveTextContent('All products')
+    expect(productSelect.closest('.ant-select')).toHaveTextContent(
+      'All products',
+    )
     await user.click(productSelect)
     expect(await screen.findByTitle('Event Kit')).toBeInTheDocument()
     expect(screen.queryByTitle('Maple Shelf')).not.toBeInTheDocument()
+  })
+
+  it('exports the visible report rows to Excel with the current filters', async () => {
+    const user = userEvent.setup()
+    const createObjectUrl = vi.fn(() => 'blob:sales-report')
+    const revokeObjectUrl = vi.fn()
+    const originalCreateObjectUrl = URL.createObjectURL
+    const originalRevokeObjectUrl = URL.revokeObjectURL
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined)
+
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectUrl,
+    })
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: revokeObjectUrl,
+    })
+    vi.mocked(getJson).mockImplementation((path: string) => {
+      if (path === '/reports/sales-summary/periods') {
+        return Promise.resolve([{ year: 2026, months: [5, 4] }])
+      }
+
+      if (path === '/reports/sales-summary?year=2026') {
+        return Promise.resolve(yearlyReport)
+      }
+
+      return Promise.reject(new Error(`Unexpected GET ${path}`))
+    })
+
+    try {
+      renderReportsRoute()
+
+      await screen.findByText('Maple Shelf')
+      await selectAntOption(
+        user,
+        screen.getByRole('combobox', { name: 'Product' }),
+        'Maple Shelf',
+      )
+      await user.click(
+        screen.getByRole('button', {
+          name: 'Export sales report to Excel',
+        }),
+      )
+
+      expect(clickSpy).toHaveBeenCalled()
+      expect(createObjectUrl).toHaveBeenCalledWith(expect.any(Blob))
+      expect(revokeObjectUrl).toHaveBeenCalledWith('blob:sales-report')
+
+      const [blob] = createObjectUrl.mock.calls[0] as unknown as [Blob]
+      const exportedContent = await blob.text()
+
+      expect(exportedContent).toContain('Sales Report')
+      expect(exportedContent).toContain('2026')
+      expect(exportedContent).toContain('Maple Shelf')
+      expect(exportedContent).toContain('Totals')
+      expect(exportedContent).not.toContain('Walnut Table')
+    } finally {
+      clickSpy.mockRestore()
+      if (originalCreateObjectUrl) {
+        Object.defineProperty(URL, 'createObjectURL', {
+          configurable: true,
+          value: originalCreateObjectUrl,
+        })
+      } else {
+        delete (URL as Partial<typeof URL>).createObjectURL
+      }
+      if (originalRevokeObjectUrl) {
+        Object.defineProperty(URL, 'revokeObjectURL', {
+          configurable: true,
+          value: originalRevokeObjectUrl,
+        })
+      } else {
+        delete (URL as Partial<typeof URL>).revokeObjectURL
+      }
+    }
   })
 
   it('resets the month Ant Select when the selected year changes', async () => {
@@ -290,7 +389,10 @@ describe('SalesReportPage', () => {
       }
 
       if (path === '/reports/sales-summary?year=2025') {
-        return Promise.resolve({ rows: [], sources: ['store', 'ecommerce', 'event'] })
+        return Promise.resolve({
+          rows: [],
+          sources: ['store', 'ecommerce', 'event'],
+        })
       }
 
       return Promise.reject(new Error(`Unexpected GET ${path}`))
@@ -299,14 +401,22 @@ describe('SalesReportPage', () => {
     renderReportsRoute()
 
     await screen.findByText('Maple Shelf')
-    await selectAntOption(user, screen.getByRole('combobox', { name: 'Month' }), 'May')
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Month' }),
+      'May',
+    )
     await waitFor(() => {
       expect(getJson).toHaveBeenCalledWith(
         '/reports/sales-summary?year=2026&month=5',
       )
     })
 
-    await selectAntOption(user, screen.getByRole('combobox', { name: 'Year' }), '2025')
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Year' }),
+      '2025',
+    )
 
     await waitFor(() => {
       expect(getJson).toHaveBeenCalledWith('/reports/sales-summary?year=2025')
