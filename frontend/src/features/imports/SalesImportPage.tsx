@@ -16,7 +16,7 @@ import {
 } from 'antd'
 import type { TableProps, UploadFile, UploadProps } from 'antd'
 import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   api,
   formatApiErrorMessage,
@@ -481,7 +481,17 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
     }
 
     if (selectedProject) {
-      return <Typography.Text>{formatProjectOption(selectedProject)}</Typography.Text>
+      const label = formatProjectOption(selectedProject)
+
+      return (
+        <Link
+          aria-label={label}
+          className="entity-reference-link"
+          to={`/projects/${selectedProject.idProject}`}
+        >
+          <Typography.Text>{label}</Typography.Text>
+        </Link>
+      )
     }
 
     return <Tag color="warning">Project required</Tag>
@@ -511,7 +521,13 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
       dataIndex: 'product',
       render: (product: ImportStageRow['product']) =>
         product ? (
-          <ProductNameCell imageUrl={product.image} name={product.name} />
+          <Link
+            aria-label={product.name}
+            className="entity-reference-link"
+            to={`/products/${product.id}`}
+          >
+            <ProductNameCell imageUrl={product.image} name={product.name} />
+          </Link>
         ) : (
           <Tag color="warning">Unmatched product</Tag>
         ),

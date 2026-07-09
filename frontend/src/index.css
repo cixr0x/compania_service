@@ -204,6 +204,21 @@ button {
   text-decoration: none;
 }
 
+.entity-reference-link {
+  color: #1677ff;
+  text-decoration: none;
+}
+
+.entity-reference-link:hover,
+.entity-reference-link:focus-visible {
+  text-decoration: underline;
+}
+
+.entity-reference-link .ant-typography,
+.entity-reference-link .product-name-text {
+  color: inherit;
+}
+
 .content-frame {
   display: flex;
   flex-direction: column;

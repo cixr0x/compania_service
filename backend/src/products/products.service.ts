@@ -2,8 +2,16 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { publicProjectBaseSelect } from '../projects/project-public-select';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+
+const productDetailInclude = {
+  projects: {
+    orderBy: { idProject: 'desc' as const },
+    select: publicProjectBaseSelect,
+  },
+};
 
 @Injectable()
 export class ProductsService {
@@ -27,7 +35,10 @@ export class ProductsService {
   }
 
   async findOne(id: number) {
-    const record = await this.prisma.product.findUnique({ where: { id } });
+    const record = await this.prisma.product.findUnique({
+      where: { id },
+      include: productDetailInclude,
+    });
     if (!record) throw new NotFoundException(`Product ${id} was not found`);
     return record;
   }

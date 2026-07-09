@@ -1,6 +1,7 @@
 import { ProductsService } from './products.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { publicProjectBaseSelect } from '../projects/project-public-select';
 
 describe('ProductsService', () => {
   const prisma = {
@@ -89,6 +90,33 @@ describe('ProductsService', () => {
     expect(prisma.product.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: { name: 'Changed' },
+    });
+  });
+
+  it('loads product detail with its projects for reciprocal navigation', async () => {
+    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
+      id: 42,
+      name: 'Maple Shelf',
+      projects: [
+        {
+          idProject: 77,
+          name: 'Wholesale launch',
+        },
+      ],
+    });
+
+    const service = new ProductsService(prisma);
+    const product = await service.findOne(42);
+
+    expect(product.projects).toHaveLength(1);
+    expect(prisma.product.findUnique).toHaveBeenCalledWith({
+      where: { id: 42 },
+      include: {
+        projects: {
+          orderBy: { idProject: 'desc' },
+          select: publicProjectBaseSelect,
+        },
+      },
     });
   });
 

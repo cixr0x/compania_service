@@ -195,6 +195,12 @@ describe('StakeholderProjectsReportPage', () => {
       }),
     ).toHaveAttribute('src', 'https://example.test/maple-shelf.jpg')
     expect(within(projectRegion).getByText('Project #501')).toBeVisible()
+    expect(
+      within(projectRegion).getByRole('link', { name: 'Maple Shelf' }),
+    ).toHaveAttribute('href', '/products/42')
+    expect(
+      within(projectRegion).getByRole('link', { name: 'Project #501' }),
+    ).toHaveAttribute('href', '/projects/501')
     expect(within(projectRegion).getByText('30%')).toBeVisible()
     expect(within(projectRegion).getByText('3 / 10 units sold')).toBeVisible()
 
@@ -230,6 +236,9 @@ describe('StakeholderProjectsReportPage', () => {
     })
     expect(stakeholderRegion).toHaveClass('stakeholder-detail-card')
     expect(within(stakeholderRegion).getByText('Alicia')).toBeVisible()
+    expect(
+      within(stakeholderRegion).getByRole('link', { name: 'Alicia' }),
+    ).toHaveAttribute('href', '/stakeholders/10')
     expect(within(stakeholderRegion).getByText('Stake %')).toBeVisible()
     expect(within(stakeholderRegion).getByText('60%')).toBeVisible()
     expect(

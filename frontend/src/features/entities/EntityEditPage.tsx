@@ -12,7 +12,7 @@ import {
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   deleteJson,
   formatApiErrorMessage,
@@ -326,6 +326,37 @@ function formatProjectParticipation(row: EntityRow): string {
   return projectName ?? productName ?? '-'
 }
 
+function getProjectParticipationProjectId(row: EntityRow): string | null {
+  const project =
+    row.project && typeof row.project === 'object' && !Array.isArray(row.project)
+      ? (row.project as EntityRow)
+      : null
+  const rawId = row.idProject ?? project?.idProject
+
+  return rawId === null || rawId === undefined || rawId === ''
+    ? null
+    : String(rawId)
+}
+
+function getProductProjects(product: EntityRow) {
+  return Array.isArray(product.projects) ? (product.projects as EntityRow[]) : []
+}
+
+function getProjectListId(project: EntityRow) {
+  const rawId = project.idProject
+
+  return rawId === null || rawId === undefined || rawId === ''
+    ? null
+    : String(rawId)
+}
+
+function formatProjectListName(project: EntityRow) {
+  const name = getNestedEntityName(project)
+  const projectId = getProjectListId(project)
+
+  return name ?? (projectId ? `Project #${projectId}` : '-')
+}
+
 function roundCurrency(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
@@ -430,6 +461,91 @@ function withSalesCalculatedValues(
   }
 }
 
+function ProductProjectsSection({ product }: { product: EntityRow }) {
+  const projects = getProductProjects(product)
+  const columns: ColumnsType<EntityRow> = [
+    {
+      dataIndex: 'name',
+      key: 'name',
+      render: (_value, project) => {
+        const name = formatProjectListName(project)
+        const projectId = getProjectListId(project)
+
+        if (name === '-') {
+          return '-'
+        }
+
+        return projectId ? (
+          <Link
+            aria-label={name}
+            className="entity-reference-link"
+            to={`/projects/${projectId}`}
+          >
+            {name}
+          </Link>
+        ) : (
+          name
+        )
+      },
+      title: 'Project',
+    },
+    {
+      dataIndex: 'isActive',
+      key: 'isActive',
+      render: (value) =>
+        value === null || value === undefined
+          ? '-'
+          : value === true || value === 'true' || value === 1 || value === '1'
+            ? 'Yes'
+            : 'No',
+      title: 'Active',
+      width: 120,
+    },
+    {
+      align: 'right',
+      dataIndex: 'units',
+      key: 'units',
+      render: (value) =>
+        value === null || value === undefined || value === ''
+          ? '-'
+          : String(value),
+      title: 'Units',
+      width: 120,
+    },
+  ]
+
+  return (
+    <section
+      aria-labelledby="product-projects-heading"
+      className="detail-section"
+    >
+      <Space className="section-heading-row" align="center">
+        <Typography.Title id="product-projects-heading" level={3}>
+          Product Projects
+        </Typography.Title>
+        <Typography.Text type="secondary">
+          {projects.length} projects
+        </Typography.Text>
+      </Space>
+
+      {projects.length === 0 ? (
+        <Empty description="This product has no projects." />
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={projects}
+          pagination={false}
+          rowKey={(project, index) =>
+            String(project.idProject ?? index ?? '')
+          }
+          scroll={{ x: 520 }}
+          size="small"
+        />
+      )}
+    </section>
+  )
+}
+
 function StakeholderProjectsSection({ stakeholder }: { stakeholder: EntityRow }) {
   const projects = Array.isArray(stakeholder.projects)
     ? (stakeholder.projects as EntityRow[])
@@ -441,11 +557,26 @@ function StakeholderProjectsSection({ stakeholder }: { stakeholder: EntityRow })
       render: (_value, projectRow) => {
         const name = formatProjectParticipation(projectRow)
         const product = getProjectParticipationProduct(projectRow)
+        const projectId = getProjectParticipationProjectId(projectRow)
 
-        return name === '-' ? (
-          '-'
-        ) : (
+        if (name === '-') {
+          return '-'
+        }
+
+        const content = (
           <ProductNameCell imageUrl={product?.image} name={name} />
+        )
+
+        return projectId ? (
+          <Link
+            aria-label={name}
+            className="entity-reference-link"
+            to={`/projects/${projectId}`}
+          >
+            {content}
+          </Link>
+        ) : (
+          content
         )
       },
       title: 'Project',
@@ -618,25 +749,39 @@ export function EntityEditPage() {
     () => buildCreateDefaultValues(config),
     [config],
   )
-  const formValues =
-    isCreate
-      ? { ...createDefaultValues, ...draftValues }
-      : isDirty
-        ? draftValues
-        : (detailQuery.data ?? {})
-  const displayedFormValues =
-    config?.path === 'sales'
-      ? withSalesCalculatedValues(
-          formValues,
-          optionRowsByPath.products,
-          optionRowsByPath.projects,
-        )
-      : config?.path === 'projects'
-        ? {
-            ...formValues,
-            transactionTotal: projectTransactionState.totalCost,
-          }
-      : formValues
+  const formValues = useMemo(
+    () =>
+      isCreate
+        ? { ...createDefaultValues, ...draftValues }
+        : isDirty
+          ? draftValues
+          : (detailQuery.data ?? {}),
+    [createDefaultValues, detailQuery.data, draftValues, isCreate, isDirty],
+  )
+  const displayedFormValues = useMemo(() => {
+    if (config?.path === 'sales') {
+      return withSalesCalculatedValues(
+        formValues,
+        optionRowsByPath.products,
+        optionRowsByPath.projects,
+      )
+    }
+
+    if (config?.path === 'projects') {
+      return {
+        ...formValues,
+        transactionTotal: projectTransactionState.totalCost,
+      }
+    }
+
+    return formValues
+  }, [
+    config?.path,
+    formValues,
+    optionRowsByPath.products,
+    optionRowsByPath.projects,
+    projectTransactionState.totalCost,
+  ])
   const shouldManageProjectDetails =
     config?.path === 'projects'
   const formConfig = useMemo(
@@ -762,6 +907,10 @@ export function EntityEditPage() {
 
       {config.path === 'stakeholders' && !isCreate && detailQuery.data ? (
         <StakeholderProjectsSection stakeholder={detailQuery.data} />
+      ) : null}
+
+      {config.path === 'products' && !isCreate && detailQuery.data ? (
+        <ProductProjectsSection product={detailQuery.data} />
       ) : null}
 
       {!isCreate ? (

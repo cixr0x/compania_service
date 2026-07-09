@@ -208,6 +208,9 @@ describe('SalesReportPage', () => {
     expect(within(reportRow).queryByText('501')).not.toBeInTheDocument()
     expect(within(reportRow).getByText('Maple Shelf')).toBeVisible()
     expect(
+      within(reportRow).getByRole('link', { name: 'Maple Shelf' }),
+    ).toHaveAttribute('href', '/products/42')
+    expect(
       within(reportRow).getByRole('img', { name: 'Maple Shelf thumbnail' }),
     ).toHaveAttribute('src', 'https://example.test/maple-shelf.jpg')
     expect(

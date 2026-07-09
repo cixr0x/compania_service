@@ -2,6 +2,7 @@ import { EditOutlined } from '@ant-design/icons'
 import type { ReactNode } from 'react'
 import { Button, Table, Tag } from 'antd'
 import type { ColumnType, ColumnsType } from 'antd/es/table'
+import { Link } from 'react-router-dom'
 import { formatCurrency } from '../utils/money'
 import { ProductNameCell } from './ProductNameCell'
 
@@ -12,6 +13,7 @@ export type DataTableColumn<Row extends Record<string, unknown>> = {
   valueFormat?: 'money'
   valueType?: 'boolean' | 'date' | 'number' | 'string'
   headerClassName?: string
+  linkGetter?: (row: Row) => string | null | undefined
   thumbnailGetter?: (row: Row) => unknown
   width?: number
 }
@@ -152,15 +154,29 @@ function renderCellValue<Row extends Record<string, unknown>>(
     return '-'
   }
 
+  const label = formatCellValue(value, column, kind)
+  const linkTarget = column.linkGetter?.(row)?.trim()
   if (column.thumbnailGetter) {
-    const label = formatCellValue(value, column, kind)
-
-    return (
+    const content = (
       <ProductNameCell
         imageUrl={column.thumbnailGetter(row)}
         name={label}
         thumbnailAlt={`${label} thumbnail`}
       />
+    )
+
+    return linkTarget ? (
+      <Link
+        aria-label={label}
+        className="entity-reference-link"
+        onClick={(event) => event.stopPropagation()}
+        onDoubleClick={(event) => event.stopPropagation()}
+        to={linkTarget}
+      >
+        {content}
+      </Link>
+    ) : (
+      content
     )
   }
 
@@ -170,7 +186,19 @@ function renderCellValue<Row extends Record<string, unknown>>(
     return <Tag color={isEnabled ? 'success' : 'default'}>{isEnabled ? 'Yes' : 'No'}</Tag>
   }
 
-  return formatCellValue(value, column, kind)
+  return linkTarget ? (
+    <Link
+      aria-label={label}
+      className="entity-reference-link"
+      onClick={(event) => event.stopPropagation()}
+      onDoubleClick={(event) => event.stopPropagation()}
+      to={linkTarget}
+    >
+      {label}
+    </Link>
+  ) : (
+    label
+  )
 }
 
 function compareValues(

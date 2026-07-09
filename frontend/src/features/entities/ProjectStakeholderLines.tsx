@@ -11,6 +11,7 @@ import {
   Tag,
   Typography,
 } from 'antd'
+import { Link } from 'react-router-dom'
 import { getJson } from '../../api/client'
 import { formatCurrency } from '../../utils/money'
 import type { EntityRow } from './entityConfigs'
@@ -199,6 +200,30 @@ function getStakeholderLabel(
   )
 
   return option?.label ?? `Stakeholder #${row.idStakeholder || '-'}`
+}
+
+function getStakeholderLink(row: SplitDraftRow) {
+  return row.idStakeholder ? `/stakeholders/${row.idStakeholder}` : null
+}
+
+function renderStakeholderLabel(
+  row: SplitDraftRow,
+  stakeholderOptions: StakeholderOption[],
+) {
+  const label = getStakeholderLabel(row, stakeholderOptions)
+  const stakeholderLink = getStakeholderLink(row)
+
+  return stakeholderLink ? (
+    <Link
+      aria-label={label}
+      className="entity-reference-link"
+      to={stakeholderLink}
+    >
+      {label}
+    </Link>
+  ) : (
+    label
+  )
 }
 
 function getRowStakeholderOptions(
@@ -429,7 +454,7 @@ export function ProjectStakeholderLines({
             value={editingRow.idStakeholder || undefined}
           />
         ) : (
-          getStakeholderLabel(row, stakeholderOptions)
+          renderStakeholderLabel(row, stakeholderOptions)
         )
       },
       title: 'Stakeholder',

@@ -2,6 +2,7 @@ import { PieChartOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Alert, Empty, Progress, Select, Spin, Typography } from 'antd'
+import { Link } from 'react-router-dom'
 import { getJson } from '../../api/client'
 import type {
   Project,
@@ -97,6 +98,7 @@ export function StakeholderProjectsReportPage() {
   const selectedProject = projects.find(
     (project) => project.idProject === selectedProjectId,
   )
+  const selectedProjectProductId = selectedProject?.idProduct ?? null
   const stakeholderOptions =
     selectedProject?.stakeholders?.map((line) => ({
       label: line.stakeholder?.name ?? `Stakeholder #${line.idStakeholder}`,
@@ -214,10 +216,28 @@ export function StakeholderProjectsReportPage() {
                   )}
                 </div>
                 <div>
-                  <Typography.Title level={3}>{row.productName}</Typography.Title>
-                  <Typography.Text type="secondary">
-                    Project #{row.projectId}
-                  </Typography.Text>
+                  {selectedProjectProductId !== null ? (
+                    <Link
+                      aria-label={row.productName}
+                      className="entity-reference-link"
+                      to={`/products/${selectedProjectProductId}`}
+                    >
+                      <Typography.Title level={3}>
+                        {row.productName}
+                      </Typography.Title>
+                    </Link>
+                  ) : (
+                    <Typography.Title level={3}>{row.productName}</Typography.Title>
+                  )}
+                  <Link
+                    aria-label={`Project #${row.projectId}`}
+                    className="entity-reference-link"
+                    to={`/projects/${row.projectId}`}
+                  >
+                    <Typography.Text type="secondary">
+                      Project #{row.projectId}
+                    </Typography.Text>
+                  </Link>
                 </div>
               </div>
 
@@ -315,9 +335,15 @@ function StakeholderDetail({
         className="stakeholder-detail-card"
       >
         <div className="stakeholder-detail-heading">
-          <Typography.Title level={3}>
-            {stakeholder.stakeholderName}
-          </Typography.Title>
+          <Link
+            aria-label={stakeholder.stakeholderName}
+            className="entity-reference-link"
+            to={`/stakeholders/${stakeholder.stakeholderId}`}
+          >
+            <Typography.Title level={3}>
+              {stakeholder.stakeholderName}
+            </Typography.Title>
+          </Link>
         </div>
 
         <div className="stakeholder-project-metrics stakeholder-detail-metrics">

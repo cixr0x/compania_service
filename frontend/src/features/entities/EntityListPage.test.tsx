@@ -242,6 +242,10 @@ describe('EntityListPage', () => {
     renderEntityList('/projects')
 
     expect(await screen.findByText('Walnut Desk')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Walnut Desk' })).toHaveAttribute(
+      'href',
+      '/products/42',
+    )
     expect(
       screen.getByRole('img', { name: 'Walnut Desk thumbnail' }),
     ).toHaveAttribute('src', 'https://example.test/walnut-desk.jpg')
@@ -282,6 +286,13 @@ describe('EntityListPage', () => {
 
     expect(await screen.findByText('Walnut Desk')).toBeVisible()
     expect(screen.getByText('Walnut Desk Project')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Walnut Desk' })).toHaveAttribute(
+      'href',
+      '/products/42',
+    )
+    expect(
+      screen.getByRole('link', { name: 'Walnut Desk Project' }),
+    ).toHaveAttribute('href', '/projects/501')
     expect(
       screen.getByRole('img', { name: 'Walnut Desk thumbnail' }),
     ).toHaveAttribute('src', 'https://example.test/walnut-desk.jpg')
@@ -505,9 +516,16 @@ describe('EntityListPage', () => {
 
     expect(await screen.findByText('Walnut Desk Project')).toBeVisible()
     expect(
+      screen.getByRole('link', { name: 'Walnut Desk Project' }),
+    ).toHaveAttribute('href', '/projects/501')
+    expect(
       screen.getByRole('img', { name: 'Walnut Desk Project thumbnail' }),
     ).toHaveAttribute('src', 'https://example.test/walnut-project.jpg')
     expect(screen.getByText('Alicia')).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Alicia' })).toHaveAttribute(
+      'href',
+      '/stakeholders/10',
+    )
     expect(screen.queryByRole('columnheader', { name: 'Project ID' })).not.toBeInTheDocument()
     expect(screen.queryByRole('columnheader', { name: 'Stakeholder ID' })).not.toBeInTheDocument()
     expect(screen.getByRole('columnheader', { name: 'Project' })).toBeVisible()

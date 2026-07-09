@@ -1,5 +1,6 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DataTable, type DataTableColumn } from './DataTable'
 
@@ -128,6 +129,32 @@ describe('DataTable', () => {
     expect(screen.getByRole('columnheader', { name: 'Store ID' })).toHaveClass(
       'channel-header-store',
     )
+  })
+
+  it('renders configured cell values as links', () => {
+    render(
+      <MemoryRouter>
+        <DataTable
+          columns={[
+            {
+              key: 'name',
+              header: 'Name',
+              linkGetter: (row) => `/products/${row.id}`,
+            },
+            { key: 'tag', header: 'Tag' },
+          ]}
+          getRowId={(row) => row.id}
+          onRowDoubleClick={vi.fn()}
+          rows={rows}
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('link', { name: 'Walnut Desk' })).toHaveAttribute(
+      'href',
+      '/products/1',
+    )
+    expect(screen.getByText('office').closest('a')).toBeNull()
   })
 
   it('formats money columns with a dollar prefix, commas, and two decimal places', () => {

@@ -12,6 +12,7 @@ import {
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import { Link } from 'react-router-dom'
 import { getJson } from '../../api/client'
 import type {
   SalesReportPeriod,
@@ -222,7 +223,13 @@ export function SalesReportPage() {
           _value: SalesReportRow['productName'],
           row: SalesReportRow,
         ) => (
-          <ProductNameCell imageUrl={row.productImage} name={row.productName} />
+          <Link
+            aria-label={row.productName}
+            className="entity-reference-link"
+            to={`/products/${row.productId}`}
+          >
+            <ProductNameCell imageUrl={row.productImage} name={row.productName} />
+          </Link>
         ),
         title: 'Product',
         width: REPORT_COLUMN_WIDTHS.product,

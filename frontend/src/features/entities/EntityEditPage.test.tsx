@@ -345,6 +345,58 @@ describe('EntityEditPage', () => {
     })
   })
 
+  it('shows the projects for a product on the product edit form', async () => {
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products/42') {
+        return {
+          id: 42,
+          description: null,
+          idEcommerce: null,
+          idEvent: null,
+          idStore: null,
+          idSurface: null,
+          image: 'https://example.test/maple-shelf.jpg',
+          name: 'Maple Shelf',
+          ownership: 25,
+          projects: [
+            {
+              idProject: 77,
+              isActive: true,
+              name: 'Wholesale launch',
+              units: 10,
+            },
+          ],
+          tag: null,
+        }
+      }
+
+      throw new Error(`Unexpected path: ${path}`)
+    })
+
+    renderEntityEditPage('/products/42', '/:entityName/:id')
+
+    expect(await screen.findByDisplayValue('Maple Shelf')).toBeVisible()
+    const projectsSection = screen.getByRole('region', {
+      name: 'Product Projects',
+    })
+    const projectsTable = within(projectsSection).getByRole('table')
+
+    expect(
+      within(projectsTable).getByRole('columnheader', { name: 'Project' }),
+    ).toBeVisible()
+    expect(
+      within(projectsTable).getByRole('columnheader', { name: 'Active' }),
+    ).toBeVisible()
+    expect(
+      within(projectsTable).getByRole('columnheader', { name: 'Units' }),
+    ).toBeVisible()
+    expect(
+      within(projectsTable).getByRole('link', { name: 'Wholesale launch' }),
+    ).toHaveAttribute('href', '/projects/77')
+    expect(within(projectsTable).getByText('Yes')).toBeVisible()
+    expect(within(projectsTable).getByText('10')).toBeVisible()
+  })
+
   it('normalizes existing sale ISO date values for display and update payloads', async () => {
     vi.mocked(getJson).mockImplementation(async (path) => {
       if (path === '/products') {
@@ -1371,8 +1423,14 @@ describe('EntityEditPage', () => {
       within(splitSection).getByRole('row', { name: /Alicia 60%/i }),
     ).toBeVisible()
     expect(
+      within(splitSection).getByRole('link', { name: 'Alicia' }),
+    ).toHaveAttribute('href', '/stakeholders/10')
+    expect(
       within(splitSection).getByRole('row', { name: /Bruno 40%/i }),
     ).toBeVisible()
+    expect(
+      within(splitSection).getByRole('link', { name: 'Bruno' }),
+    ).toHaveAttribute('href', '/stakeholders/11')
     expect(
       within(splitSection).queryByRole('combobox', { name: 'Stakeholder' }),
     ).not.toBeInTheDocument()
@@ -1448,6 +1506,9 @@ describe('EntityEditPage', () => {
       }),
     ).toBeVisible()
     expect(within(participationTable).getByText('Maple Shelf')).toBeVisible()
+    expect(
+      within(participationTable).getByRole('link', { name: 'Maple Shelf' }),
+    ).toHaveAttribute('href', '/projects/77')
     expect(
       within(participationTable).getByRole('img', {
         name: 'Maple Shelf thumbnail',

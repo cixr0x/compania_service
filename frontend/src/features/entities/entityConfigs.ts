@@ -175,6 +175,36 @@ function getProjectProductName(row: EntityRow) {
   )
 }
 
+function getStringId(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  return String(value)
+}
+
+function getProductLink(row: EntityRow) {
+  const product = asEntityRow(row.product)
+  const id = getStringId(row.idProduct) ?? getStringId(product?.id)
+
+  return id ? `/products/${id}` : null
+}
+
+function getProjectLink(row: EntityRow) {
+  const project = asEntityRow(row.project)
+  const id = getStringId(row.idProject) ?? getStringId(project?.idProject)
+
+  return id ? `/projects/${id}` : null
+}
+
+function getStakeholderLink(row: EntityRow) {
+  const stakeholder = asEntityRow(row.stakeholder)
+  const id =
+    getStringId(row.idStakeholder) ?? getStringId(stakeholder?.idStakeholder)
+
+  return id ? `/stakeholders/${id}` : null
+}
+
 function getProjectProductImage(row: EntityRow) {
   const project = asEntityRow(row.project)
 
@@ -388,6 +418,7 @@ export const entityConfigs = {
         width: 220,
       }),
       column('idProduct', 'Product', {
+        linkGetter: getProductLink,
         thumbnailGetter: (row) => getRelatedEntityImage(row, 'product'),
         valueGetter: (row) => getRelatedEntityName(row, 'product'),
         valueType: 'string',
@@ -517,12 +548,14 @@ export const entityConfigs = {
     columns: [
       column('idProjectStakeholder', 'ID'),
       column('idProject', 'Project', {
+        linkGetter: getProjectLink,
         thumbnailGetter: getProjectProductImage,
         valueGetter: getProjectProductName,
         valueType: 'string',
         width: 260,
       }),
       column('idStakeholder', 'Stakeholder', {
+        linkGetter: getStakeholderLink,
         valueGetter: (row) => getRelatedEntityName(row, 'stakeholder'),
         valueType: 'string',
       }),
@@ -563,12 +596,14 @@ export const entityConfigs = {
       column('idSale', 'ID', { width: 56 }),
       column('date', 'Date', { width: 112 }),
       column('idProduct', 'Product', {
+        linkGetter: getProductLink,
         thumbnailGetter: (row) => getRelatedEntityImage(row, 'product'),
         valueGetter: (row) => getRelatedEntityName(row, 'product'),
         valueType: 'string',
         width: 190,
       }),
       column('idProject', 'Project', {
+        linkGetter: getProjectLink,
         thumbnailGetter: getProjectProductImage,
         valueGetter: getProjectProductName,
         valueType: 'string',

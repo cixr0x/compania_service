@@ -217,9 +217,15 @@ describe('SalesImportPage', () => {
     ).toBeVisible()
     expect(within(table).getByText('Starter Kit')).toBeVisible()
     expect(
+      within(table).getByRole('link', { name: 'Starter Kit' }),
+    ).toHaveAttribute('href', '/products/101')
+    expect(
       within(table).getByRole('img', { name: 'Starter Kit thumbnail' }),
     ).toHaveAttribute('src', 'https://example.test/starter-kit.jpg')
     expect(within(table).getByText('Starter launch (#501)')).toBeVisible()
+    expect(
+      within(table).getByRole('link', { name: 'Starter launch (#501)' }),
+    ).toHaveAttribute('href', '/projects/501')
     expect(within(table).getByText('Valid').closest('.ant-tag')).toBeInTheDocument()
   })
 
