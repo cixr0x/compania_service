@@ -924,6 +924,14 @@ button {
   gap: 12px;
 }
 
+.stakeholder-projects-heading-actions {
+  margin-left: auto;
+}
+
+.stakeholder-projects-print-page {
+  padding: 24px;
+}
+
 .stakeholder-projects-heading-icon {
   align-items: center;
   background: #f3e8ff;
@@ -1464,6 +1472,15 @@ button {
     align-items: stretch;
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .stakeholder-projects-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .stakeholder-projects-heading-actions {
+    margin-left: 48px;
   }
 
   .sales-table-filter {

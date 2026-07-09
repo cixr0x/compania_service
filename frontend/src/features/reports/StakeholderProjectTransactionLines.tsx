@@ -64,6 +64,7 @@ type EditingTransactionRow = TransactionDraftRow & {
 
 type StakeholderProjectTransactionLinesProps = {
   projectId: number
+  readOnly?: boolean
   stakeholderId: number
   stakeholderName: string
 }
@@ -171,6 +172,7 @@ function formatTransactionAmount(value: unknown) {
 
 export function StakeholderProjectTransactionLines({
   projectId,
+  readOnly = false,
   stakeholderId,
   stakeholderName,
 }: StakeholderProjectTransactionLinesProps) {
@@ -356,7 +358,7 @@ export function StakeholderProjectTransactionLines({
       dataIndex: 'date',
       key: 'date',
       render: (_value: string, row) => {
-        const editingRow = editingRows[row.rowKey]
+        const editingRow = readOnly ? undefined : editingRows[row.rowKey]
 
         return editingRow ? (
           <Input
@@ -382,7 +384,7 @@ export function StakeholderProjectTransactionLines({
       dataIndex: 'transactionType',
       key: 'transactionType',
       render: (_value: StakeholderProjectTransactionType, row) => {
-        const editingRow = editingRows[row.rowKey]
+        const editingRow = readOnly ? undefined : editingRows[row.rowKey]
 
         return editingRow ? (
           <Select
@@ -407,7 +409,7 @@ export function StakeholderProjectTransactionLines({
       dataIndex: 'description',
       key: 'description',
       render: (_value: string, row) => {
-        const editingRow = editingRows[row.rowKey]
+        const editingRow = readOnly ? undefined : editingRows[row.rowKey]
 
         return editingRow ? (
           <Space orientation="vertical" size={4} style={{ width: '100%' }}>
@@ -439,7 +441,7 @@ export function StakeholderProjectTransactionLines({
       dataIndex: 'amount',
       key: 'amount',
       render: (_value: string, row) => {
-        const editingRow = editingRows[row.rowKey]
+        const editingRow = readOnly ? undefined : editingRows[row.rowKey]
 
         return editingRow ? (
           <Input
@@ -465,55 +467,63 @@ export function StakeholderProjectTransactionLines({
       title: 'Amount',
       width: 180,
     },
-    {
-      align: 'right',
-      className: 'stakeholder-transaction-actions-cell',
-      key: 'actions',
-      render: (_value: unknown, row, index) => {
-        const isEditing = Boolean(editingRows[row.rowKey])
-        const rowNumber = index + 1
+    ...(readOnly
+      ? []
+      : ([
+          {
+            align: 'right',
+            className: 'stakeholder-transaction-actions-cell',
+            key: 'actions',
+            render: (
+              _value: unknown,
+              row: TransactionDraftRow,
+              index: number,
+            ) => {
+              const isEditing = Boolean(editingRows[row.rowKey])
+              const rowNumber = index + 1
 
-        return isEditing ? (
-          <Space size="small">
-            <Button
-              aria-label={`Save row ${rowNumber}`}
-              icon={<SaveOutlined />}
-              loading={saveMutation.isPending}
-              onClick={() => handleSaveRow(row.rowKey)}
-              size="small"
-              type="primary"
-            />
-            <Button
-              aria-label={`Cancel row ${rowNumber}`}
-              icon={<CloseOutlined />}
-              onClick={() => handleCancelRow(row.rowKey)}
-              size="small"
-              type="default"
-            />
-          </Space>
-        ) : (
-          <Space size="small">
-            <Button
-              aria-label={`Edit row ${rowNumber}`}
-              icon={<EditOutlined />}
-              onClick={() => handleEditRow(row)}
-              size="small"
-              type="default"
-            />
-            <Button
-              aria-label={`Remove row ${rowNumber}`}
-              icon={<DeleteOutlined />}
-              loading={saveMutation.isPending}
-              onClick={() => handleRemoveRow(row.rowKey)}
-              size="small"
-              type="default"
-            />
-          </Space>
-        )
-      },
-      title: 'Actions',
-      width: 180,
-    },
+              return isEditing ? (
+                <Space size="small">
+                  <Button
+                    aria-label={`Save row ${rowNumber}`}
+                    icon={<SaveOutlined />}
+                    loading={saveMutation.isPending}
+                    onClick={() => handleSaveRow(row.rowKey)}
+                    size="small"
+                    type="primary"
+                  />
+                  <Button
+                    aria-label={`Cancel row ${rowNumber}`}
+                    icon={<CloseOutlined />}
+                    onClick={() => handleCancelRow(row.rowKey)}
+                    size="small"
+                    type="default"
+                  />
+                </Space>
+              ) : (
+                <Space size="small">
+                  <Button
+                    aria-label={`Edit row ${rowNumber}`}
+                    icon={<EditOutlined />}
+                    onClick={() => handleEditRow(row)}
+                    size="small"
+                    type="default"
+                  />
+                  <Button
+                    aria-label={`Remove row ${rowNumber}`}
+                    icon={<DeleteOutlined />}
+                    loading={saveMutation.isPending}
+                    onClick={() => handleRemoveRow(row.rowKey)}
+                    size="small"
+                    type="default"
+                  />
+                </Space>
+              )
+            },
+            title: 'Actions',
+            width: 180,
+          },
+        ] satisfies ColumnsType<TransactionDraftRow>)),
   ]
 
   return (
@@ -556,20 +566,22 @@ export function StakeholderProjectTransactionLines({
             }}
             pagination={false}
             rowKey="rowKey"
-            scroll={{ x: 910 }}
+            scroll={{ x: readOnly ? 730 : 910 }}
             size="small"
           />
 
-          <div className="stakeholder-transactions-card-footer">
-            <Button
-              aria-label="Add transaction"
-              icon={<PlusOutlined />}
-              onClick={handleAddRow}
-              type="link"
-            >
-              Add transaction
-            </Button>
-          </div>
+          {!readOnly ? (
+            <div className="stakeholder-transactions-card-footer">
+              <Button
+                aria-label="Add transaction"
+                icon={<PlusOutlined />}
+                onClick={handleAddRow}
+                type="link"
+              >
+                Add transaction
+              </Button>
+            </div>
+          ) : null}
         </Form>
       )}
     </section>

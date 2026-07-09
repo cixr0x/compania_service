@@ -1,11 +1,12 @@
-import { PieChartOutlined } from '@ant-design/icons'
+import { PieChartOutlined, PrinterOutlined } from '@ant-design/icons'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Empty, Progress, Select, Spin, Typography } from 'antd'
-import { Link } from 'react-router-dom'
+import { Alert, Button, Empty, Progress, Select, Spin, Typography } from 'antd'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getJson } from '../../api/client'
 import type {
   Project,
+  StakeholderProjectReportRow,
   StakeholderProjectStakeholderRow,
   StakeholderProjectsReport,
   StakeholderProjectsReportSource,
@@ -51,12 +52,40 @@ function formatUnits(value: unknown) {
 }
 
 function buildReportPath(projectId: number, stakeholderId: number) {
+  return buildStakeholderProjectsPath(
+    '/reports/stakeholder-projects',
+    projectId,
+    stakeholderId,
+  )
+}
+
+function buildPrintReportPath(projectId: number, stakeholderId: number) {
+  return buildStakeholderProjectsPath(
+    '/reports/stakeholder-projects/print',
+    projectId,
+    stakeholderId,
+  )
+}
+
+function buildStakeholderProjectsPath(
+  basePath: string,
+  projectId: number,
+  stakeholderId: number,
+) {
   const query = new URLSearchParams({
     projectId: String(projectId),
     stakeholderId: String(stakeholderId),
   })
 
-  return `/reports/stakeholder-projects?${query.toString()}`
+  return `${basePath}?${query.toString()}`
+}
+
+function parseIdParam(value: string | null) {
+  const numericValue = Number(value)
+
+  return Number.isInteger(numericValue) && numericValue > 0
+    ? numericValue
+    : null
 }
 
 function formatProjectOption(project: Project) {
@@ -112,6 +141,10 @@ export function StakeholderProjectsReportPage() {
   const isLoading =
     projectsQuery.isLoading ||
     (hasSelectedScope && reportQuery.isLoading)
+  const printReportPath = row
+    ? buildPrintReportPath(row.projectId, row.stakeholder.stakeholderId)
+    : null
+
   return (
     <section
       className="stakeholder-projects-page"
@@ -129,6 +162,18 @@ export function StakeholderProjectsReportPage() {
             Investment performance & transaction history
           </Typography.Text>
         </div>
+        {printReportPath ? (
+          <div className="stakeholder-projects-heading-actions">
+            <Button
+              aria-label="Print report"
+              href={printReportPath}
+              icon={<PrinterOutlined />}
+              type="primary"
+            >
+              Print
+            </Button>
+          </div>
+        ) : null}
       </div>
 
       <div className="stakeholder-report-controls">
@@ -198,126 +243,231 @@ export function StakeholderProjectsReportPage() {
       ) : null}
 
       {!isLoading && row ? (
-        <>
-          <section
-            aria-label={`${row.productName} project ${row.projectId}`}
-            className="stakeholder-project-card"
-          >
-            <div className="stakeholder-project-summary-header">
-              <div className="stakeholder-project-product">
-                <div className="stakeholder-project-product-image">
-                  {row.productImage ? (
-                    <img
-                      alt={`${row.productName} thumbnail`}
-                      src={row.productImage}
-                    />
-                  ) : (
-                    <span>{row.productName.charAt(0) || '?'}</span>
-                  )}
-                </div>
-                <div>
-                  {selectedProjectProductId !== null ? (
-                    <Link
-                      aria-label={row.productName}
-                      className="entity-reference-link"
-                      to={`/products/${selectedProjectProductId}`}
-                    >
-                      <Typography.Title level={3}>
-                        {row.productName}
-                      </Typography.Title>
-                    </Link>
-                  ) : (
-                    <Typography.Title level={3}>{row.productName}</Typography.Title>
-                  )}
-                  <Link
-                    aria-label={`Project #${row.projectId}`}
-                    className="entity-reference-link"
-                    to={`/projects/${row.projectId}`}
-                  >
-                    <Typography.Text type="secondary">
-                      Project #{row.projectId}
-                    </Typography.Text>
-                  </Link>
-                </div>
-              </div>
-
-              <div className="stakeholder-project-progress">
-                <Typography.Text type="secondary">
-                  {`${formatUnits(row.totalUnitsSold)} / ${formatUnits(row.totalUnits)} units sold`}
-                </Typography.Text>
-                <div className="stakeholder-project-progress-row">
-                  <Progress
-                    percent={row.projectProgress}
-                    showInfo={false}
-                    size="small"
-                    strokeColor="#f59e0b"
-                  />
-                  <Typography.Text className="stakeholder-project-progress-value">
-                    {formatPercentage(row.projectProgress)}
-                  </Typography.Text>
-                </div>
-              </div>
-            </div>
-
-            <div
-              aria-label={`${row.productName} source totals`}
-              className="stakeholder-source-grid"
-              role="list"
-            >
-              {sources.map((source) => (
-                <div
-                  className={`stakeholder-source-card stakeholder-source-card-${sourceTones[source]}`}
-                  key={source}
-                  role="listitem"
-                >
-                  <Typography.Text className="stakeholder-source-label">
-                    {sourceLabels[source]}
-                  </Typography.Text>
-                  <Typography.Text className="stakeholder-source-units">
-                    {`${formatUnits(row[source].quantity)} units`}
-                  </Typography.Text>
-                  <Typography.Text className="stakeholder-source-amount">
-                    {formatCurrency(row[source].amount)}
-                  </Typography.Text>
-                </div>
-              ))}
-            </div>
-
-            <div className="stakeholder-project-metrics">
-              <Metric label="Units left" value={formatUnits(row.unitsLeft)} />
-              <Metric label="Total sales" value={formatCurrency(row.totalSales)} />
-              <Metric label="Total fees" value={formatCurrency(row.totalFees)} />
-              <Metric
-                label="Net sales total"
-                value={formatCurrency(row.netSalesTotal)}
-              />
-              <Metric
-                label="Calculated cost"
-                value={formatCurrency(row.calculatedCost)}
-              />
-              <Metric
-                label="Profit"
-                tone="positive"
-                value={formatCurrency(row.profit)}
-              />
-            </div>
-          </section>
-
-          <StakeholderDetail
-            projectId={row.projectId}
-            stakeholder={row.stakeholder}
-          />
-        </>
+        <StakeholderProjectsReportContent
+          readOnlyTransactions={false}
+          row={row}
+          selectedProjectProductId={selectedProjectProductId}
+          sources={sources}
+        />
       ) : null}
     </section>
   )
 }
 
+export function StakeholderProjectsReportPrintPage() {
+  const [searchParams] = useSearchParams()
+  const selectedProjectId = parseIdParam(searchParams.get('projectId'))
+  const selectedStakeholderId = parseIdParam(searchParams.get('stakeholderId'))
+  const hasSelectedScope =
+    selectedProjectId !== null && selectedStakeholderId !== null
+  const projectQuery = useQuery({
+    enabled: selectedProjectId !== null,
+    queryKey: ['reports', 'stakeholder-projects', 'project', selectedProjectId],
+    queryFn: () => getJson<Project>(`/projects/${selectedProjectId!}`),
+  })
+  const reportQuery = useQuery({
+    enabled: hasSelectedScope,
+    queryKey: [
+      'reports',
+      'stakeholder-projects',
+      selectedProjectId,
+      selectedStakeholderId,
+    ],
+    queryFn: () =>
+      getJson<StakeholderProjectsReport>(
+        buildReportPath(selectedProjectId!, selectedStakeholderId!),
+      ),
+  })
+  const report = reportQuery.data
+  const sources = report?.sources ?? DEFAULT_REPORT_SOURCES
+  const row = report?.row ?? null
+
+  return (
+    <section
+      className="stakeholder-projects-page stakeholder-projects-print-page"
+      aria-labelledby="stakeholder-projects-report-heading"
+    >
+      <div className="stakeholder-projects-heading">
+        <div className="stakeholder-projects-heading-icon" aria-hidden="true">
+          <PieChartOutlined />
+        </div>
+        <div>
+          <Typography.Title id="stakeholder-projects-report-heading" level={2}>
+            Stakeholder Projects
+          </Typography.Title>
+          <Typography.Text className="stakeholder-projects-subtitle">
+            Printable report
+          </Typography.Text>
+        </div>
+      </div>
+
+      {!hasSelectedScope ? (
+        <Empty description="Open this printable report from a selected stakeholder project report." />
+      ) : null}
+
+      {reportQuery.isError ? (
+        <Alert
+          showIcon
+          title="Unable to load the stakeholder projects report."
+          type="error"
+        />
+      ) : null}
+
+      {hasSelectedScope && reportQuery.isLoading ? (
+        <div className="report-loading">
+          <Spin />
+        </div>
+      ) : null}
+
+      {hasSelectedScope && !reportQuery.isLoading && !reportQuery.isError && !row ? (
+        <Empty description="No stakeholder report found for the selected project and stakeholder." />
+      ) : null}
+
+      {row ? (
+        <StakeholderProjectsReportContent
+          readOnlyTransactions
+          row={row}
+          selectedProjectProductId={projectQuery.data?.idProduct ?? null}
+          sources={sources}
+        />
+      ) : null}
+    </section>
+  )
+}
+
+function StakeholderProjectsReportContent({
+  readOnlyTransactions,
+  row,
+  selectedProjectProductId,
+  sources,
+}: {
+  readOnlyTransactions: boolean
+  row: StakeholderProjectReportRow
+  selectedProjectProductId: number | null
+  sources: StakeholderProjectsReportSource[]
+}) {
+  return (
+    <>
+      <section
+        aria-label={`${row.productName} project ${row.projectId}`}
+        className="stakeholder-project-card"
+      >
+        <div className="stakeholder-project-summary-header">
+          <div className="stakeholder-project-product">
+            <div className="stakeholder-project-product-image">
+              {row.productImage ? (
+                <img
+                  alt={`${row.productName} thumbnail`}
+                  src={row.productImage}
+                />
+              ) : (
+                <span>{row.productName.charAt(0) || '?'}</span>
+              )}
+            </div>
+            <div>
+              {selectedProjectProductId !== null ? (
+                <Link
+                  aria-label={row.productName}
+                  className="entity-reference-link"
+                  to={`/products/${selectedProjectProductId}`}
+                >
+                  <Typography.Title level={3}>
+                    {row.productName}
+                  </Typography.Title>
+                </Link>
+              ) : (
+                <Typography.Title level={3}>{row.productName}</Typography.Title>
+              )}
+              <Link
+                aria-label={`Project #${row.projectId}`}
+                className="entity-reference-link"
+                to={`/projects/${row.projectId}`}
+              >
+                <Typography.Text type="secondary">
+                  Project #{row.projectId}
+                </Typography.Text>
+              </Link>
+            </div>
+          </div>
+
+          <div className="stakeholder-project-progress">
+            <Typography.Text type="secondary">
+              {`${formatUnits(row.totalUnitsSold)} / ${formatUnits(row.totalUnits)} units sold`}
+            </Typography.Text>
+            <div className="stakeholder-project-progress-row">
+              <Progress
+                percent={row.projectProgress}
+                showInfo={false}
+                size="small"
+                strokeColor="#f59e0b"
+              />
+              <Typography.Text className="stakeholder-project-progress-value">
+                {formatPercentage(row.projectProgress)}
+              </Typography.Text>
+            </div>
+          </div>
+        </div>
+
+        <div
+          aria-label={`${row.productName} source totals`}
+          className="stakeholder-source-grid"
+          role="list"
+        >
+          {sources.map((source) => (
+            <div
+              className={`stakeholder-source-card stakeholder-source-card-${sourceTones[source]}`}
+              key={source}
+              role="listitem"
+            >
+              <Typography.Text className="stakeholder-source-label">
+                {sourceLabels[source]}
+              </Typography.Text>
+              <Typography.Text className="stakeholder-source-units">
+                {`${formatUnits(row[source].quantity)} units`}
+              </Typography.Text>
+              <Typography.Text className="stakeholder-source-amount">
+                {formatCurrency(row[source].amount)}
+              </Typography.Text>
+            </div>
+          ))}
+        </div>
+
+        <div className="stakeholder-project-metrics">
+          <Metric label="Units left" value={formatUnits(row.unitsLeft)} />
+          <Metric label="Total sales" value={formatCurrency(row.totalSales)} />
+          <Metric label="Total fees" value={formatCurrency(row.totalFees)} />
+          <Metric
+            label="Net sales total"
+            value={formatCurrency(row.netSalesTotal)}
+          />
+          <Metric
+            label="Calculated cost"
+            value={formatCurrency(row.calculatedCost)}
+          />
+          <Metric
+            label="Profit"
+            tone="positive"
+            value={formatCurrency(row.profit)}
+          />
+        </div>
+      </section>
+
+      <StakeholderDetail
+        projectId={row.projectId}
+        readOnlyTransactions={readOnlyTransactions}
+        stakeholder={row.stakeholder}
+      />
+    </>
+  )
+}
+
 function StakeholderDetail({
   projectId,
+  readOnlyTransactions,
   stakeholder,
 }: {
   projectId: number
+  readOnlyTransactions: boolean
   stakeholder: StakeholderProjectStakeholderRow
 }) {
   const hasAdjustments = stakeholder.adjustmentCount > 0
@@ -384,6 +534,7 @@ function StakeholderDetail({
       <StakeholderProjectTransactionLines
         key={`${projectId}-${stakeholder.stakeholderId}`}
         projectId={projectId}
+        readOnly={readOnlyTransactions}
         stakeholderId={stakeholder.stakeholderId}
         stakeholderName={stakeholder.stakeholderName}
       />

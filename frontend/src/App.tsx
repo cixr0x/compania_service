@@ -5,11 +5,18 @@ import { EntityEditPage } from './features/entities/EntityEditPage'
 import { EntityListPage } from './features/entities/EntityListPage'
 import { SalesImportPage } from './features/imports/SalesImportPage'
 import { SalesReportPage } from './features/reports/SalesReportPage'
-import { StakeholderProjectsReportPage } from './features/reports/StakeholderProjectsReportPage'
+import {
+  StakeholderProjectsReportPage,
+  StakeholderProjectsReportPrintPage,
+} from './features/reports/StakeholderProjectsReportPage'
 
 function App() {
   return (
     <Routes>
+      <Route
+        path="reports/stakeholder-projects/print"
+        element={<StakeholderProjectsReportPrintPage />}
+      />
       <Route element={<AppLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="imports" element={<SalesImportPage />} />

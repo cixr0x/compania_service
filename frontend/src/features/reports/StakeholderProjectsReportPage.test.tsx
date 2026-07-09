@@ -81,7 +81,9 @@ const projects = [
   },
 ]
 
-function renderStakeholderProjectsReportRoute() {
+function renderStakeholderProjectsReportRoute(
+  initialEntry = '/reports/stakeholder-projects',
+) {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -90,7 +92,7 @@ function renderStakeholderProjectsReportRoute() {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/reports/stakeholder-projects']}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <App />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -255,6 +257,12 @@ describe('StakeholderProjectsReportPage', () => {
     expect(within(stakeholderRegion).getByText('$10.25')).toBeVisible()
     expect(within(stakeholderRegion).getByText('$90.55')).toBeVisible()
     expect(
+      screen.getByRole('link', { name: 'Print report' }),
+    ).toHaveAttribute(
+      'href',
+      '/reports/stakeholder-projects/print?projectId=501&stakeholderId=10',
+    )
+    expect(
       screen.getByRole('table', {
         name: 'Alicia transaction details',
       }),
@@ -267,6 +275,91 @@ describe('StakeholderProjectsReportPage', () => {
       }),
     ).toBeVisible()
     expect(within(projectRegion).queryByText('Bruno')).not.toBeInTheDocument()
+  })
+
+  it('renders a printable stakeholder projects report without selectors or transaction controls', async () => {
+    vi.mocked(getJson).mockImplementation((path: string) => {
+      if (
+        path === '/reports/stakeholder-projects?projectId=501&stakeholderId=10'
+      ) {
+        return Promise.resolve(stakeholderProjectsReport)
+      }
+
+      if (path === '/projects/501') {
+        return Promise.resolve(projects[0])
+      }
+
+      if (
+        path ===
+        '/stakeholder-project-transactions/projects/501/stakeholders/10'
+      ) {
+        return Promise.resolve([
+          {
+            amount: 125.5,
+            date: '2026-05-05',
+            description: 'Distribution',
+            idProject: 501,
+            idStakeholder: 10,
+            idStakeholderProjectTransaction: 99,
+            transactionType: 'payment',
+          },
+        ])
+      }
+
+      return Promise.reject(new Error(`Unexpected GET ${path}`))
+    })
+
+    renderStakeholderProjectsReportRoute(
+      '/reports/stakeholder-projects/print?projectId=501&stakeholderId=10',
+    )
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Stakeholder Projects',
+      }),
+    ).toBeVisible()
+    expect(screen.getByText('Printable report')).toBeVisible()
+    expect(
+      screen.queryByRole('combobox', { name: 'Project' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('combobox', { name: 'Stakeholder' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'Print report' }),
+    ).not.toBeInTheDocument()
+
+    const projectRegion = await screen.findByRole('region', {
+      name: 'Maple Shelf project 501',
+    })
+    expect(
+      await within(projectRegion).findByRole('link', {
+        name: 'Maple Shelf',
+      }),
+    ).toHaveAttribute('href', '/products/42')
+    expect(within(projectRegion).getByText('Project #501')).toBeVisible()
+    expect(within(projectRegion).getByText('$310.00')).toBeVisible()
+
+    const stakeholderRegion = screen.getByRole('region', {
+      name: 'Alicia stakeholder detail',
+    })
+    expect(within(stakeholderRegion).getByText('$90.55')).toBeVisible()
+
+    const transactionTable = await screen.findByRole('table', {
+      name: 'Alicia transaction details',
+    })
+    expect(within(transactionTable).getByText('Distribution')).toBeVisible()
+    expect(within(transactionTable).getByText('Payment')).toBeVisible()
+    expect(within(transactionTable).getByText('$125.50')).toBeVisible()
+    expect(
+      screen.queryByRole('button', { name: 'Add transaction' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Edit row/i }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Remove row/i }),
+    ).not.toBeInTheDocument()
   })
 
   it('renders report load failures as an Ant Design alert', async () => {
