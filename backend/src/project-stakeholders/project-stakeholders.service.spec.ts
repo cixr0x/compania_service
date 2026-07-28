@@ -1,37 +1,82 @@
 import { BadRequestException } from '@nestjs/common';
 import { ProjectStakeholdersService } from './project-stakeholders.service';
+import { asPrismaService } from '../../test/prisma-service.mock';
+import { publicProjectSummarySelect } from '../projects/project-public-select';
+
+type ProjectStakeholderRecord = {
+  idProjectStakeholder: number;
+  idProject: number;
+  idStakeholder: number;
+  stakePercentage: string;
+};
+type ProjectStakeholderCreateMock = (
+  args: unknown,
+) => Promise<ProjectStakeholderRecord>;
+type ProjectStakeholderCreateManyMock = (
+  args: unknown,
+) => Promise<{ count: number }>;
+type ProjectStakeholderDeleteMock = (
+  args: unknown,
+) => Promise<ProjectStakeholderRecord>;
+type ProjectStakeholderDeleteManyMock = (
+  args: unknown,
+) => Promise<{ count: number }>;
+type ProjectStakeholderFindManyMock = (
+  args: unknown,
+) => Promise<ProjectStakeholderRecord[]>;
+type ProjectStakeholderFindUniqueMock = (
+  args: unknown,
+) => Promise<ProjectStakeholderRecord | null>;
+type ProjectStakeholderUpdateMock = (
+  args: unknown,
+) => Promise<ProjectStakeholderRecord>;
+type QueryRawMock = (query: unknown) => Promise<unknown>;
+type ProjectStakeholderDelegateMock = {
+  create: jest.MockedFunction<ProjectStakeholderCreateMock>;
+  createMany: jest.MockedFunction<ProjectStakeholderCreateManyMock>;
+  update: jest.MockedFunction<ProjectStakeholderUpdateMock>;
+  delete: jest.MockedFunction<ProjectStakeholderDeleteMock>;
+  deleteMany: jest.MockedFunction<ProjectStakeholderDeleteManyMock>;
+  findUnique: jest.MockedFunction<ProjectStakeholderFindUniqueMock>;
+  findMany: jest.MockedFunction<ProjectStakeholderFindManyMock>;
+};
+type ProjectStakeholderPrismaMock = {
+  $queryRaw: jest.MockedFunction<QueryRawMock>;
+  projectStakeholder: ProjectStakeholderDelegateMock;
+};
+type ProjectStakeholderTransactionRunner = (
+  callback: (tx: ProjectStakeholderPrismaMock) => Promise<unknown>,
+) => Promise<unknown>;
+
+function createProjectStakeholderDelegateMock(): ProjectStakeholderDelegateMock {
+  return {
+    create: jest.fn<ProjectStakeholderCreateMock>(),
+    createMany: jest.fn<ProjectStakeholderCreateManyMock>(),
+    update: jest.fn<ProjectStakeholderUpdateMock>(),
+    delete: jest.fn<ProjectStakeholderDeleteMock>(),
+    deleteMany: jest.fn<ProjectStakeholderDeleteManyMock>(),
+    findUnique: jest.fn<ProjectStakeholderFindUniqueMock>(),
+    findMany: jest.fn<ProjectStakeholderFindManyMock>(),
+  };
+}
 
 describe('ProjectStakeholdersService', () => {
-  const transactionPrisma = {
-    $queryRaw: jest.fn(),
-    projectStakeholder: {
-      create: jest.fn(),
-      createMany: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      deleteMany: jest.fn(),
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-    },
-  } as any;
+  const transactionPrisma: ProjectStakeholderPrismaMock = {
+    $queryRaw: jest.fn<QueryRawMock>(),
+    projectStakeholder: createProjectStakeholderDelegateMock(),
+  };
 
+  const runTransaction = jest.fn<ProjectStakeholderTransactionRunner>();
   const prisma = {
-    $transaction: jest.fn((callback) => callback(transactionPrisma)),
-    projectStakeholder: {
-      create: jest.fn(),
-      createMany: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      deleteMany: jest.fn(),
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-    },
-  } as any;
+    $transaction: runTransaction,
+    projectStakeholder: createProjectStakeholderDelegateMock(),
+  };
 
   beforeEach(() => {
     jest.resetAllMocks();
-    prisma.$transaction.mockImplementation((callback) =>
-      callback(transactionPrisma),
+    runTransaction.mockImplementation(
+      (callback: (tx: ProjectStakeholderPrismaMock) => Promise<unknown>) =>
+        callback(transactionPrisma),
     );
   });
 
@@ -55,7 +100,7 @@ describe('ProjectStakeholdersService', () => {
         stakePercentage: '40.00',
       });
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
     await service.create({
       idProject: 10,
       idStakeholder: 2,
@@ -82,7 +127,7 @@ describe('ProjectStakeholdersService', () => {
         },
       ]);
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
 
     await expect(
       service.create({ idProject: 10, idStakeholder: 2, stakePercentage: 30 }),
@@ -101,7 +146,7 @@ describe('ProjectStakeholdersService', () => {
         },
       ]);
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
 
     await expect(
       service.create({ idProject: 10, idStakeholder: 2, stakePercentage: 30 }),
@@ -127,12 +172,15 @@ describe('ProjectStakeholdersService', () => {
       },
     ]);
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
     await service.findByProject(10);
 
     expect(prisma.projectStakeholder.findMany).toHaveBeenCalledWith({
       where: { idProject: 10 },
-      include: expect.any(Object),
+      include: {
+        project: { select: publicProjectSummarySelect },
+        stakeholder: true,
+      },
       orderBy: { idProjectStakeholder: 'desc' },
     });
   });
@@ -140,16 +188,13 @@ describe('ProjectStakeholdersService', () => {
   it('loads project product and stakeholder names for list table display', async () => {
     jest.spyOn(prisma.projectStakeholder, 'findMany').mockResolvedValue([]);
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
     await service.findAll({ page: 1, pageSize: 25 });
 
     expect(prisma.projectStakeholder.findMany).toHaveBeenCalledWith({
       include: {
         project: {
-          select: expect.objectContaining({
-            name: true,
-            product: true,
-          }),
+          select: publicProjectSummarySelect,
         },
         stakeholder: true,
       },
@@ -157,9 +202,7 @@ describe('ProjectStakeholdersService', () => {
       skip: 0,
       take: 25,
     });
-    expect(
-      prisma.projectStakeholder.findMany.mock.calls[0][0].include.project.select,
-    ).not.toHaveProperty('createdDate');
+    expect(publicProjectSummarySelect).not.toHaveProperty('createdDate');
   });
 
   it('checks the destination project total when moving a stakeholder row to another project', async () => {
@@ -182,7 +225,7 @@ describe('ProjectStakeholdersService', () => {
         },
       ]);
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
 
     await expect(
       service.update(1, {
@@ -227,7 +270,7 @@ describe('ProjectStakeholdersService', () => {
         stakePercentage: '40.00',
       });
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
     await service.update(1, { stakePercentage: 40 });
 
     expect(transactionPrisma.projectStakeholder.update).toHaveBeenCalled();
@@ -275,7 +318,7 @@ describe('ProjectStakeholdersService', () => {
         stakePercentage: '30.00',
       });
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
     await service.update(1, { idProject: 20 });
 
     expect(transactionPrisma.projectStakeholder.update).toHaveBeenCalledWith({
@@ -318,7 +361,7 @@ describe('ProjectStakeholdersService', () => {
         },
       ]);
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
 
     await expect(
       service.update(1, { idProject: 20, stakePercentage: 30 }),
@@ -354,7 +397,7 @@ describe('ProjectStakeholdersService', () => {
         },
       ]);
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
 
     await expect(service.remove(1)).rejects.toThrow(
       new BadRequestException('Project stakeholder total must equal 100'),
@@ -386,7 +429,7 @@ describe('ProjectStakeholdersService', () => {
         },
       ]);
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
     await service.replaceProjectSplit(10, [
       { idStakeholder: 1, stakePercentage: 25 },
       { idStakeholder: 2, stakePercentage: 75 },
@@ -416,7 +459,7 @@ describe('ProjectStakeholdersService', () => {
       .spyOn(transactionPrisma.projectStakeholder, 'findMany')
       .mockResolvedValue([]);
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
     const result = await service.replaceProjectSplit(10, []);
 
     expect(result).toEqual([]);
@@ -432,7 +475,7 @@ describe('ProjectStakeholdersService', () => {
   });
 
   it('rejects replacing a project split when submitted stakeholder total is not exactly 100', async () => {
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
 
     await expect(
       service.replaceProjectSplit(10, [
@@ -498,7 +541,7 @@ describe('ProjectStakeholdersService', () => {
         });
       });
 
-    const service = new ProjectStakeholdersService(prisma);
+    const service = new ProjectStakeholdersService(asPrismaService(prisma));
     await service.update(1, { stakePercentage: 40 });
 
     expect(operations[0]).toBe('raw-lock');
