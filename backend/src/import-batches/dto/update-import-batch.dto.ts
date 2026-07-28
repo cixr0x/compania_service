@@ -6,7 +6,9 @@ import { IsSaleDateString } from '../../sales/dto/sale-date-string.validator';
 
 export class UpdateImportBatchDto {
   @ValidateIf((_, value) => value !== undefined)
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }): unknown =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @IsNotEmpty()
   @IsIn(IMPORT_SOURCES)

@@ -10,7 +10,9 @@ export class ReplaceProjectTransactionDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   amount!: number;
 
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }): unknown =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @IsNotEmpty()
   description!: string;

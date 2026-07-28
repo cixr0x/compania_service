@@ -4,7 +4,9 @@ import { IMPORT_SOURCES } from '../../common/constants/import-sources';
 import type { ImportSource } from '../../common/constants/import-sources';
 
 export class CreateImportBatchDto {
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }): unknown =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @IsNotEmpty()
   @IsIn(IMPORT_SOURCES)
