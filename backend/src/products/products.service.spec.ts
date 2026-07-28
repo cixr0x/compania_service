@@ -1,5 +1,5 @@
 import { ProductsService } from './products.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { asPrismaService } from '../../test/prisma-service.mock';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { publicProjectBaseSelect } from '../projects/project-public-select';
 
@@ -10,7 +10,7 @@ describe('ProductsService', () => {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
-  } as any;
+  };
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -28,7 +28,7 @@ describe('ProductsService', () => {
       tag: 'starter',
     });
 
-    const service = new ProductsService(prisma);
+    const service = new ProductsService(asPrismaService(prisma));
     await service.create({
       name: 'Starter Kit',
       description: 'Kit',
@@ -63,7 +63,7 @@ describe('ProductsService', () => {
       ownership: '0.00',
     });
 
-    const service = new ProductsService(prisma);
+    const service = new ProductsService(asPrismaService(prisma));
     await service.create({ name: 'Starter Kit' });
 
     expect(prisma.product.create).toHaveBeenCalledWith({
@@ -83,7 +83,7 @@ describe('ProductsService', () => {
       ownership: '15.00',
     });
 
-    const service = new ProductsService(prisma);
+    const service = new ProductsService(asPrismaService(prisma));
     const dto = Object.assign(new UpdateProductDto(), { name: 'Changed' });
     await service.update(1, dto);
 
@@ -105,7 +105,7 @@ describe('ProductsService', () => {
       ],
     });
 
-    const service = new ProductsService(prisma);
+    const service = new ProductsService(asPrismaService(prisma));
     const product = await service.findOne(42);
 
     expect(product.projects).toHaveLength(1);
@@ -135,7 +135,7 @@ describe('ProductsService', () => {
       ownership: '15.00',
     });
 
-    const service = new ProductsService(prisma);
+    const service = new ProductsService(asPrismaService(prisma));
     await service.update(1, {
       description: '',
       image: '   ',
@@ -163,7 +163,7 @@ describe('ProductsService', () => {
       ownership: '0.00',
     });
 
-    const service = new ProductsService(prisma);
+    const service = new ProductsService(asPrismaService(prisma));
     await service.create({
       name: ' Starter Kit ',
       idEcommerce: '   ',
