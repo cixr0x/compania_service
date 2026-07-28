@@ -84,7 +84,7 @@ describe('StakeholderProjectTransactionLines', () => {
     renderStakeholderProjectTransactionLines()
 
     const section = await screen.findByRole('region', {
-      name: 'Stakeholder Transactions',
+      name: 'Transacciones del socio',
     })
     expect(section).toHaveClass('stakeholder-transactions-card')
     expect(getJson).toHaveBeenCalledWith(
@@ -92,16 +92,16 @@ describe('StakeholderProjectTransactionLines', () => {
     )
     expect(
       await within(section).findByRole('table', {
-        name: 'Alicia transaction details',
+        name: 'Alicia, detalle de transacciones',
       }),
     ).toBeVisible()
     expect(within(section).getByText('2026-05-05')).toBeVisible()
-    expect(within(section).getByText('Payment')).toBeVisible()
+    expect(within(section).getByText('Pago')).toBeVisible()
     expect(within(section).getByText('$125.50')).toBeVisible()
     expect(within(section).getByText('Distribution')).toBeVisible()
-    expect(within(section).queryByLabelText('Date')).not.toBeInTheDocument()
+    expect(within(section).queryByLabelText('Fecha')).not.toBeInTheDocument()
     expect(
-      within(section).getByRole('button', { name: 'Edit row 1' }),
+      within(section).getByRole('button', { name: 'Editar fila 1' }),
     ).toBeVisible()
   })
 
@@ -122,28 +122,28 @@ describe('StakeholderProjectTransactionLines', () => {
     renderStakeholderProjectTransactionLines()
 
     const section = await screen.findByRole('region', {
-      name: 'Stakeholder Transactions',
+      name: 'Transacciones del socio',
     })
-    await within(section).findByRole('button', { name: 'Add transaction' })
+    await within(section).findByRole('button', { name: 'Agregar transacción' })
     await user.click(
-      within(section).getByRole('button', { name: 'Add transaction' }),
+      within(section).getByRole('button', { name: 'Agregar transacción' }),
     )
-    fireEvent.change(within(section).getByLabelText('Date'), {
+    fireEvent.change(within(section).getByLabelText('Fecha'), {
       target: { value: '2026-05-06' },
     })
-    fireEvent.change(within(section).getByLabelText('Amount'), {
+    fireEvent.change(within(section).getByLabelText('Monto'), {
       target: { value: '250.00' },
     })
     await selectAntOption(
       user,
-      within(section).getByRole('combobox', { name: 'Type' }),
-      'Payment',
+      within(section).getByRole('combobox', { name: 'Tipo' }),
+      'Pago',
     )
-    fireEvent.change(within(section).getByLabelText('Description'), {
+    fireEvent.change(within(section).getByLabelText('Descripción'), {
       target: { value: 'Capital return' },
     })
     await user.click(
-      within(section).getByRole('button', { name: 'Save row 1' }),
+      within(section).getByRole('button', { name: 'Guardar fila 1' }),
     )
 
     await waitFor(() => {
@@ -159,7 +159,7 @@ describe('StakeholderProjectTransactionLines', () => {
         ],
       )
     })
-    expect(within(section).queryByLabelText('Amount')).not.toBeInTheDocument()
+    expect(within(section).queryByLabelText('Monto')).not.toBeInTheDocument()
     expect(await within(section).findByText('Capital return')).toBeVisible()
     expect(within(section).getByText('$250.00')).toBeVisible()
   })
@@ -181,26 +181,26 @@ describe('StakeholderProjectTransactionLines', () => {
     renderStakeholderProjectTransactionLines()
 
     const section = await screen.findByRole('region', {
-      name: 'Stakeholder Transactions',
+      name: 'Transacciones del socio',
     })
     const table = await within(section).findByRole('table', {
-      name: 'Alicia transaction details',
+      name: 'Alicia, detalle de transacciones',
     })
     await within(section).findByText('Later transaction')
     await user.click(
-      within(section).getByRole('button', { name: 'Add transaction' }),
+      within(section).getByRole('button', { name: 'Agregar transacción' }),
     )
-    fireEvent.change(within(section).getByLabelText('Date'), {
+    fireEvent.change(within(section).getByLabelText('Fecha'), {
       target: { value: '2026-05-01' },
     })
-    fireEvent.change(within(section).getByLabelText('Amount'), {
+    fireEvent.change(within(section).getByLabelText('Monto'), {
       target: { value: '50.00' },
     })
-    fireEvent.change(within(section).getByLabelText('Description'), {
+    fireEvent.change(within(section).getByLabelText('Descripción'), {
       target: { value: 'Earlier transaction' },
     })
     await user.click(
-      within(section).getByRole('button', { name: 'Save row 2' }),
+      within(section).getByRole('button', { name: 'Guardar fila 2' }),
     )
 
     await waitFor(() => {
@@ -217,19 +217,19 @@ describe('StakeholderProjectTransactionLines', () => {
     renderStakeholderProjectTransactionLines()
 
     const section = await screen.findByRole('region', {
-      name: 'Stakeholder Transactions',
+      name: 'Transacciones del socio',
     })
-    await within(section).findByRole('button', { name: 'Add transaction' })
+    await within(section).findByRole('button', { name: 'Agregar transacción' })
     await user.click(
-      within(section).getByRole('button', { name: 'Add transaction' }),
+      within(section).getByRole('button', { name: 'Agregar transacción' }),
     )
 
-    const descriptionInput = within(section).getByLabelText('Description')
+    const descriptionInput = within(section).getByLabelText('Descripción')
     await user.click(descriptionInput)
     await user.keyboard('Capital return')
 
-    expect(within(section).getByLabelText('Description')).toHaveFocus()
-    expect(within(section).getByLabelText('Description')).toHaveValue(
+    expect(within(section).getByLabelText('Descripción')).toHaveFocus()
+    expect(within(section).getByLabelText('Descripción')).toHaveValue(
       'Capital return',
     )
   })
@@ -251,23 +251,23 @@ describe('StakeholderProjectTransactionLines', () => {
     renderStakeholderProjectTransactionLines()
 
     const section = await screen.findByRole('region', {
-      name: 'Stakeholder Transactions',
+      name: 'Transacciones del socio',
     })
     await within(section).findByText('Distribution')
     await user.click(
-      within(section).getByRole('button', { name: 'Edit row 1' }),
+      within(section).getByRole('button', { name: 'Editar fila 1' }),
     )
-    fireEvent.change(within(section).getByLabelText('Date'), {
+    fireEvent.change(within(section).getByLabelText('Fecha'), {
       target: { value: '2026-05-07' },
     })
-    fireEvent.change(within(section).getByLabelText('Amount'), {
+    fireEvent.change(within(section).getByLabelText('Monto'), {
       target: { value: '500.00' },
     })
-    fireEvent.change(within(section).getByLabelText('Description'), {
+    fireEvent.change(within(section).getByLabelText('Descripción'), {
       target: { value: 'Updated distribution' },
     })
     await user.click(
-      within(section).getByRole('button', { name: 'Cancel row 1' }),
+      within(section).getByRole('button', { name: 'Cancelar fila 1' }),
     )
 
     expect(putJson).not.toHaveBeenCalled()
@@ -297,11 +297,11 @@ describe('StakeholderProjectTransactionLines', () => {
     renderStakeholderProjectTransactionLines()
 
     const section = await screen.findByRole('region', {
-      name: 'Stakeholder Transactions',
+      name: 'Transacciones del socio',
     })
     await within(section).findByText('Distribution')
     await user.click(
-      within(section).getByRole('button', { name: 'Remove row 1' }),
+      within(section).getByRole('button', { name: 'Eliminar fila 1' }),
     )
 
     await waitFor(() => {
@@ -312,7 +312,7 @@ describe('StakeholderProjectTransactionLines', () => {
     })
     expect(
       within(section).getByText(
-        'No stakeholder transactions have been recorded yet.',
+        'Aún no se han registrado transacciones para este socio.',
       ),
     ).toBeVisible()
   })

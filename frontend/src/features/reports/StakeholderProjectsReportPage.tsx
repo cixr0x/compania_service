@@ -16,9 +16,9 @@ import { StakeholderProjectTransactionLines } from './StakeholderProjectTransact
 
 const OPTION_LIST_PAGE_SIZE = 100
 const sourceLabels: Record<StakeholderProjectsReportSource, string> = {
-  ecommerce: 'Ecommerce',
-  event: 'Event',
-  store: 'Store',
+  ecommerce: 'Comercio electrónico',
+  event: 'Evento',
+  store: 'Tienda',
   surface: 'Surface',
 }
 const DEFAULT_REPORT_SOURCES: StakeholderProjectsReportSource[] = [
@@ -39,7 +39,7 @@ function formatPercentage(value: unknown) {
     return '-'
   }
 
-  return `${new Intl.NumberFormat('en-US', {
+  return `${new Intl.NumberFormat('es-MX', {
     maximumFractionDigits: 2,
   }).format(numericValue)}%`
 }
@@ -47,8 +47,18 @@ function formatPercentage(value: unknown) {
 function formatUnits(value: unknown) {
   const numericValue = Number(value)
   return Number.isFinite(numericValue)
-    ? numericValue.toLocaleString()
+    ? numericValue.toLocaleString('es-MX')
     : '-'
+}
+
+function formatUnitCount(value: unknown) {
+  const numericValue = Number(value)
+
+  if (!Number.isFinite(numericValue)) {
+    return '-'
+  }
+
+  return `${formatUnits(numericValue)} ${numericValue === 1 ? 'unidad' : 'unidades'}`
 }
 
 function buildReportPath(projectId: number, stakeholderId: number) {
@@ -96,8 +106,8 @@ function formatProjectOption(project: Project) {
 
   const productName = project.product?.name?.trim()
   return productName
-    ? `Project #${project.idProject} - ${productName}`
-    : `Project #${project.idProject}`
+    ? `Proyecto #${project.idProject} - ${productName}`
+    : `Proyecto #${project.idProject}`
 }
 
 export function StakeholderProjectsReportPage() {
@@ -130,7 +140,7 @@ export function StakeholderProjectsReportPage() {
   const selectedProjectProductId = selectedProject?.idProduct ?? null
   const stakeholderOptions =
     selectedProject?.stakeholders?.map((line) => ({
-      label: line.stakeholder?.name ?? `Stakeholder #${line.idStakeholder}`,
+      label: line.stakeholder?.name ?? `Socio #${line.idStakeholder}`,
       value: line.idStakeholder,
     })) ?? []
   const report = reportQuery.data
@@ -156,21 +166,21 @@ export function StakeholderProjectsReportPage() {
         </div>
         <div>
           <Typography.Title id="stakeholder-projects-report-heading" level={2}>
-            Stakeholder Projects
+            Proyectos por socio
           </Typography.Title>
           <Typography.Text className="stakeholder-projects-subtitle">
-            Investment performance & transaction history
+            Rendimiento de la inversión e historial de transacciones
           </Typography.Text>
         </div>
         {printReportPath ? (
           <div className="stakeholder-projects-heading-actions">
             <Button
-              aria-label="Print report"
+              aria-label="Imprimir reporte"
               href={printReportPath}
               icon={<PrinterOutlined />}
               type="primary"
             >
-              Print
+              Imprimir
             </Button>
           </div>
         ) : null}
@@ -179,9 +189,9 @@ export function StakeholderProjectsReportPage() {
       <div className="stakeholder-report-controls">
         <div className="stakeholder-report-filter-row">
           <label className="stakeholder-report-filter">
-            Project
+            Proyecto
             <Select
-              aria-label="Project"
+              aria-label="Proyecto"
               loading={projectsQuery.isLoading}
               onChange={(value) => {
                 setSelectedProjectId(value)
@@ -191,20 +201,22 @@ export function StakeholderProjectsReportPage() {
                 label: formatProjectOption(project),
                 value: project.idProject,
               }))}
-              placeholder="Select project"
+              notFoundContent="No se encontraron proyectos."
+              placeholder="Selecciona un proyecto"
               showSearch
               value={selectedProjectId}
             />
           </label>
 
           <label className="stakeholder-report-filter">
-            Stakeholder
+            Socio
             <Select
-              aria-label="Stakeholder"
+              aria-label="Socio"
               disabled={selectedProjectId === null}
               onChange={(value) => setSelectedStakeholderId(value)}
               options={stakeholderOptions}
-              placeholder="Select stakeholder"
+              notFoundContent="No se encontraron socios."
+              placeholder="Selecciona un socio"
               showSearch
               value={selectedStakeholderId}
             />
@@ -215,7 +227,7 @@ export function StakeholderProjectsReportPage() {
       {projectsQuery.isError ? (
         <Alert
           showIcon
-          title="Unable to load report selectors."
+          title="No se pudieron cargar las opciones del reporte."
           type="error"
         />
       ) : null}
@@ -223,7 +235,7 @@ export function StakeholderProjectsReportPage() {
       {reportQuery.isError ? (
         <Alert
           showIcon
-          title="Unable to load the stakeholder projects report."
+          title="No se pudo cargar el reporte de proyectos por socio."
           type="error"
         />
       ) : null}
@@ -235,11 +247,11 @@ export function StakeholderProjectsReportPage() {
       ) : null}
 
       {!isLoading && !hasSelectedScope ? (
-        <Empty description="Select a project and stakeholder to load the report." />
+        <Empty description="Selecciona un proyecto y un socio para cargar el reporte." />
       ) : null}
 
       {!isLoading && hasSelectedScope && !reportQuery.isError && !row ? (
-        <Empty description="No stakeholder report found for the selected project and stakeholder." />
+        <Empty description="No se encontró un reporte para el proyecto y el socio seleccionados." />
       ) : null}
 
       {!isLoading && row ? (
@@ -293,22 +305,22 @@ export function StakeholderProjectsReportPrintPage() {
         </div>
         <div>
           <Typography.Title id="stakeholder-projects-report-heading" level={2}>
-            Stakeholder Projects
+            Proyectos por socio
           </Typography.Title>
           <Typography.Text className="stakeholder-projects-subtitle">
-            Printable report
+            Reporte para imprimir
           </Typography.Text>
         </div>
       </div>
 
       {!hasSelectedScope ? (
-        <Empty description="Open this printable report from a selected stakeholder project report." />
+        <Empty description="Abre este reporte para imprimir desde un reporte con un proyecto y un socio seleccionados." />
       ) : null}
 
       {reportQuery.isError ? (
         <Alert
           showIcon
-          title="Unable to load the stakeholder projects report."
+          title="No se pudo cargar el reporte de proyectos por socio."
           type="error"
         />
       ) : null}
@@ -320,7 +332,7 @@ export function StakeholderProjectsReportPrintPage() {
       ) : null}
 
       {hasSelectedScope && !reportQuery.isLoading && !reportQuery.isError && !row ? (
-        <Empty description="No stakeholder report found for the selected project and stakeholder." />
+        <Empty description="No se encontró un reporte para el proyecto y el socio seleccionados." />
       ) : null}
 
       {row ? (
@@ -349,7 +361,7 @@ function StakeholderProjectsReportContent({
   return (
     <>
       <section
-        aria-label={`${row.productName} project ${row.projectId}`}
+        aria-label={`${row.productName}, proyecto ${row.projectId}`}
         className="stakeholder-project-card"
       >
         <div className="stakeholder-project-summary-header">
@@ -357,7 +369,7 @@ function StakeholderProjectsReportContent({
             <div className="stakeholder-project-product-image">
               {row.productImage ? (
                 <img
-                  alt={`${row.productName} thumbnail`}
+                  alt={`Miniatura de ${row.productName}`}
                   src={row.productImage}
                 />
               ) : (
@@ -379,12 +391,12 @@ function StakeholderProjectsReportContent({
                 <Typography.Title level={3}>{row.productName}</Typography.Title>
               )}
               <Link
-                aria-label={`Project #${row.projectId}`}
+                aria-label={`Proyecto #${row.projectId}`}
                 className="entity-reference-link"
                 to={`/projects/${row.projectId}`}
               >
                 <Typography.Text type="secondary">
-                  Project #{row.projectId}
+                  Proyecto #{row.projectId}
                 </Typography.Text>
               </Link>
             </div>
@@ -392,7 +404,7 @@ function StakeholderProjectsReportContent({
 
           <div className="stakeholder-project-progress">
             <Typography.Text type="secondary">
-              {`${formatUnits(row.totalUnitsSold)} / ${formatUnits(row.totalUnits)} units sold`}
+              {`${formatUnits(row.totalUnitsSold)} / ${formatUnits(row.totalUnits)} unidades vendidas`}
             </Typography.Text>
             <div className="stakeholder-project-progress-row">
               <Progress
@@ -409,7 +421,7 @@ function StakeholderProjectsReportContent({
         </div>
 
         <div
-          aria-label={`${row.productName} source totals`}
+          aria-label={`${row.productName}, totales por origen`}
           className="stakeholder-source-grid"
           role="list"
         >
@@ -423,7 +435,7 @@ function StakeholderProjectsReportContent({
                 {sourceLabels[source]}
               </Typography.Text>
               <Typography.Text className="stakeholder-source-units">
-                {`${formatUnits(row[source].quantity)} units`}
+                {formatUnitCount(row[source].quantity)}
               </Typography.Text>
               <Typography.Text className="stakeholder-source-amount">
                 {formatCurrency(row[source].amount)}
@@ -433,19 +445,25 @@ function StakeholderProjectsReportContent({
         </div>
 
         <div className="stakeholder-project-metrics">
-          <Metric label="Units left" value={formatUnits(row.unitsLeft)} />
-          <Metric label="Total sales" value={formatCurrency(row.totalSales)} />
-          <Metric label="Total fees" value={formatCurrency(row.totalFees)} />
           <Metric
-            label="Net sales total"
+            label="Unidades restantes"
+            value={formatUnits(row.unitsLeft)}
+          />
+          <Metric label="Ventas totales" value={formatCurrency(row.totalSales)} />
+          <Metric
+            label="Comisiones totales"
+            value={formatCurrency(row.totalFees)}
+          />
+          <Metric
+            label="Ventas netas totales"
             value={formatCurrency(row.netSalesTotal)}
           />
           <Metric
-            label="Calculated cost"
+            label="Costo calculado"
             value={formatCurrency(row.calculatedCost)}
           />
           <Metric
-            label="Profit"
+            label="Utilidad"
             tone="positive"
             value={formatCurrency(row.profit)}
           />
@@ -481,7 +499,7 @@ function StakeholderDetail({
   return (
     <>
       <section
-        aria-label={`${stakeholder.stakeholderName} stakeholder detail`}
+        aria-label={`${stakeholder.stakeholderName}, detalle del socio`}
         className="stakeholder-detail-card"
       >
         <div className="stakeholder-detail-heading">
@@ -498,33 +516,33 @@ function StakeholderDetail({
 
         <div className="stakeholder-project-metrics stakeholder-detail-metrics">
           <Metric
-            label="Stake %"
+            label="Participación %"
             value={formatPercentage(stakeholder.stakePercentage)}
           />
           <Metric
-            label="Investment Balance"
+            label="Saldo de inversión"
             tone={stakeholder.investment < 0 ? 'negative' : undefined}
             value={formatCurrency(stakeholder.investment)}
           />
           <Metric
-            label="Payments"
+            label="Pagos"
             tone="positive"
             value={formatCurrency(stakeholder.payments)}
           />
           <Metric
-            label="Entitled Income"
+            label="Ingreso correspondiente"
             tone="income"
             value={formatCurrency(stakeholder.income)}
           />
           {hasAdjustments ? (
             <Metric
-              label="Adjustments"
+              label="Ajustes"
               tone={adjustmentTone}
               value={formatCurrency(stakeholder.adjustments)}
             />
           ) : null}
           <Metric
-            label="Balance"
+            label="Saldo"
             tone="warning"
             value={formatCurrency(stakeholder.balance)}
           />

@@ -38,9 +38,9 @@ const TRANSACTION_TYPE_OPTIONS: {
   label: string
   value: StakeholderProjectTransactionType
 }[] = [
-  { label: 'Investment', value: 'investment' },
-  { label: 'Payment', value: 'payment' },
-  { label: 'Adjustment', value: 'adjustment' },
+  { label: 'Inversión', value: 'investment' },
+  { label: 'Pago', value: 'payment' },
+  { label: 'Ajuste', value: 'adjustment' },
 ]
 
 type TransactionPayloadRow = {
@@ -106,7 +106,7 @@ function normalizeTransactionType(
 function getTransactionTypeLabel(value: StakeholderProjectTransactionType) {
   return (
     TRANSACTION_TYPE_OPTIONS.find((option) => option.value === value)?.label ??
-    'Investment'
+    'Inversión'
   )
 }
 
@@ -186,7 +186,10 @@ export function StakeholderProjectTransactionLines({
   const transactionsPath = getTransactionsPath(projectId, stakeholderId)
   const queryClient = useQueryClient()
   const tableComponents = useMemo(
-    () => getNamedTableComponents(`${stakeholderName} transaction details`),
+    () =>
+      getNamedTableComponents(
+        `${stakeholderName}, detalle de transacciones`,
+      ),
     [stakeholderName],
   )
 
@@ -212,7 +215,7 @@ export function StakeholderProjectTransactionLines({
       setSaveError(
         formatApiErrorMessage(
           error,
-          'Unable to save stakeholder project transactions.',
+          'No se pudieron guardar las transacciones del socio en el proyecto.',
         ),
       ),
     onSuccess: (rows) => {
@@ -303,7 +306,7 @@ export function StakeholderProjectTransactionLines({
     if (amount === null || date === '' || description === '') {
       setRowErrors((currentErrors) => ({
         ...currentErrors,
-        [rowKey]: 'Date, amount, and description are required.',
+        [rowKey]: 'La fecha, el monto y la descripción son obligatorios.',
       }))
       return
     }
@@ -362,7 +365,7 @@ export function StakeholderProjectTransactionLines({
 
         return editingRow ? (
           <Input
-            aria-label="Date"
+            aria-label="Fecha"
             id={`stakeholder-project-transaction-date-${row.rowKey}`}
             onChange={(event) =>
               handleRowChange(row.rowKey, 'date', event.target.value)
@@ -376,7 +379,7 @@ export function StakeholderProjectTransactionLines({
           row.date || '-'
         )
       },
-      title: 'Date',
+      title: 'Fecha',
       width: 150,
     },
     {
@@ -388,7 +391,7 @@ export function StakeholderProjectTransactionLines({
 
         return editingRow ? (
           <Select
-            aria-label="Type"
+            aria-label="Tipo"
             onChange={(value) =>
               handleRowChange(row.rowKey, 'transactionType', value)
             }
@@ -401,7 +404,7 @@ export function StakeholderProjectTransactionLines({
           getTransactionTypeLabel(row.transactionType)
         )
       },
-      title: 'Type',
+      title: 'Tipo',
       width: 150,
     },
     {
@@ -414,7 +417,7 @@ export function StakeholderProjectTransactionLines({
         return editingRow ? (
           <Space orientation="vertical" size={4} style={{ width: '100%' }}>
             <Input
-              aria-label="Description"
+              aria-label="Descripción"
               id={`stakeholder-project-transaction-description-${row.rowKey}`}
               onChange={(event) =>
                 handleRowChange(row.rowKey, 'description', event.target.value)
@@ -433,7 +436,7 @@ export function StakeholderProjectTransactionLines({
           row.description || '-'
         )
       },
-      title: 'Description',
+      title: 'Descripción',
     },
     {
       align: 'right',
@@ -445,7 +448,7 @@ export function StakeholderProjectTransactionLines({
 
         return editingRow ? (
           <Input
-            aria-label="Amount"
+            aria-label="Monto"
             id={`stakeholder-project-transaction-amount-${row.rowKey}`}
             inputMode="decimal"
             onChange={(event) =>
@@ -464,7 +467,7 @@ export function StakeholderProjectTransactionLines({
           </span>
         )
       },
-      title: 'Amount',
+      title: 'Monto',
       width: 180,
     },
     ...(readOnly
@@ -485,7 +488,7 @@ export function StakeholderProjectTransactionLines({
               return isEditing ? (
                 <Space size="small">
                   <Button
-                    aria-label={`Save row ${rowNumber}`}
+                    aria-label={`Guardar fila ${rowNumber}`}
                     icon={<SaveOutlined />}
                     loading={saveMutation.isPending}
                     onClick={() => handleSaveRow(row.rowKey)}
@@ -493,7 +496,7 @@ export function StakeholderProjectTransactionLines({
                     type="primary"
                   />
                   <Button
-                    aria-label={`Cancel row ${rowNumber}`}
+                    aria-label={`Cancelar fila ${rowNumber}`}
                     icon={<CloseOutlined />}
                     onClick={() => handleCancelRow(row.rowKey)}
                     size="small"
@@ -503,14 +506,14 @@ export function StakeholderProjectTransactionLines({
               ) : (
                 <Space size="small">
                   <Button
-                    aria-label={`Edit row ${rowNumber}`}
+                    aria-label={`Editar fila ${rowNumber}`}
                     icon={<EditOutlined />}
                     onClick={() => handleEditRow(row)}
                     size="small"
                     type="default"
                   />
                   <Button
-                    aria-label={`Remove row ${rowNumber}`}
+                    aria-label={`Eliminar fila ${rowNumber}`}
                     icon={<DeleteOutlined />}
                     loading={saveMutation.isPending}
                     onClick={() => handleRemoveRow(row.rowKey)}
@@ -520,7 +523,7 @@ export function StakeholderProjectTransactionLines({
                 </Space>
               )
             },
-            title: 'Actions',
+            title: 'Acciones',
             width: 180,
           },
         ] satisfies ColumnsType<TransactionDraftRow>)),
@@ -528,18 +531,18 @@ export function StakeholderProjectTransactionLines({
 
   return (
     <section
-      aria-label="Stakeholder Transactions"
+      aria-label="Transacciones del socio"
       className="stakeholder-transactions-card"
     >
       <div className="stakeholder-transactions-card-header">
-        <Typography.Title level={3}>Stakeholder Transactions</Typography.Title>
+        <Typography.Title level={3}>Transacciones del socio</Typography.Title>
       </div>
 
       {transactionsQuery.isError ? (
         <Alert
           role="alert"
           showIcon
-          title="Unable to load stakeholder project transactions."
+          title="No se pudieron cargar las transacciones del socio en el proyecto."
           type="error"
         />
       ) : null}
@@ -550,7 +553,7 @@ export function StakeholderProjectTransactionLines({
 
       {transactionsQuery.isLoading ? (
         <Typography.Paragraph className="page-description">
-          Loading stakeholder project transactions...
+          Cargando transacciones del socio en el proyecto...
         </Typography.Paragraph>
       ) : (
         <Form component={false} layout="vertical">
@@ -561,7 +564,7 @@ export function StakeholderProjectTransactionLines({
             dataSource={activeRows}
             locale={{
               emptyText: (
-                <Empty description="No stakeholder transactions have been recorded yet." />
+                <Empty description="Aún no se han registrado transacciones para este socio." />
               ),
             }}
             pagination={false}
@@ -573,12 +576,12 @@ export function StakeholderProjectTransactionLines({
           {!readOnly ? (
             <div className="stakeholder-transactions-card-footer">
               <Button
-                aria-label="Add transaction"
+                aria-label="Agregar transacción"
                 icon={<PlusOutlined />}
                 onClick={handleAddRow}
                 type="link"
               >
-                Add transaction
+                Agregar transacción
               </Button>
             </div>
           ) : null}

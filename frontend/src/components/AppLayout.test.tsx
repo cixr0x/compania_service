@@ -149,7 +149,7 @@ describe('AppLayout', () => {
       within(drawer).getByRole('link', { name: 'Sales Report' }),
     ).toHaveAttribute('href', '/reports/sales')
     expect(
-      within(drawer).getByRole('link', { name: 'Stakeholder Projects' }),
+      within(drawer).getByRole('link', { name: 'Proyectos por socio' }),
     ).toHaveAttribute('href', '/reports/stakeholder-projects')
   })
 })

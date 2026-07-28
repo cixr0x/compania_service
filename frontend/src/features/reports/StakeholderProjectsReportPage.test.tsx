@@ -153,33 +153,37 @@ describe('StakeholderProjectsReportPage', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Stakeholder Projects',
+        name: 'Proyectos por socio',
       }),
     ).toBeVisible()
     expect(
-      screen.getByText('Investment performance & transaction history'),
+      screen.getByText(
+        'Rendimiento de la inversión e historial de transacciones',
+      ),
     ).toBeVisible()
     await user.click(screen.getByRole('button', { name: /Reports/i }))
     await waitFor(() => {
       expect(
-        screen.getByRole('link', { name: 'Stakeholder Projects' }),
+        screen.getByRole('link', { name: 'Proyectos por socio' }),
       ).toHaveAttribute('href', '/reports/stakeholder-projects')
     })
 
     const projectSelect = await screen.findByRole('combobox', {
-      name: 'Project',
+      name: 'Proyecto',
     })
     const stakeholderSelect = screen.getByRole('combobox', {
-      name: 'Stakeholder',
+      name: 'Socio',
     })
     expect(stakeholderSelect.closest('.ant-select')).toHaveClass(
       'ant-select-disabled',
     )
     expect(
-      screen.getByText('Select a project and stakeholder to load the report.'),
+      screen.getByText(
+        'Selecciona un proyecto y un socio para cargar el reporte.',
+      ),
     ).toBeVisible()
 
-    await selectAntOption(user, projectSelect, 'Project #501 - Maple Shelf')
+    await selectAntOption(user, projectSelect, 'Proyecto #501 - Maple Shelf')
     await selectAntOption(user, stakeholderSelect, 'Alicia')
 
     await waitFor(() => {
@@ -189,89 +193,98 @@ describe('StakeholderProjectsReportPage', () => {
     })
 
     const projectRegion = await screen.findByRole('region', {
-      name: 'Maple Shelf project 501',
+      name: 'Maple Shelf, proyecto 501',
     })
     expect(
       within(projectRegion).getByRole('img', {
-        name: 'Maple Shelf thumbnail',
+        name: 'Miniatura de Maple Shelf',
       }),
     ).toHaveAttribute('src', 'https://example.test/maple-shelf.jpg')
-    expect(within(projectRegion).getByText('Project #501')).toBeVisible()
+    expect(within(projectRegion).getByText('Proyecto #501')).toBeVisible()
     expect(
       within(projectRegion).getByRole('link', { name: 'Maple Shelf' }),
     ).toHaveAttribute('href', '/products/42')
     expect(
-      within(projectRegion).getByRole('link', { name: 'Project #501' }),
+      within(projectRegion).getByRole('link', { name: 'Proyecto #501' }),
     ).toHaveAttribute('href', '/projects/501')
     expect(within(projectRegion).getByText('30%')).toBeVisible()
-    expect(within(projectRegion).getByText('3 / 10 units sold')).toBeVisible()
+    expect(
+      within(projectRegion).getByText('3 / 10 unidades vendidas'),
+    ).toBeVisible()
 
     const sourceTiles = within(projectRegion).getByRole('list', {
-      name: 'Maple Shelf source totals',
+      name: 'Maple Shelf, totales por origen',
     })
     expect(sourceTiles).toHaveClass('stakeholder-source-grid')
-    expect(within(sourceTiles).getByText('Store')).toBeVisible()
-    expect(within(sourceTiles).getByText('2 units')).toBeVisible()
+    expect(within(sourceTiles).getByText('Tienda')).toBeVisible()
+    expect(within(sourceTiles).getByText('2 unidades')).toBeVisible()
     expect(within(sourceTiles).getByText('$200.00')).toBeVisible()
-    expect(within(sourceTiles).getByText('Ecommerce')).toBeVisible()
-    expect(within(sourceTiles).getByText('1 units')).toBeVisible()
+    expect(within(sourceTiles).getByText('Comercio electrónico')).toBeVisible()
+    expect(within(sourceTiles).getByText('1 unidad')).toBeVisible()
     expect(within(sourceTiles).getByText('$150.00')).toBeVisible()
-    expect(within(sourceTiles).getByText('Event')).toBeVisible()
-    expect(within(sourceTiles).getByText('0 units')).toBeVisible()
+    expect(within(sourceTiles).getByText('Evento')).toBeVisible()
+    expect(within(sourceTiles).getByText('0 unidades')).toBeVisible()
     expect(within(sourceTiles).queryByText('Surface')).not.toBeInTheDocument()
 
-    expect(within(projectRegion).getByText('Units left')).toBeVisible()
+    expect(within(projectRegion).getByText('Unidades restantes')).toBeVisible()
     expect(within(projectRegion).getByText('7')).toBeVisible()
-    expect(within(projectRegion).getByText('Total sales')).toBeVisible()
+    expect(within(projectRegion).getByText('Ventas totales')).toBeVisible()
     expect(within(projectRegion).getByText('$350.00')).toBeVisible()
-    expect(within(projectRegion).getByText('Total fees')).toBeVisible()
+    expect(within(projectRegion).getByText('Comisiones totales')).toBeVisible()
     expect(within(projectRegion).getByText('$7.00')).toBeVisible()
-    expect(within(projectRegion).getByText('Net sales total')).toBeVisible()
+    expect(
+      within(projectRegion).getByText('Ventas netas totales'),
+    ).toBeVisible()
     expect(within(projectRegion).getByText('$343.00')).toBeVisible()
-    expect(within(projectRegion).getByText('Calculated cost')).toBeVisible()
+    expect(within(projectRegion).getByText('Costo calculado')).toBeVisible()
     expect(within(projectRegion).getByText('$33.00')).toBeVisible()
-    expect(within(projectRegion).getByText('Profit')).toBeVisible()
+    expect(within(projectRegion).getByText('Utilidad')).toBeVisible()
     expect(within(projectRegion).getByText('$310.00')).toBeVisible()
 
     const stakeholderRegion = screen.getByRole('region', {
-      name: 'Alicia stakeholder detail',
+      name: 'Alicia, detalle del socio',
     })
     expect(stakeholderRegion).toHaveClass('stakeholder-detail-card')
     expect(within(stakeholderRegion).getByText('Alicia')).toBeVisible()
     expect(
       within(stakeholderRegion).getByRole('link', { name: 'Alicia' }),
     ).toHaveAttribute('href', '/stakeholders/10')
-    expect(within(stakeholderRegion).getByText('Stake %')).toBeVisible()
+    expect(
+      within(stakeholderRegion).getByText('Participación %'),
+    ).toBeVisible()
     expect(within(stakeholderRegion).getByText('60%')).toBeVisible()
     expect(
-      within(stakeholderRegion).getByText('Investment Balance'),
+      within(stakeholderRegion).getByText('Saldo de inversión'),
     ).toBeVisible()
     expect(within(stakeholderRegion).getByText('$25.50')).toBeVisible()
-    expect(within(stakeholderRegion).getByText('Payments')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('Pagos')).toBeVisible()
     expect(
       within(stakeholderRegion).getAllByText('$125.50').length,
     ).toBeGreaterThan(0)
-    expect(within(stakeholderRegion).getByText('Entitled Income')).toBeVisible()
+    expect(
+      within(stakeholderRegion).getByText('Ingreso correspondiente'),
+    ).toBeVisible()
     expect(within(stakeholderRegion).getByText('$205.80')).toBeVisible()
-    expect(within(stakeholderRegion).getByText('Adjustments')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('Ajustes')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('Saldo')).toBeVisible()
     expect(within(stakeholderRegion).getByText('$10.25')).toBeVisible()
     expect(within(stakeholderRegion).getByText('$90.55')).toBeVisible()
     expect(
-      screen.getByRole('link', { name: 'Print report' }),
+      screen.getByRole('link', { name: 'Imprimir reporte' }),
     ).toHaveAttribute(
       'href',
       '/reports/stakeholder-projects/print?projectId=501&stakeholderId=10',
     )
     expect(
       screen.getByRole('table', {
-        name: 'Alicia transaction details',
+        name: 'Alicia, detalle de transacciones',
       }),
     ).toBeVisible()
     expect(screen.getByText('Distribution')).toBeVisible()
     expect(screen.getAllByText('$125.50').length).toBeGreaterThan(0)
     expect(
       screen.getByRole('button', {
-        name: 'Add transaction',
+        name: 'Agregar transacción',
       }),
     ).toBeVisible()
     expect(within(projectRegion).queryByText('Bruno')).not.toBeInTheDocument()
@@ -315,50 +328,64 @@ describe('StakeholderProjectsReportPage', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Stakeholder Projects',
+        name: 'Proyectos por socio',
       }),
     ).toBeVisible()
-    expect(screen.getByText('Printable report')).toBeVisible()
+    expect(screen.getByText('Reporte para imprimir')).toBeVisible()
     expect(
-      screen.queryByRole('combobox', { name: 'Project' }),
+      screen.queryByRole('combobox', { name: 'Proyecto' }),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('combobox', { name: 'Stakeholder' }),
+      screen.queryByRole('combobox', { name: 'Socio' }),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('link', { name: 'Print report' }),
+      screen.queryByRole('link', { name: 'Imprimir reporte' }),
     ).not.toBeInTheDocument()
 
     const projectRegion = await screen.findByRole('region', {
-      name: 'Maple Shelf project 501',
+      name: 'Maple Shelf, proyecto 501',
     })
     expect(
       await within(projectRegion).findByRole('link', {
         name: 'Maple Shelf',
       }),
     ).toHaveAttribute('href', '/products/42')
-    expect(within(projectRegion).getByText('Project #501')).toBeVisible()
+    expect(within(projectRegion).getByText('Proyecto #501')).toBeVisible()
     expect(within(projectRegion).getByText('$310.00')).toBeVisible()
 
     const stakeholderRegion = screen.getByRole('region', {
-      name: 'Alicia stakeholder detail',
+      name: 'Alicia, detalle del socio',
     })
     expect(within(stakeholderRegion).getByText('$90.55')).toBeVisible()
 
     const transactionTable = await screen.findByRole('table', {
-      name: 'Alicia transaction details',
+      name: 'Alicia, detalle de transacciones',
     })
     expect(within(transactionTable).getByText('Distribution')).toBeVisible()
-    expect(within(transactionTable).getByText('Payment')).toBeVisible()
+    expect(within(transactionTable).getByText('Pago')).toBeVisible()
+    expect(
+      within(transactionTable).getByRole('columnheader', { name: 'Fecha' }),
+    ).toBeVisible()
+    expect(
+      within(transactionTable).getByRole('columnheader', { name: 'Tipo' }),
+    ).toBeVisible()
+    expect(
+      within(transactionTable).getByRole('columnheader', {
+        name: 'Descripción',
+      }),
+    ).toBeVisible()
+    expect(
+      within(transactionTable).getByRole('columnheader', { name: 'Monto' }),
+    ).toBeVisible()
     expect(within(transactionTable).getByText('$125.50')).toBeVisible()
     expect(
-      screen.queryByRole('button', { name: 'Add transaction' }),
+      screen.queryByRole('button', { name: 'Agregar transacción' }),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /Edit row/i }),
+      screen.queryByRole('button', { name: /Editar fila/i }),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /Remove row/i }),
+      screen.queryByRole('button', { name: /Eliminar fila/i }),
     ).not.toBeInTheDocument()
   })
 
@@ -383,12 +410,12 @@ describe('StakeholderProjectsReportPage', () => {
 
     await selectAntOption(
       user,
-      await screen.findByRole('combobox', { name: 'Project' }),
-      'Project #501 - Maple Shelf',
+      await screen.findByRole('combobox', { name: 'Proyecto' }),
+      'Proyecto #501 - Maple Shelf',
     )
     await selectAntOption(
       user,
-      screen.getByRole('combobox', { name: 'Stakeholder' }),
+      screen.getByRole('combobox', { name: 'Socio' }),
       'Alicia',
     )
 
@@ -396,7 +423,7 @@ describe('StakeholderProjectsReportPage', () => {
 
     expect(alert).toHaveClass('ant-alert-error')
     expect(alert).toHaveTextContent(
-      'Unable to load the stakeholder projects report.',
+      'No se pudo cargar el reporte de proyectos por socio.',
     )
   })
 })

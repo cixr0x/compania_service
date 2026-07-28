@@ -55,7 +55,7 @@ const navigationSections: NavigationSection[] = [
         icon: <BarChartOutlined />,
       },
       {
-        label: 'Stakeholder Projects',
+        label: 'Proyectos por socio',
         path: '/reports/stakeholder-projects',
         icon: <ProjectOutlined />,
       },
