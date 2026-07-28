@@ -73,9 +73,7 @@ export class ProductsService {
   private normalizeProductUpdateData(
     dto: UpdateProductDto,
   ): Prisma.ProductUncheckedUpdateInput {
-    return this.normalizeProductWriteData(
-      dto,
-    ) as Prisma.ProductUncheckedUpdateInput;
+    return this.normalizeProductWriteData(dto);
   }
 
   private normalizeProductWriteData(dto: CreateProductDto | UpdateProductDto) {

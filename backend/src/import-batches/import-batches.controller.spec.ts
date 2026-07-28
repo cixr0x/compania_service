@@ -1,12 +1,13 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import type { Server } from 'node:http';
 import request from 'supertest';
 import { createValidationException } from '../common/errors/validation-error.factory';
 import { ImportBatchesController } from './import-batches.controller';
 import { ImportBatchesService } from './import-batches.service';
 
 describe('ImportBatchesController', () => {
-  let app: INestApplication;
+  let app: INestApplication<Server>;
   const importBatchesService = {
     updateStageRow: jest.fn(),
   };
@@ -23,7 +24,7 @@ describe('ImportBatchesController', () => {
       ],
     }).compile();
 
-    app = module.createNestApplication();
+    app = module.createNestApplication<INestApplication<Server>>();
     app.useGlobalPipes(
       new ValidationPipe({
         exceptionFactory: createValidationException,
