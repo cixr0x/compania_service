@@ -1,4 +1,5 @@
 import { SettingsService } from './settings.service';
+import { asPrismaService } from '../../test/prisma-service.mock';
 
 describe('SettingsService', () => {
   const prisma = {
@@ -9,7 +10,7 @@ describe('SettingsService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     },
-  } as any;
+  };
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -22,7 +23,7 @@ describe('SettingsService', () => {
       value: '16',
     });
 
-    const service = new SettingsService(prisma);
+    const service = new SettingsService(asPrismaService(prisma));
     const result = await service.create({
       code: 'default_margin',
       name: 'Default Margin',
@@ -44,7 +45,7 @@ describe('SettingsService', () => {
   it('searches settings by code or name', async () => {
     jest.spyOn(prisma.setting, 'findMany').mockResolvedValue([]);
 
-    const service = new SettingsService(prisma);
+    const service = new SettingsService(asPrismaService(prisma));
     await service.findAll({ page: 2, pageSize: 10, search: 'margin' });
 
     expect(prisma.setting.findMany).toHaveBeenCalledWith({

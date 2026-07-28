@@ -1,5 +1,6 @@
 import { StakeholdersService } from './stakeholders.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { asPrismaService } from '../../test/prisma-service.mock';
+import { publicProjectSummarySelect } from '../projects/project-public-select';
 
 describe('StakeholdersService', () => {
   const prisma = {
@@ -7,7 +8,7 @@ describe('StakeholdersService', () => {
       create: jest.fn(),
       findUnique: jest.fn(),
     },
-  } as any;
+  };
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -17,7 +18,7 @@ describe('StakeholdersService', () => {
       name: 'Primary Investor',
     });
 
-    const service = new StakeholdersService(prisma);
+    const service = new StakeholdersService(asPrismaService(prisma));
     const result = await service.create({ name: 'Primary Investor' });
 
     expect(prisma.stakeholder.create).toHaveBeenCalledWith({
@@ -44,7 +45,7 @@ describe('StakeholdersService', () => {
       ],
     });
 
-    const service = new StakeholdersService(prisma as PrismaService);
+    const service = new StakeholdersService(asPrismaService(prisma));
     const result = await service.findOne(10);
 
     expect(prisma.stakeholder.findUnique).toHaveBeenCalledWith({
@@ -53,20 +54,14 @@ describe('StakeholdersService', () => {
         projects: {
           include: {
             project: {
-              select: expect.objectContaining({
-                name: true,
-                product: true,
-              }),
+              select: publicProjectSummarySelect,
             },
           },
           orderBy: { idProjectStakeholder: 'desc' },
         },
       },
     });
-    expect(
-      prisma.stakeholder.findUnique.mock.calls[0][0].include.projects.include
-        .project.select,
-    ).not.toHaveProperty('createdDate');
+    expect(publicProjectSummarySelect).not.toHaveProperty('createdDate');
     expect(result.projects[0].project.product.name).toBe('Maple Shelf');
   });
 });
