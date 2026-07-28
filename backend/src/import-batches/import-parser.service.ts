@@ -1,8 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { parse as parseCsv } from 'csv-parse/sync';
 import type { Workbook as WorkbookType } from 'exceljs';
+import { createRequire } from 'node:module';
 import { extname } from 'path';
 import { ParsedImportRow } from './import-validator.service';
+
+const requireModule = createRequire(__filename);
 
 const HEADER_ALIASES = {
   externalProductId: new Set(['externalproductid', 'externalid', 'id']),
@@ -28,13 +31,16 @@ export class ImportParserService {
   }
 
   private parseCsv(buffer: Buffer): ParsedImportRow[] {
-    const records = parseCsv(buffer, {
+    const records = parseCsv<{
+      record: Record<string, unknown>;
+      info: { lines: number };
+    }>(buffer, {
       bom: true,
       columns: true,
       info: true,
       skip_empty_lines: true,
       trim: false,
-    }) as { record: Record<string, unknown>; info: { lines: number } }[];
+    });
 
     return records.map(({ record, info }) =>
       this.toParsedRow(info.lines, record),
@@ -96,7 +102,10 @@ export class ImportParserService {
 }
 
 function loadExcelJS(): typeof import('exceljs') {
-  return require('exceljs/dist/es5/exceljs.nodejs') as typeof import('exceljs');
+  const excelJsModule: unknown = requireModule(
+    'exceljs/dist/es5/exceljs.nodejs',
+  );
+  return excelJsModule as typeof import('exceljs');
 }
 
 function stringField(
@@ -108,7 +117,7 @@ function stringField(
     return null;
   }
 
-  return String(value).trim();
+  return valueToString(value).trim();
 }
 
 function numericField(
@@ -131,7 +140,7 @@ function numericField(
 function findValue(
   row: Record<string, unknown>,
   aliases: Set<string>,
-): unknown | undefined {
+): unknown {
   for (const [key, value] of Object.entries(row)) {
     if (aliases.has(normalizeHeader(key))) {
       return value;
@@ -155,12 +164,38 @@ function cellToString(value: unknown): string {
   }
 
   if (typeof value === 'object' && 'text' in value) {
-    return String((value as { text: unknown }).text);
+    return valueToString(value.text);
   }
 
   if (typeof value === 'object' && 'result' in value) {
-    return String((value as { result: unknown }).result ?? '');
+    return valueToString(value.result);
   }
 
-  return String(value);
+  return valueToString(value);
+}
+
+function valueToString(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean' ||
+    typeof value === 'bigint' ||
+    typeof value === 'symbol'
+  ) {
+    return String(value);
+  }
+
+  if (value instanceof Date) {
+    return value.toString();
+  }
+
+  if (typeof value === 'function') {
+    return Function.prototype.toString.call(value);
+  }
+
+  return Object.prototype.toString.call(value);
 }
