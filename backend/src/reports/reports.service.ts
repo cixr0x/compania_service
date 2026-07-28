@@ -28,6 +28,9 @@ type SalesSummaryRow = Record<ReportSource, SalesSummarySourceTotals> & {
   productName: string;
   profit: number;
   projectId: number;
+  projectName: string;
+  stakeholderIncome: number | null;
+  stakePercentage: number | null;
   totalAmount: number;
   totalAveragePrice: number;
   totalQuantity: number;
@@ -88,6 +91,7 @@ type StakeholderProjectTransactionInput = {
 
 const salesReportInclude = {
   product: true,
+  project: true,
 };
 
 @Injectable()
@@ -121,15 +125,58 @@ export class ReportsService {
     query: SalesSummaryQueryDto,
   ): Promise<SalesSummaryResponse> {
     const { gte, lt } = getDateRange(query);
+    const stakeholderProjects =
+      query.stakeholderId === undefined
+        ? []
+        : await this.prisma.project.findMany({
+            orderBy: [{ name: 'asc' }, { idProject: 'asc' }],
+            select: {
+              idProject: true,
+              name: true,
+              product: true,
+              stakeholders: {
+                select: { stakePercentage: true },
+                where: { idStakeholder: query.stakeholderId },
+              },
+            },
+            where: {
+              stakeholders: {
+                some: { idStakeholder: query.stakeholderId },
+              },
+            },
+          });
+    const stakeholderProjectsById = new Map(
+      stakeholderProjects.map((project) => [project.idProject, project]),
+    );
     const sales = await this.prisma.sale.findMany({
       include: salesReportInclude,
-      orderBy: [{ product: { name: 'asc' } }, { idProject: 'asc' }],
+      orderBy: [{ project: { name: 'asc' } }, { idProject: 'asc' }],
       where: {
         date: { gte, lt },
+        ...(query.stakeholderId === undefined
+          ? {}
+          : { idProject: { in: [...stakeholderProjectsById.keys()] } }),
       },
     });
-    const rowsByProductProject = new Map<string, SalesSummaryAccumulator>();
+    const rowsByProject = new Map<number, SalesSummaryAccumulator>();
     let hasSurfaceSales = false;
+
+    for (const project of stakeholderProjects) {
+      const stakePercentage = toNumber(
+        project.stakeholders[0]?.stakePercentage,
+      );
+      rowsByProject.set(
+        project.idProject,
+        createEmptyRow({
+          productId: project.product.id,
+          productImage: normalizeImageUrl(project.product.image),
+          productName: project.product.name,
+          projectId: project.idProject,
+          projectName: project.name,
+          stakePercentage,
+        }),
+      );
+    }
 
     for (const sale of sales) {
       const source = sale.source as ImportSource;
@@ -137,14 +184,15 @@ export class ReportsService {
         hasSurfaceSales = true;
       }
 
-      const key = `${sale.product.id}:${sale.idProject}`;
       const row =
-        rowsByProductProject.get(key) ??
+        rowsByProject.get(sale.idProject) ??
         createEmptyRow({
           productId: sale.product.id,
           productImage: normalizeImageUrl(sale.product.image),
           productName: sale.product.name,
           projectId: sale.idProject,
+          projectName: sale.project.name,
+          stakePercentage: null,
         });
 
       if (isReportSource(source)) {
@@ -158,10 +206,10 @@ export class ReportsService {
       row.profit += toNumber(sale.profit);
       row.ownerProfit += toNumber(sale.ownerProfit);
       recomputeFinancials(row);
-      rowsByProductProject.set(key, row);
+      rowsByProject.set(sale.idProject, row);
     }
 
-    const rows = [...rowsByProductProject.values()].map(stripAccumulator);
+    const rows = [...rowsByProject.values()].map(stripAccumulator);
     const sources: ReportSource[] = hasSurfaceSales
       ? [...ALL_REPORT_SOURCES]
       : [...BASE_REPORT_SOURCES];
@@ -295,11 +343,15 @@ function createEmptyRow({
   productImage,
   productName,
   projectId,
+  projectName,
+  stakePercentage,
 }: {
   productId: number;
   productImage: string | null;
   productName: string;
   projectId: number;
+  projectName: string;
+  stakePercentage: number | null;
 }): SalesSummaryAccumulator {
   return {
     ecommerce: createEmptySalesSourceTotals(),
@@ -311,6 +363,9 @@ function createEmptyRow({
     productName,
     profit: 0,
     projectId,
+    projectName,
+    stakeholderIncome: stakePercentage === null ? null : 0,
+    stakePercentage,
     store: createEmptySalesSourceTotals(),
     surface: createEmptySalesSourceTotals(),
     totalAmount: 0,
@@ -373,6 +428,12 @@ function recomputeFinancials(row: SalesSummaryAccumulator) {
   row.fee = roundCurrency(row.fee);
   row.profit = roundCurrency(row.profit);
   row.ownerProfit = roundCurrency(row.ownerProfit);
+  row.stakeholderIncome =
+    row.stakePercentage === null
+      ? null
+      : roundCurrency(
+          (row.totalAmount - row.fee) * (row.stakePercentage / 100),
+        );
 
   for (const source of ALL_REPORT_SOURCES) {
     row[source].amount = roundCurrency(row[source].amount);

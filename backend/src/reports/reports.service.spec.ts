@@ -54,6 +54,7 @@ describe('ReportsService', () => {
         project: {
           adminCost: '20.00',
           idProject: 501,
+          name: 'Maple Shelf Launch',
           productionCost: '100.00',
         },
         quantity: 2,
@@ -74,6 +75,7 @@ describe('ReportsService', () => {
         project: {
           adminCost: '20.00',
           idProject: 501,
+          name: 'Maple Shelf Launch',
           productionCost: '100.00',
         },
         quantity: 1,
@@ -94,6 +96,7 @@ describe('ReportsService', () => {
         project: {
           adminCost: '30.00',
           idProject: 502,
+          name: 'Maple Shelf Holiday Run',
           productionCost: '70.00',
         },
         quantity: 3,
@@ -107,8 +110,9 @@ describe('ReportsService', () => {
     expect(prisma.sale.findMany).toHaveBeenCalledWith({
       include: {
         product: true,
+        project: true,
       },
-      orderBy: [{ product: { name: 'asc' } }, { idProject: 'asc' }],
+      orderBy: [{ project: { name: 'asc' } }, { idProject: 'asc' }],
       where: {
         date: {
           gte: new Date('2026-05-01T00:00:00.000Z'),
@@ -128,6 +132,9 @@ describe('ReportsService', () => {
         productName: 'Maple Shelf',
         profit: 330,
         projectId: 501,
+        projectName: 'Maple Shelf Launch',
+        stakeholderIncome: null,
+        stakePercentage: null,
         store: { amount: 200, averagePrice: 100, quantity: 2 },
         surface: { amount: 0, averagePrice: 0, quantity: 0 },
         totalAmount: 350,
@@ -144,6 +151,9 @@ describe('ReportsService', () => {
         productName: 'Maple Shelf',
         profit: 260,
         projectId: 502,
+        projectName: 'Maple Shelf Holiday Run',
+        stakeholderIncome: null,
+        stakePercentage: null,
         store: { amount: 0, averagePrice: 0, quantity: 0 },
         surface: { amount: 0, averagePrice: 0, quantity: 0 },
         totalAmount: 300,
@@ -169,6 +179,7 @@ describe('ReportsService', () => {
         project: {
           adminCost: '10.00',
           idProject: 701,
+          name: 'Event Kit Surface Run',
           productionCost: '20.00',
         },
         quantity: 4,
@@ -186,6 +197,113 @@ describe('ReportsService', () => {
       quantity: 4,
     });
     expect(result.rows[0].totalAveragePrice).toBe(20);
+  });
+
+  it('includes every assigned project and calculates period income for a selected stakeholder', async () => {
+    jest.spyOn(prisma.project, 'findMany').mockResolvedValue([
+      {
+        idProject: 501,
+        name: 'Maple Shelf Launch',
+        product: {
+          id: 42,
+          image: 'https://example.test/maple-shelf.jpg',
+          name: 'Maple Shelf',
+        },
+        stakeholders: [{ stakePercentage: '60.00' }],
+      },
+      {
+        idProject: 503,
+        name: 'Maple Shelf Reserve',
+        product: {
+          id: 42,
+          image: 'https://example.test/maple-shelf.jpg',
+          name: 'Maple Shelf',
+        },
+        stakeholders: [{ stakePercentage: '25.00' }],
+      },
+    ]);
+    jest.spyOn(prisma.sale, 'findMany').mockResolvedValue([
+      {
+        amount: '350.00',
+        fee: '7.00',
+        idProject: 501,
+        ownerProfit: '85.75',
+        product: {
+          id: 42,
+          image: 'https://example.test/maple-shelf.jpg',
+          name: 'Maple Shelf',
+        },
+        profit: '330.00',
+        project: {
+          idProject: 501,
+          name: 'Maple Shelf Launch',
+        },
+        quantity: 3,
+        source: 'store',
+      },
+    ]);
+
+    const service = new ReportsService(prisma as PrismaService);
+    const result = await service.getSalesSummary({
+      year: 2026,
+      stakeholderId: 10,
+    });
+
+    expect(prisma.project.findMany).toHaveBeenCalledWith({
+      orderBy: [{ name: 'asc' }, { idProject: 'asc' }],
+      select: {
+        idProject: true,
+        name: true,
+        product: true,
+        stakeholders: {
+          select: { stakePercentage: true },
+          where: { idStakeholder: 10 },
+        },
+      },
+      where: {
+        stakeholders: {
+          some: { idStakeholder: 10 },
+        },
+      },
+    });
+    expect(prisma.sale.findMany).toHaveBeenCalledWith({
+      include: {
+        product: true,
+        project: true,
+      },
+      orderBy: [{ project: { name: 'asc' } }, { idProject: 'asc' }],
+      where: {
+        date: {
+          gte: new Date('2026-01-01T00:00:00.000Z'),
+          lt: new Date('2027-01-01T00:00:00.000Z'),
+        },
+        idProject: { in: [501, 503] },
+      },
+    });
+    expect(result.sources).toEqual(['store', 'ecommerce', 'event']);
+    expect(result.rows).toHaveLength(2);
+    expect(result.rows[0]).toEqual(
+      expect.objectContaining({
+        fee: 7,
+        projectId: 501,
+        projectName: 'Maple Shelf Launch',
+        stakeholderIncome: 205.8,
+        stakePercentage: 60,
+        totalAmount: 350,
+        totalQuantity: 3,
+      }),
+    );
+    expect(result.rows[1]).toEqual(
+      expect.objectContaining({
+        fee: 0,
+        projectId: 503,
+        projectName: 'Maple Shelf Reserve',
+        stakeholderIncome: 0,
+        stakePercentage: 25,
+        totalAmount: 0,
+        totalQuantity: 0,
+      }),
+    );
   });
 
   it('builds an all-time stakeholder project report for one project stakeholder', async () => {

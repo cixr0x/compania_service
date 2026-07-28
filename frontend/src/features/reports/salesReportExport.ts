@@ -16,9 +16,9 @@ type SalesReportSourceTotals = {
 
 type SalesReportTotals = {
   fee: number
-  ownerProfit: number
   profit: number
   sourceTotals: Record<SalesReportSource, SalesReportSourceTotals>
+  stakeholderIncome: number
   totalAmount: number
   totalAveragePrice: number
   totalQuantity: number
@@ -26,9 +26,10 @@ type SalesReportTotals = {
 
 type SalesReportExcelExport = {
   monthLabel: string
-  productLabel: string
+  projectLabel: string
   rows: SalesReportRow[]
   sources: SalesReportSource[]
+  stakeholderLabel?: string
   totals: SalesReportTotals
   year: string
 }
@@ -51,17 +52,25 @@ export function downloadSalesReportExcel(exportData: SalesReportExcelExport) {
 
 function buildSalesReportExcelFilename({
   monthLabel,
-  productLabel,
+  projectLabel,
+  stakeholderLabel,
   year,
-}: Pick<SalesReportExcelExport, 'monthLabel' | 'productLabel' | 'year'>) {
+}: Pick<
+  SalesReportExcelExport,
+  'monthLabel' | 'projectLabel' | 'stakeholderLabel' | 'year'
+>) {
   const parts = ['sales-report', year]
 
   if (monthLabel && monthLabel !== 'Full year') {
     parts.push(slugify(monthLabel))
   }
 
-  if (productLabel && productLabel !== 'All products') {
-    parts.push(slugify(productLabel))
+  if (stakeholderLabel) {
+    parts.push(slugify(stakeholderLabel))
+  }
+
+  if (projectLabel && projectLabel !== 'All projects') {
+    parts.push(slugify(projectLabel))
   }
 
   return `${parts.join('-')}.xls`
@@ -69,24 +78,38 @@ function buildSalesReportExcelFilename({
 
 function buildSalesReportExcelHtml({
   monthLabel,
-  productLabel,
+  projectLabel,
   rows,
   sources,
+  stakeholderLabel,
   totals,
   year,
 }: SalesReportExcelExport) {
-  const columnCount = 1 + sources.length * 3 + 6
+  const hasSelectedStakeholder = Boolean(stakeholderLabel)
+  const columnCount =
+    1 + sources.length * 3 + 5 + (hasSelectedStakeholder ? 2 : 0)
   const headerRows = [
     `<tr><th colspan="${columnCount}">Sales Report</th></tr>`,
     `<tr><td>Year</td><td>${escapeHtml(year)}</td></tr>`,
     `<tr><td>Month</td><td>${escapeHtml(monthLabel)}</td></tr>`,
-    `<tr><td>Product</td><td>${escapeHtml(productLabel)}</td></tr>`,
+    `<tr><td>Project</td><td>${escapeHtml(projectLabel)}</td></tr>`,
+    ...(stakeholderLabel
+      ? [
+          `<tr><td>Stakeholder</td><td>${escapeHtml(stakeholderLabel)}</td></tr>`,
+        ]
+      : []),
     '<tr></tr>',
-    buildGroupedHeaderRow(sources),
+    buildGroupedHeaderRow(sources, hasSelectedStakeholder),
     buildColumnHeaderRow(sources),
   ].join('')
-  const bodyRows = rows.map((row) => buildDataRow(row, sources)).join('')
-  const totalsRow = buildTotalsRow(totals, sources)
+  const bodyRows = rows
+    .map((row) => buildDataRow(row, sources, hasSelectedStakeholder))
+    .join('')
+  const totalsRow = buildTotalsRow(
+    totals,
+    sources,
+    hasSelectedStakeholder,
+  )
 
   return `<!doctype html>
 <html>
@@ -110,10 +133,13 @@ function buildSalesReportExcelHtml({
 </html>`
 }
 
-function buildGroupedHeaderRow(sources: SalesReportSource[]) {
+function buildGroupedHeaderRow(
+  sources: SalesReportSource[],
+  hasSelectedStakeholder: boolean,
+) {
   return [
     '<tr>',
-    '<th rowspan="2">Product</th>',
+    '<th rowspan="2">Project</th>',
     ...sources.map(
       (source) => `<th colspan="3">${escapeHtml(sourceLabels[source])}</th>`,
     ),
@@ -122,7 +148,12 @@ function buildGroupedHeaderRow(sources: SalesReportSource[]) {
     '<th rowspan="2">Avg Price</th>',
     '<th rowspan="2">Fee</th>',
     '<th rowspan="2">Profit</th>',
-    '<th rowspan="2">Owner Profit</th>',
+    ...(hasSelectedStakeholder
+      ? [
+          '<th rowspan="2">Stake %</th>',
+          '<th rowspan="2">Stakeholder Income</th>',
+        ]
+      : []),
     '</tr>',
   ].join('')
 }
@@ -139,10 +170,14 @@ function buildColumnHeaderRow(sources: SalesReportSource[]) {
   ].join('')
 }
 
-function buildDataRow(row: SalesReportRow, sources: SalesReportSource[]) {
+function buildDataRow(
+  row: SalesReportRow,
+  sources: SalesReportSource[],
+  hasSelectedStakeholder: boolean,
+) {
   return [
     '<tr>',
-    textCell(row.productName),
+    textCell(row.projectName),
     ...sources.flatMap((source) => [
       numberCell(row[source].quantity),
       moneyCell(row[source].amount),
@@ -153,7 +188,12 @@ function buildDataRow(row: SalesReportRow, sources: SalesReportSource[]) {
     moneyCell(row.totalAveragePrice),
     moneyCell(row.fee),
     moneyCell(row.profit),
-    moneyCell(row.ownerProfit),
+    ...(hasSelectedStakeholder
+      ? [
+          percentageCell(row.stakePercentage),
+          moneyCell(row.stakeholderIncome ?? 0),
+        ]
+      : []),
     '</tr>',
   ].join('')
 }
@@ -161,6 +201,7 @@ function buildDataRow(row: SalesReportRow, sources: SalesReportSource[]) {
 function buildTotalsRow(
   totals: SalesReportTotals,
   sources: SalesReportSource[],
+  hasSelectedStakeholder: boolean,
 ) {
   return [
     '<tr class="total">',
@@ -175,7 +216,9 @@ function buildTotalsRow(
     moneyCell(totals.totalAveragePrice),
     moneyCell(totals.fee),
     moneyCell(totals.profit),
-    moneyCell(totals.ownerProfit),
+    ...(hasSelectedStakeholder
+      ? [textCell('-'), moneyCell(totals.stakeholderIncome)]
+      : []),
     '</tr>',
   ].join('')
 }
@@ -190,6 +233,10 @@ function numberCell(value: number) {
 
 function moneyCell(value: number) {
   return `<td class="number">${escapeHtml(formatCurrency(value))}</td>`
+}
+
+function percentageCell(value: number | null) {
+  return textCell(value === null ? '-' : `${value}%`)
 }
 
 function escapeHtml(value: string) {

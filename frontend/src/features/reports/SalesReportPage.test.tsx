@@ -28,6 +28,9 @@ const yearlyReport = {
       productName: 'Maple Shelf',
       profit: 343,
       projectId: 501,
+      projectName: 'Maple Shelf Launch',
+      stakeholderIncome: null,
+      stakePercentage: null,
       store: { amount: 200, averagePrice: 100, quantity: 2 },
       surface: { amount: 0, averagePrice: 0, quantity: 0 },
       totalAmount: 350,
@@ -44,6 +47,9 @@ const yearlyReport = {
       productName: 'Walnut Table',
       profit: 420,
       projectId: 502,
+      projectName: 'Walnut Table Holiday Run',
+      stakeholderIncome: null,
+      stakePercentage: null,
       store: { amount: 100, averagePrice: 100, quantity: 1 },
       surface: { amount: 0, averagePrice: 0, quantity: 0 },
       totalAmount: 450,
@@ -62,9 +68,13 @@ const monthlyReport = {
       fee: 0,
       ownerProfit: 40,
       productId: 88,
+      productImage: null,
       productName: 'Event Kit',
       profit: 80,
       projectId: 701,
+      projectName: 'Event Kit Surface Run',
+      stakeholderIncome: null,
+      stakePercentage: null,
       store: { amount: 0, averagePrice: 0, quantity: 0 },
       surface: { amount: 80, averagePrice: 20, quantity: 4 },
       totalAmount: 80,
@@ -73,6 +83,55 @@ const monthlyReport = {
     },
   ],
   sources: ['store', 'ecommerce', 'event', 'surface'],
+}
+
+const stakeholders = [
+  { idStakeholder: 10, name: 'Alicia' },
+  { idStakeholder: 11, name: 'Bruno' },
+]
+
+const aliciaReport = {
+  rows: [
+    {
+      ecommerce: { amount: 150, averagePrice: 150, quantity: 1 },
+      event: { amount: 0, averagePrice: 0, quantity: 0 },
+      fee: 7,
+      ownerProfit: 85.75,
+      productId: 42,
+      productImage: 'https://example.test/maple-shelf.jpg',
+      productName: 'Maple Shelf',
+      profit: 343,
+      projectId: 501,
+      projectName: 'Maple Shelf Launch',
+      stakeholderIncome: 205.8,
+      stakePercentage: 60,
+      store: { amount: 200, averagePrice: 100, quantity: 2 },
+      surface: { amount: 0, averagePrice: 0, quantity: 0 },
+      totalAmount: 350,
+      totalAveragePrice: 116.67,
+      totalQuantity: 3,
+    },
+    {
+      ecommerce: { amount: 0, averagePrice: 0, quantity: 0 },
+      event: { amount: 0, averagePrice: 0, quantity: 0 },
+      fee: 0,
+      ownerProfit: 0,
+      productId: 44,
+      productImage: null,
+      productName: 'Oak Desk',
+      profit: 0,
+      projectId: 503,
+      projectName: 'Oak Desk Reserve',
+      stakeholderIncome: 0,
+      stakePercentage: 25,
+      store: { amount: 0, averagePrice: 0, quantity: 0 },
+      surface: { amount: 0, averagePrice: 0, quantity: 0 },
+      totalAmount: 0,
+      totalAveragePrice: 0,
+      totalQuantity: 0,
+    },
+  ],
+  sources: ['store', 'ecommerce', 'event'],
 }
 
 function renderReportsRoute() {
@@ -107,11 +166,15 @@ describe('SalesReportPage', () => {
     vi.clearAllMocks()
   })
 
-  it('renders the yearly sales report with grouped source columns and no project id column', async () => {
+  it('renders the yearly sales report grouped and filtered by project', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation((path: string) => {
       if (path === '/reports/sales-summary/periods') {
         return Promise.resolve([{ year: 2026, months: [5, 4] }])
+      }
+
+      if (path === '/stakeholders?pageSize=100') {
+        return Promise.resolve(stakeholders)
       }
 
       if (path === '/reports/sales-summary?year=2026') {
@@ -136,26 +199,36 @@ describe('SalesReportPage', () => {
     })
     const yearSelect = screen.getByRole('combobox', { name: 'Year' })
     const monthSelect = screen.getByRole('combobox', { name: 'Month' })
-    const productSelect = screen.getByRole('combobox', { name: 'Product' })
+    const stakeholderSelect = screen.getByRole('combobox', {
+      name: 'Stakeholder',
+    })
+    const projectSelect = screen.getByRole('combobox', { name: 'Project' })
     const controlsRow = reportRegion.querySelector('.report-controls')
 
     expect(controlsRow).toBeInTheDocument()
     expect(controlsRow).toContainElement(yearSelect)
     expect(controlsRow).toContainElement(monthSelect)
-    expect(controlsRow).toContainElement(productSelect)
+    expect(controlsRow).toContainElement(stakeholderSelect)
+    expect(controlsRow).toContainElement(projectSelect)
     expect(yearSelect.closest('.ant-space-item')?.parentElement).toBe(
       monthSelect.closest('.ant-space-item')?.parentElement,
     )
     expect(yearSelect.closest('.ant-space-item')?.parentElement).toBe(
-      productSelect.closest('.ant-space-item')?.parentElement,
+      stakeholderSelect.closest('.ant-space-item')?.parentElement,
+    )
+    expect(yearSelect.closest('.ant-space-item')?.parentElement).toBe(
+      projectSelect.closest('.ant-space-item')?.parentElement,
     )
 
     await waitFor(() => {
       expect(yearSelect.closest('.ant-select')).toHaveTextContent('2026')
     })
     expect(monthSelect.closest('.ant-select')).toHaveTextContent('Full year')
-    expect(productSelect.closest('.ant-select')).toHaveTextContent(
-      'All products',
+    expect(stakeholderSelect.closest('.ant-select')).toHaveTextContent(
+      'All stakeholders',
+    )
+    expect(projectSelect.closest('.ant-select')).toHaveTextContent(
+      'All projects',
     )
 
     const columnHeaders = await screen.findAllByRole('columnheader')
@@ -164,11 +237,11 @@ describe('SalesReportPage', () => {
     expect(table.closest('.ant-table-wrapper')).toBeInTheDocument()
     expect(table.closest('.sales-report-table')).toBeInTheDocument()
     expect(table.closest('.ant-table')).toHaveClass('ant-table-small')
-    expect(table).toHaveStyle({ width: '1598px' })
+    expect(table).toHaveStyle({ width: '1498px' })
     expect(
       within(table).queryByRole('columnheader', { name: 'Project ID' }),
     ).not.toBeInTheDocument()
-    expect(columnHeaders[0]).toHaveTextContent('Product')
+    expect(columnHeaders[0]).toHaveTextContent('Project')
     const storeHeader = within(table).getByRole('columnheader', {
       name: 'Store',
     })
@@ -204,14 +277,16 @@ describe('SalesReportPage', () => {
       within(table).getAllByRole('columnheader', { name: 'Avg Price' }),
     ).toHaveLength(4)
 
-    const reportRow = screen.getByText('Maple Shelf').closest('tr')!
+    const reportRow = screen.getByText('Maple Shelf Launch').closest('tr')!
     expect(within(reportRow).queryByText('501')).not.toBeInTheDocument()
-    expect(within(reportRow).getByText('Maple Shelf')).toBeVisible()
+    expect(within(reportRow).getByText('Maple Shelf Launch')).toBeVisible()
     expect(
-      within(reportRow).getByRole('link', { name: 'Maple Shelf' }),
-    ).toHaveAttribute('href', '/products/42')
+      within(reportRow).getByRole('link', { name: 'Maple Shelf Launch' }),
+    ).toHaveAttribute('href', '/projects/501')
     expect(
-      within(reportRow).getByRole('img', { name: 'Maple Shelf thumbnail' }),
+      within(reportRow).getByRole('img', {
+        name: 'Maple Shelf Launch thumbnail',
+      }),
     ).toHaveAttribute('src', 'https://example.test/maple-shelf.jpg')
     expect(
       within(reportRow).queryByText('1,000,000.00'),
@@ -223,20 +298,27 @@ describe('SalesReportPage', () => {
     expect(within(reportRow).getByText('$350.00')).toBeVisible()
     expect(within(reportRow).getByText('$7.00')).toBeVisible()
     expect(within(reportRow).getByText('$343.00')).toBeVisible()
-    expect(within(reportRow).getByText('$85.75')).toBeVisible()
+    expect(within(reportRow).queryByText('$85.75')).not.toBeInTheDocument()
+    expect(
+      within(table).queryByRole('columnheader', { name: 'Owner Profit' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(table).queryByRole('columnheader', {
+        name: 'Stakeholder Income',
+      }),
+    ).not.toBeInTheDocument()
 
     const totalsRow = screen.getByText('Totals').closest('tr')!
     expect(within(totalsRow).getByText('$800.00')).toBeVisible()
     expect(within(totalsRow).getByText('$88.89')).toBeVisible()
     expect(within(totalsRow).getByText('$37.00')).toBeVisible()
     expect(within(totalsRow).getByText('$763.00')).toBeVisible()
-    expect(within(totalsRow).getByText('$295.75')).toBeVisible()
 
-    await selectAntOption(user, productSelect, 'Maple Shelf')
+    await selectAntOption(user, projectSelect, 'Maple Shelf Launch')
 
     await waitFor(() => {
       expect(
-        screen.queryByRole('row', { name: /Walnut Table/ }),
+        screen.queryByRole('row', { name: /Walnut Table Holiday Run/ }),
       ).not.toBeInTheDocument()
     })
     const filteredTotalsRow = screen.getByText('Totals').closest('tr')!
@@ -249,6 +331,10 @@ describe('SalesReportPage', () => {
     vi.mocked(getJson).mockImplementation((path: string) => {
       if (path === '/reports/sales-summary/periods') {
         return Promise.resolve([{ year: 2026, months: [5, 4] }])
+      }
+
+      if (path === '/stakeholders?pageSize=100') {
+        return Promise.resolve(stakeholders)
       }
 
       if (path === '/reports/sales-summary?year=2026') {
@@ -264,7 +350,7 @@ describe('SalesReportPage', () => {
 
     renderReportsRoute()
 
-    await screen.findByText('Maple Shelf')
+    await screen.findByText('Maple Shelf Launch')
     const yearSelect = screen.getByRole('combobox', { name: 'Year' })
     const monthSelect = screen.getByRole('combobox', { name: 'Month' })
 
@@ -283,16 +369,86 @@ describe('SalesReportPage', () => {
     ).toBeVisible()
     expect(
       screen.getByRole('columnheader', { name: 'Surface' }).closest('table'),
-    ).toHaveStyle({ width: '1870px' })
-    expect(screen.getByText('Event Kit')).toBeVisible()
+    ).toHaveStyle({ width: '1770px' })
+    expect(screen.getByText('Event Kit Surface Run')).toBeVisible()
 
-    const productSelect = screen.getByRole('combobox', { name: 'Product' })
-    expect(productSelect.closest('.ant-select')).toHaveTextContent(
-      'All products',
+    const projectSelect = screen.getByRole('combobox', { name: 'Project' })
+    expect(projectSelect.closest('.ant-select')).toHaveTextContent(
+      'All projects',
     )
-    await user.click(productSelect)
-    expect(await screen.findByTitle('Event Kit')).toBeInTheDocument()
-    expect(screen.queryByTitle('Maple Shelf')).not.toBeInTheDocument()
+    await user.click(projectSelect)
+    expect(
+      await screen.findByTitle('Event Kit Surface Run'),
+    ).toBeInTheDocument()
+    expect(screen.queryByTitle('Maple Shelf Launch')).not.toBeInTheDocument()
+  })
+
+  it('shows assigned zero-sales projects and stakeholder income when a stakeholder is selected', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation((path: string) => {
+      if (path === '/reports/sales-summary/periods') {
+        return Promise.resolve([{ year: 2026, months: [5, 4] }])
+      }
+
+      if (path === '/stakeholders?pageSize=100') {
+        return Promise.resolve(stakeholders)
+      }
+
+      if (path === '/reports/sales-summary?year=2026') {
+        return Promise.resolve(yearlyReport)
+      }
+
+      if (
+        path === '/reports/sales-summary?year=2026&stakeholderId=10'
+      ) {
+        return Promise.resolve(aliciaReport)
+      }
+
+      return Promise.reject(new Error(`Unexpected GET ${path}`))
+    })
+
+    renderReportsRoute()
+
+    await screen.findByText('Maple Shelf Launch')
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Stakeholder' }),
+      'Alicia',
+    )
+
+    await waitFor(() => {
+      expect(getJson).toHaveBeenCalledWith(
+        '/reports/sales-summary?year=2026&stakeholderId=10',
+      )
+    })
+    expect(await screen.findByText('Oak Desk Reserve')).toBeVisible()
+
+    const stakeholderIncomeHeader = screen.getByRole('columnheader', {
+      name: 'Stakeholder Income',
+    })
+    const table = stakeholderIncomeHeader.closest('table')!
+    expect(table).toHaveStyle({ width: '1718px' })
+    expect(
+      within(table).getByRole('columnheader', { name: 'Stake %' }),
+    ).toBeVisible()
+    expect(
+      within(table).queryByRole('columnheader', { name: 'Owner Profit' }),
+    ).not.toBeInTheDocument()
+
+    const salesRow = screen.getByText('Maple Shelf Launch').closest('tr')!
+    expect(within(salesRow).getByText('60%')).toBeVisible()
+    expect(within(salesRow).getByText('$205.80')).toBeVisible()
+
+    const zeroSalesRow = screen.getByText('Oak Desk Reserve').closest('tr')!
+    expect(within(zeroSalesRow).getByText('25%')).toBeVisible()
+    expect(within(zeroSalesRow).getAllByText('$0.00').length).toBeGreaterThan(0)
+
+    const totalsRow = screen.getByText('Totals').closest('tr')!
+    expect(within(totalsRow).getByText('-')).toBeVisible()
+    expect(within(totalsRow).getByText('$205.80')).toBeVisible()
+    expect(
+      screen.queryByRole('row', { name: /Walnut Table Holiday Run/ }),
+    ).not.toBeInTheDocument()
   })
 
   it('exports the visible report rows to Excel with the current filters', async () => {
@@ -318,8 +474,18 @@ describe('SalesReportPage', () => {
         return Promise.resolve([{ year: 2026, months: [5, 4] }])
       }
 
+      if (path === '/stakeholders?pageSize=100') {
+        return Promise.resolve(stakeholders)
+      }
+
       if (path === '/reports/sales-summary?year=2026') {
         return Promise.resolve(yearlyReport)
+      }
+
+      if (
+        path === '/reports/sales-summary?year=2026&stakeholderId=10'
+      ) {
+        return Promise.resolve(aliciaReport)
       }
 
       return Promise.reject(new Error(`Unexpected GET ${path}`))
@@ -328,11 +494,17 @@ describe('SalesReportPage', () => {
     try {
       renderReportsRoute()
 
-      await screen.findByText('Maple Shelf')
+      await screen.findByText('Maple Shelf Launch')
       await selectAntOption(
         user,
-        screen.getByRole('combobox', { name: 'Product' }),
-        'Maple Shelf',
+        screen.getByRole('combobox', { name: 'Stakeholder' }),
+        'Alicia',
+      )
+      await screen.findByText('Oak Desk Reserve')
+      await selectAntOption(
+        user,
+        screen.getByRole('combobox', { name: 'Project' }),
+        'Maple Shelf Launch',
       )
       await user.click(
         screen.getByRole('button', {
@@ -349,9 +521,14 @@ describe('SalesReportPage', () => {
 
       expect(exportedContent).toContain('Sales Report')
       expect(exportedContent).toContain('2026')
-      expect(exportedContent).toContain('Maple Shelf')
+      expect(exportedContent).toContain('Alicia')
+      expect(exportedContent).toContain('Maple Shelf Launch')
+      expect(exportedContent).toContain('Stake %')
+      expect(exportedContent).toContain('Stakeholder Income')
+      expect(exportedContent).toContain('$205.80')
       expect(exportedContent).toContain('Totals')
-      expect(exportedContent).not.toContain('Walnut Table')
+      expect(exportedContent).not.toContain('Owner Profit')
+      expect(exportedContent).not.toContain('Oak Desk Reserve')
     } finally {
       clickSpy.mockRestore()
       if (originalCreateObjectUrl) {
@@ -383,6 +560,10 @@ describe('SalesReportPage', () => {
         ])
       }
 
+      if (path === '/stakeholders?pageSize=100') {
+        return Promise.resolve(stakeholders)
+      }
+
       if (path === '/reports/sales-summary?year=2026') {
         return Promise.resolve(yearlyReport)
       }
@@ -403,7 +584,7 @@ describe('SalesReportPage', () => {
 
     renderReportsRoute()
 
-    await screen.findByText('Maple Shelf')
+    await screen.findByText('Maple Shelf Launch')
     await selectAntOption(
       user,
       screen.getByRole('combobox', { name: 'Month' }),
@@ -433,6 +614,10 @@ describe('SalesReportPage', () => {
     vi.mocked(getJson).mockImplementation((path: string) => {
       if (path === '/reports/sales-summary/periods') {
         return Promise.resolve([{ year: 2026, months: [5] }])
+      }
+
+      if (path === '/stakeholders?pageSize=100') {
+        return Promise.resolve(stakeholders)
       }
 
       if (path === '/reports/sales-summary?year=2026') {

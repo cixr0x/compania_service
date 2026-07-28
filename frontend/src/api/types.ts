@@ -160,6 +160,9 @@ export type SalesReportRow = Record<SalesReportSource, SalesReportSourceTotals> 
   productName: string
   profit: number
   projectId: number
+  projectName: string
+  stakeholderIncome: number | null
+  stakePercentage: number | null
   totalAmount: number
   totalAveragePrice: number
   totalQuantity: number

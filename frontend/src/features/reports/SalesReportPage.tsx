@@ -19,6 +19,7 @@ import type {
   SalesReportRow,
   SalesReportSource,
   SalesReportSummary,
+  Stakeholder,
 } from '../../api/types'
 import { ProductNameCell } from '../../components/ProductNameCell'
 import { getChannelHeaderClass } from '../../utils/channelHeaders'
@@ -38,14 +39,16 @@ const DEFAULT_REPORT_SOURCES: SalesReportSource[] = [
 ]
 const EMPTY_PERIODS: SalesReportPeriod[] = []
 const EMPTY_REPORT_ROWS: SalesReportRow[] = []
+const EMPTY_STAKEHOLDERS: Stakeholder[] = []
 const REPORT_COLUMN_WIDTHS = {
   fee: 90,
-  ownerProfit: 120,
-  product: 160,
+  project: 180,
   profit: 88,
   sourceAmount: 104,
   sourceAveragePrice: 104,
   sourceQuantity: 64,
+  stakeholderIncome: 132,
+  stakePercentage: 88,
   totalAmount: 120,
   totalAveragePrice: 104,
   totalQuantity: 100,
@@ -55,13 +58,15 @@ const REPORT_SOURCE_GROUP_WIDTH =
   REPORT_COLUMN_WIDTHS.sourceAmount +
   REPORT_COLUMN_WIDTHS.sourceAveragePrice
 const REPORT_STATIC_WIDTH =
-  REPORT_COLUMN_WIDTHS.product +
+  REPORT_COLUMN_WIDTHS.project +
   REPORT_COLUMN_WIDTHS.totalQuantity +
   REPORT_COLUMN_WIDTHS.totalAmount +
   REPORT_COLUMN_WIDTHS.totalAveragePrice +
   REPORT_COLUMN_WIDTHS.fee +
-  REPORT_COLUMN_WIDTHS.profit +
-  REPORT_COLUMN_WIDTHS.ownerProfit
+  REPORT_COLUMN_WIDTHS.profit
+const REPORT_STAKEHOLDER_WIDTH =
+  REPORT_COLUMN_WIDTHS.stakePercentage +
+  REPORT_COLUMN_WIDTHS.stakeholderIncome
 
 const monthFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'long',
@@ -72,17 +77,27 @@ function formatMonth(month: number) {
   return monthFormatter.format(new Date(Date.UTC(2026, month - 1, 1)))
 }
 
-function buildReportPath(year: string, month: string) {
+function buildReportPath(year: string, month: string, stakeholderId: string) {
   const query = new URLSearchParams({ year })
   if (month) {
     query.set('month', month)
+  }
+  if (stakeholderId) {
+    query.set('stakeholderId', stakeholderId)
   }
 
   return `/reports/sales-summary?${query.toString()}`
 }
 
-function getReportTableWidth(sources: SalesReportSource[]) {
-  return REPORT_STATIC_WIDTH + sources.length * REPORT_SOURCE_GROUP_WIDTH
+function getReportTableWidth(
+  sources: SalesReportSource[],
+  hasSelectedStakeholder: boolean,
+) {
+  return (
+    REPORT_STATIC_WIDTH +
+    sources.length * REPORT_SOURCE_GROUP_WIDTH +
+    (hasSelectedStakeholder ? REPORT_STAKEHOLDER_WIDTH : 0)
+  )
 }
 
 function roundCurrency(value: number) {
@@ -109,9 +124,9 @@ function getReportTotals(rows: SalesReportRow[], sources: SalesReportSource[]) {
   ) as Record<SalesReportSource, SalesReportRow[SalesReportSource]>
   const totals = {
     fee: 0,
-    ownerProfit: 0,
     profit: 0,
     sourceTotals,
+    stakeholderIncome: 0,
     totalAmount: 0,
     totalAveragePrice: 0,
     totalQuantity: 0,
@@ -127,7 +142,7 @@ function getReportTotals(rows: SalesReportRow[], sources: SalesReportSource[]) {
     totals.totalAmount += row.totalAmount
     totals.fee += row.fee
     totals.profit += row.profit
-    totals.ownerProfit += row.ownerProfit
+    totals.stakeholderIncome += row.stakeholderIncome ?? 0
   }
 
   for (const source of sources) {
@@ -146,7 +161,7 @@ function getReportTotals(rows: SalesReportRow[], sources: SalesReportSource[]) {
   )
   totals.fee = roundCurrency(totals.fee)
   totals.profit = roundCurrency(totals.profit)
-  totals.ownerProfit = roundCurrency(totals.ownerProfit)
+  totals.stakeholderIncome = roundCurrency(totals.stakeholderIncome)
 
   return totals
 }
@@ -154,7 +169,8 @@ function getReportTotals(rows: SalesReportRow[], sources: SalesReportSource[]) {
 export function SalesReportPage() {
   const [selectedYear, setSelectedYear] = useState<string | null>(null)
   const [selectedMonth, setSelectedMonth] = useState('')
-  const [selectedProductId, setSelectedProductId] = useState('')
+  const [selectedProjectId, setSelectedProjectId] = useState('')
+  const [selectedStakeholderId, setSelectedStakeholderId] = useState('')
   const periodsQuery = useQuery({
     queryKey: ['reports', 'sales-summary-periods'],
     queryFn: () =>
@@ -166,73 +182,108 @@ export function SalesReportPage() {
     () => periods.find((period) => String(period.year) === activeYear),
     [activeYear, periods],
   )
+  const stakeholdersQuery = useQuery({
+    queryKey: ['reports', 'sales-summary', 'stakeholders'],
+    queryFn: () => getJson<Stakeholder[]>('/stakeholders?pageSize=100'),
+  })
+  const stakeholders = stakeholdersQuery.data ?? EMPTY_STAKEHOLDERS
   const reportQuery = useQuery({
     enabled: activeYear !== '',
-    queryKey: ['reports', 'sales-summary', activeYear, selectedMonth],
+    queryKey: [
+      'reports',
+      'sales-summary',
+      activeYear,
+      selectedMonth,
+      selectedStakeholderId,
+    ],
     queryFn: () =>
-      getJson<SalesReportSummary>(buildReportPath(activeYear, selectedMonth)),
+      getJson<SalesReportSummary>(
+        buildReportPath(activeYear, selectedMonth, selectedStakeholderId),
+      ),
   })
   const report = reportQuery.data
   const sources = report?.sources ?? DEFAULT_REPORT_SOURCES
   const rows = report?.rows ?? EMPTY_REPORT_ROWS
-  const activeProductId =
-    selectedProductId &&
-    rows.some((row) => String(row.productId) === selectedProductId)
-      ? selectedProductId
+  const activeProjectId =
+    selectedProjectId &&
+    rows.some((row) => String(row.projectId) === selectedProjectId)
+      ? selectedProjectId
       : ''
-  const productOptions = useMemo(() => {
-    const optionsByProduct = new Map<number, string>()
+  const projectOptions = useMemo(() => {
+    const optionsByProject = new Map<number, string>()
 
     for (const row of rows) {
-      optionsByProduct.set(row.productId, row.productName)
+      optionsByProject.set(row.projectId, row.projectName)
     }
 
-    return [...optionsByProduct.entries()]
+    return [...optionsByProject.entries()]
       .sort(([, leftName], [, rightName]) => leftName.localeCompare(rightName))
-      .map(([productId, productName]) => ({
-        label: productName,
-        value: String(productId),
+      .map(([projectId, projectName]) => ({
+        label: projectName,
+        value: String(projectId),
       }))
   }, [rows])
+  const stakeholderOptions = useMemo(
+    () =>
+      [...stakeholders]
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map((stakeholder) => ({
+          label: stakeholder.name,
+          value: String(stakeholder.idStakeholder),
+        })),
+    [stakeholders],
+  )
   const filteredRows = useMemo(
     () =>
-      activeProductId
-        ? rows.filter((row) => String(row.productId) === activeProductId)
+      activeProjectId
+        ? rows.filter((row) => String(row.projectId) === activeProjectId)
         : rows,
-    [activeProductId, rows],
+    [activeProjectId, rows],
   )
   const reportTotals = useMemo(
     () => getReportTotals(filteredRows, sources),
     [filteredRows, sources],
   )
-  const isLoading = reportQuery.isLoading || periodsQuery.isLoading
+  const isLoading =
+    reportQuery.isLoading ||
+    periodsQuery.isLoading ||
+    stakeholdersQuery.isLoading
   const activeMonthLabel = selectedMonth
     ? formatMonth(Number(selectedMonth))
     : 'Full year'
-  const activeProductLabel =
-    productOptions.find((option) => option.value === activeProductId)?.label ??
-    'All products'
+  const activeProjectLabel =
+    projectOptions.find((option) => option.value === activeProjectId)?.label ??
+    'All projects'
+  const activeStakeholderLabel =
+    stakeholderOptions.find(
+      (option) => option.value === selectedStakeholderId,
+    )?.label ?? 'All stakeholders'
+  const hasSelectedStakeholder = selectedStakeholderId !== ''
   const canExport = activeYear !== '' && filteredRows.length > 0 && !isLoading
   const columns = useMemo<ColumnsType<SalesReportRow>>(
     () => [
       {
-        dataIndex: 'productName',
-        key: 'productName',
+        dataIndex: 'projectName',
+        key: 'projectName',
         ellipsis: true,
         render: (
-          _value: SalesReportRow['productName'],
+          _value: SalesReportRow['projectName'],
           row: SalesReportRow,
         ) => (
           <Link
-            aria-label={row.productName}
+            aria-label={row.projectName}
             className="entity-reference-link"
-            to={`/products/${row.productId}`}
+            to={`/projects/${row.projectId}`}
           >
-            <ProductNameCell imageUrl={row.productImage} name={row.productName} />
+            <ProductNameCell
+              imageUrl={row.productImage}
+              name={row.projectName}
+              thumbnailAlt={`${row.projectName} thumbnail`}
+            />
           </Link>
         ),
-        title: 'Product',
-        width: REPORT_COLUMN_WIDTHS.product,
+        title: 'Project',
+        width: REPORT_COLUMN_WIDTHS.project,
       },
       ...sources.map((source) => {
         const headerClassName = getChannelHeaderClass(source)
@@ -312,24 +363,41 @@ export function SalesReportPage() {
         title: 'Profit',
         width: REPORT_COLUMN_WIDTHS.profit,
       },
-      {
-        align: 'right',
-        dataIndex: 'ownerProfit',
-        key: 'ownerProfit',
-        render: (value: SalesReportRow['ownerProfit']) => formatCurrency(value),
-        title: 'Owner Profit',
-        width: REPORT_COLUMN_WIDTHS.ownerProfit,
-      },
+      ...(hasSelectedStakeholder
+        ? [
+            {
+              align: 'right' as const,
+              dataIndex: 'stakePercentage',
+              key: 'stakePercentage',
+              render: (value: SalesReportRow['stakePercentage']) =>
+                value === null ? '-' : `${value}%`,
+              title: 'Stake %',
+              width: REPORT_COLUMN_WIDTHS.stakePercentage,
+            },
+            {
+              align: 'right' as const,
+              dataIndex: 'stakeholderIncome',
+              key: 'stakeholderIncome',
+              render: (value: SalesReportRow['stakeholderIncome']) =>
+                formatCurrency(value ?? 0),
+              title: 'Stakeholder Income',
+              width: REPORT_COLUMN_WIDTHS.stakeholderIncome,
+            },
+          ]
+        : []),
     ],
-    [sources],
+    [hasSelectedStakeholder, sources],
   )
 
   function handleExportReport() {
     downloadSalesReportExcel({
       monthLabel: activeMonthLabel,
-      productLabel: activeProductLabel,
+      projectLabel: activeProjectLabel,
       rows: filteredRows,
       sources,
+      stakeholderLabel: hasSelectedStakeholder
+        ? activeStakeholderLabel
+        : undefined,
       totals: reportTotals,
       year: activeYear,
     })
@@ -366,7 +434,7 @@ export function SalesReportPage() {
               onChange={(value) => {
                 setSelectedYear(value)
                 setSelectedMonth('')
-                setSelectedProductId('')
+                setSelectedProjectId('')
               }}
               options={
                 periods.length === 0
@@ -388,7 +456,7 @@ export function SalesReportPage() {
               disabled={!selectedPeriod}
               onChange={(value) => {
                 setSelectedMonth(value)
-                setSelectedProductId('')
+                setSelectedProjectId('')
               }}
               options={[
                 { label: 'Full year', value: '' },
@@ -403,25 +471,47 @@ export function SalesReportPage() {
           </label>
 
           <label className="form-field">
-            Product
+            Stakeholder
             <Select
-              aria-label="Product"
-              disabled={rows.length === 0}
-              onChange={(value) => setSelectedProductId(value)}
+              aria-label="Stakeholder"
+              disabled={stakeholders.length === 0}
+              onChange={(value) => {
+                setSelectedStakeholderId(value)
+                setSelectedProjectId('')
+              }}
               optionFilterProp="label"
               options={[
-                { label: 'All products', value: '' },
-                ...productOptions,
+                { label: 'All stakeholders', value: '' },
+                ...stakeholderOptions,
               ]}
               showSearch
               style={{ minWidth: 220 }}
-              value={activeProductId}
+              value={selectedStakeholderId}
+            />
+          </label>
+
+          <label className="form-field">
+            Project
+            <Select
+              aria-label="Project"
+              disabled={rows.length === 0}
+              onChange={(value) => setSelectedProjectId(value)}
+              optionFilterProp="label"
+              options={[
+                { label: 'All projects', value: '' },
+                ...projectOptions,
+              ]}
+              showSearch
+              style={{ minWidth: 220 }}
+              value={activeProjectId}
             />
           </label>
         </Space>
       </div>
 
-      {periodsQuery.isError || reportQuery.isError ? (
+      {periodsQuery.isError ||
+      reportQuery.isError ||
+      stakeholdersQuery.isError ? (
         <Alert
           message="Unable to load the sales report."
           showIcon
@@ -441,12 +531,18 @@ export function SalesReportPage() {
           emptyText: isLoading ? (
             'Loading report...'
           ) : (
-            <Empty description="No sales data for the selected period." />
+            <Empty
+              description={
+                hasSelectedStakeholder
+                  ? 'No projects found for the selected stakeholder.'
+                  : 'No sales data for the selected period.'
+              }
+            />
           ),
         }}
         pagination={false}
-        rowKey={(row) => `${row.projectId}-${row.productId}`}
-        scroll={{ x: getReportTableWidth(sources) }}
+        rowKey={(row) => row.projectId}
+        scroll={{ x: getReportTableWidth(sources, hasSelectedStakeholder) }}
         size="small"
         summary={() => {
           if (filteredRows.length === 0) {
@@ -507,9 +603,18 @@ export function SalesReportPage() {
                 <Table.Summary.Cell index={cellIndex++} align="right">
                   <strong>{formatCurrency(reportTotals.profit)}</strong>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={cellIndex++} align="right">
-                  <strong>{formatCurrency(reportTotals.ownerProfit)}</strong>
-                </Table.Summary.Cell>
+                {hasSelectedStakeholder ? (
+                  <>
+                    <Table.Summary.Cell index={cellIndex++} align="right">
+                      <strong>-</strong>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={cellIndex++} align="right">
+                      <strong>
+                        {formatCurrency(reportTotals.stakeholderIncome)}
+                      </strong>
+                    </Table.Summary.Cell>
+                  </>
+                ) : null}
               </Table.Summary.Row>
             </Table.Summary>
           )
