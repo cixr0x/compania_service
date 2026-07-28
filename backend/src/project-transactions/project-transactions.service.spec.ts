@@ -1,28 +1,57 @@
 import { ProjectTransactionsService } from './project-transactions.service';
+import { asPrismaService } from '../../test/prisma-service.mock';
+
+type ProjectFindUniqueMock = (
+  args: unknown,
+) => Promise<{ idProject: number } | null>;
+type ProjectTransactionCreateManyMock = (
+  args: unknown,
+) => Promise<{ count: number }>;
+type ProjectTransactionDeleteManyMock = (
+  args: unknown,
+) => Promise<{ count: number }>;
+type ProjectTransactionFindManyMock = (args: unknown) => Promise<unknown[]>;
+type QueryRawMock = (query: unknown) => Promise<unknown>;
+type ProjectTransactionPrismaMock = {
+  $queryRaw: jest.MockedFunction<QueryRawMock>;
+  project: {
+    findUnique: jest.MockedFunction<ProjectFindUniqueMock>;
+  };
+  projectTransaction: {
+    createMany: jest.MockedFunction<ProjectTransactionCreateManyMock>;
+    deleteMany: jest.MockedFunction<ProjectTransactionDeleteManyMock>;
+    findMany: jest.MockedFunction<ProjectTransactionFindManyMock>;
+  };
+};
+type ProjectTransactionRunner = (
+  callback: (tx: ProjectTransactionPrismaMock) => Promise<unknown>,
+) => Promise<unknown>;
 
 describe('ProjectTransactionsService', () => {
-  const transactionPrisma = {
-    $queryRaw: jest.fn(),
+  const transactionPrisma: ProjectTransactionPrismaMock = {
+    $queryRaw: jest.fn<QueryRawMock>(),
     project: {
-      findUnique: jest.fn(),
+      findUnique: jest.fn<ProjectFindUniqueMock>(),
     },
     projectTransaction: {
-      createMany: jest.fn(),
-      deleteMany: jest.fn(),
-      findMany: jest.fn(),
+      createMany: jest.fn<ProjectTransactionCreateManyMock>(),
+      deleteMany: jest.fn<ProjectTransactionDeleteManyMock>(),
+      findMany: jest.fn<ProjectTransactionFindManyMock>(),
     },
-  } as any;
+  };
+  const runTransaction = jest.fn<ProjectTransactionRunner>();
   const prisma = {
-    $transaction: jest.fn((callback) => callback(transactionPrisma)),
+    $transaction: runTransaction,
     projectTransaction: {
-      findMany: jest.fn(),
+      findMany: jest.fn<ProjectTransactionFindManyMock>(),
     },
-  } as any;
+  };
 
   beforeEach(() => {
     jest.resetAllMocks();
-    prisma.$transaction.mockImplementation((callback) =>
-      callback(transactionPrisma),
+    runTransaction.mockImplementation(
+      (callback: (tx: ProjectTransactionPrismaMock) => Promise<unknown>) =>
+        callback(transactionPrisma),
     );
   });
 
@@ -37,7 +66,7 @@ describe('ProjectTransactionsService', () => {
       },
     ]);
 
-    const service = new ProjectTransactionsService(prisma);
+    const service = new ProjectTransactionsService(asPrismaService(prisma));
     await service.findByProject(501);
 
     expect(prisma.projectTransaction.findMany).toHaveBeenCalledWith({
@@ -75,7 +104,7 @@ describe('ProjectTransactionsService', () => {
         },
       ]);
 
-    const service = new ProjectTransactionsService(prisma);
+    const service = new ProjectTransactionsService(asPrismaService(prisma));
     const result = await service.replaceProjectTransactions(501, [
       { amount: 100, date: '2026-05-05', description: 'Production' },
       { amount: -15, date: '2026-05-06', description: 'Supplier credit' },
@@ -139,7 +168,7 @@ describe('ProjectTransactionsService', () => {
       .spyOn(transactionPrisma.projectTransaction, 'findMany')
       .mockResolvedValue([]);
 
-    const service = new ProjectTransactionsService(prisma);
+    const service = new ProjectTransactionsService(asPrismaService(prisma));
     await service.replaceProjectTransactions(501, []);
 
     expect(
