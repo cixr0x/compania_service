@@ -1,24 +1,34 @@
 import { BadRequestException } from '@nestjs/common';
+import { asPrismaService } from '../../test/prisma-service.mock';
 import { SaleFinancialsCalculatorService } from './sale-financials-calculator.service';
 
 describe('SaleFinancialsCalculatorService', () => {
+  type ProductOwnership = {
+    id: number;
+    ownership: string;
+  };
+
+  const findProduct =
+    jest.fn<(args: unknown) => Promise<ProductOwnership | null>>();
   const prisma = {
     product: {
-      findUnique: jest.fn(),
+      findUnique: findProduct,
     },
-  } as any;
+  };
 
   beforeEach(() => {
     jest.resetAllMocks();
   });
 
   it('calculates persisted profit and owner profit from sale values and product ownership', async () => {
-    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({
+    findProduct.mockResolvedValue({
       id: 7,
       ownership: '25.00',
     });
 
-    const calculator = new SaleFinancialsCalculatorService(prisma);
+    const calculator = new SaleFinancialsCalculatorService(
+      asPrismaService(prisma),
+    );
 
     await expect(
       calculator.calculateFinancials({
@@ -30,16 +40,18 @@ describe('SaleFinancialsCalculatorService', () => {
       ownerProfit: 27.63,
       profit: 110.5,
     });
-    expect(prisma.product.findUnique).toHaveBeenCalledWith({
+    expect(findProduct).toHaveBeenCalledWith({
       where: { id: 7 },
       select: { id: true, ownership: true },
     });
   });
 
   it('rejects profit calculation for a missing product', async () => {
-    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue(null);
+    findProduct.mockResolvedValue(null);
 
-    const calculator = new SaleFinancialsCalculatorService(prisma);
+    const calculator = new SaleFinancialsCalculatorService(
+      asPrismaService(prisma),
+    );
 
     await expect(
       calculator.calculateFinancials({

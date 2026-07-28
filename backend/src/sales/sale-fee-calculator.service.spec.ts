@@ -1,12 +1,20 @@
 import { BadRequestException } from '@nestjs/common';
+import { asPrismaService } from '../../test/prisma-service.mock';
 import { SaleFeeCalculatorService } from './sale-fee-calculator.service';
 
 describe('SaleFeeCalculatorService', () => {
+  type ProjectFee = {
+    feeModel: string;
+    feeValue: number;
+    idProject: number;
+  };
+
+  const findProject = jest.fn<(args: unknown) => Promise<ProjectFee | null>>();
   const prisma = {
     project: {
-      findUnique: jest.fn(),
+      findUnique: findProject,
     },
-  } as any;
+  };
 
   beforeEach(() => {
     jest.resetAllMocks();
@@ -19,13 +27,13 @@ describe('SaleFeeCalculatorService', () => {
   ])(
     'calculates sale fee for %s project fee model',
     async (feeModel, feeValue, amount, quantity, expectedFee) => {
-      jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
+      findProject.mockResolvedValue({
         feeModel,
         feeValue,
         idProject: 51,
       });
 
-      const calculator = new SaleFeeCalculatorService(prisma);
+      const calculator = new SaleFeeCalculatorService(asPrismaService(prisma));
 
       await expect(
         calculator.calculateFee({
@@ -38,13 +46,13 @@ describe('SaleFeeCalculatorService', () => {
   );
 
   it('selects project fee fields only', async () => {
-    jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
+    findProject.mockResolvedValue({
       feeModel: 'percentage',
       feeValue: 18,
       idProject: 51,
     });
 
-    const calculator = new SaleFeeCalculatorService(prisma);
+    const calculator = new SaleFeeCalculatorService(asPrismaService(prisma));
 
     await expect(
       calculator.calculateFee({
@@ -53,20 +61,20 @@ describe('SaleFeeCalculatorService', () => {
         quantity: 2,
       }),
     ).resolves.toBe(18);
-    expect(prisma.project.findUnique).toHaveBeenCalledWith({
+    expect(findProject).toHaveBeenCalledWith({
       where: { idProject: 51 },
       select: { feeModel: true, feeValue: true, idProject: true },
     });
   });
 
   it('rejects unsupported project fee models', async () => {
-    jest.spyOn(prisma.project, 'findUnique').mockResolvedValue({
+    findProject.mockResolvedValue({
       feeModel: 'legacy_model',
       feeValue: 18,
       idProject: 51,
     });
 
-    const calculator = new SaleFeeCalculatorService(prisma);
+    const calculator = new SaleFeeCalculatorService(asPrismaService(prisma));
 
     await expect(
       calculator.calculateFee({
