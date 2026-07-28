@@ -1,48 +1,59 @@
 import { NotFoundException } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { StakeholderProjectTransactionsService } from './stakeholder-project-transactions.service';
+import {
+  asPrismaService,
+  asPrismaTransactionClient,
+} from '../../test/prisma-service.mock';
+
+type AsyncMock = (args: unknown) => Promise<unknown>;
+type TransactionMock = (
+  callback: (client: Prisma.TransactionClient) => Promise<unknown>,
+) => Promise<unknown>;
 
 describe('StakeholderProjectTransactionsService', () => {
   const transactionPrisma = {
-    $queryRaw: jest.fn(),
+    $queryRaw: jest.fn<AsyncMock>(),
     projectStakeholder: {
-      findUnique: jest.fn(),
+      findUnique: jest.fn<AsyncMock>(),
     },
     stakeholderProjectTransaction: {
-      createMany: jest.fn(),
-      deleteMany: jest.fn(),
-      findMany: jest.fn(),
+      createMany: jest.fn<AsyncMock>(),
+      deleteMany: jest.fn<AsyncMock>(),
+      findMany: jest.fn<AsyncMock>(),
     },
-  } as any;
+  };
   const prisma = {
-    $transaction: jest.fn((callback) => callback(transactionPrisma)),
+    $transaction: jest.fn<TransactionMock>(),
     stakeholderProjectTransaction: {
-      findMany: jest.fn(),
+      findMany: jest.fn<AsyncMock>(),
     },
-  } as any;
+  };
 
   beforeEach(() => {
     jest.resetAllMocks();
-    prisma.$transaction.mockImplementation((callback) =>
-      callback(transactionPrisma),
+    prisma.$transaction.mockImplementation(
+      (callback: Parameters<TransactionMock>[0]) =>
+        callback(asPrismaTransactionClient(transactionPrisma)),
     );
   });
 
   it('lists stakeholder project transactions ordered by date ascending', async () => {
-    jest
-      .spyOn(prisma.stakeholderProjectTransaction, 'findMany')
-      .mockResolvedValue([
-        {
-          amount: '125.50',
-          date: new Date('2026-05-05T00:00:00.000Z'),
-          description: 'Distribution',
-          idProject: 501,
-          idStakeholder: 10,
-          idStakeholderProjectTransaction: 2,
-          transactionType: 'payment',
-        },
-      ]);
+    prisma.stakeholderProjectTransaction.findMany.mockResolvedValue([
+      {
+        amount: '125.50',
+        date: new Date('2026-05-05T00:00:00.000Z'),
+        description: 'Distribution',
+        idProject: 501,
+        idStakeholder: 10,
+        idStakeholderProjectTransaction: 2,
+        transactionType: 'payment',
+      },
+    ]);
 
-    const service = new StakeholderProjectTransactionsService(prisma);
+    const service = new StakeholderProjectTransactionsService(
+      asPrismaService(prisma),
+    );
     await service.findByProjectStakeholder(501, 10);
 
     expect(prisma.stakeholderProjectTransaction.findMany).toHaveBeenCalledWith({
@@ -52,41 +63,39 @@ describe('StakeholderProjectTransactionsService', () => {
   });
 
   it('replaces all stakeholder project transactions atomically', async () => {
-    jest
-      .spyOn(transactionPrisma.projectStakeholder, 'findUnique')
-      .mockResolvedValue({
-        idProjectStakeholder: 900,
-      });
-    jest
-      .spyOn(transactionPrisma.stakeholderProjectTransaction, 'deleteMany')
-      .mockResolvedValue({ count: 2 });
-    jest
-      .spyOn(transactionPrisma.stakeholderProjectTransaction, 'createMany')
-      .mockResolvedValue({ count: 2 });
-    jest
-      .spyOn(transactionPrisma.stakeholderProjectTransaction, 'findMany')
-      .mockResolvedValue([
-        {
-          amount: '100.00',
-          date: new Date('2026-05-05T00:00:00.000Z'),
-          description: 'Distribution',
-          idProject: 501,
-          idStakeholder: 10,
-          idStakeholderProjectTransaction: 10,
-          transactionType: 'payment',
-        },
-        {
-          amount: '-15.00',
-          date: new Date('2026-05-06T00:00:00.000Z'),
-          description: 'Correction',
-          idProject: 501,
-          idStakeholder: 10,
-          idStakeholderProjectTransaction: 11,
-          transactionType: 'adjustment',
-        },
-      ]);
+    transactionPrisma.projectStakeholder.findUnique.mockResolvedValue({
+      idProjectStakeholder: 900,
+    });
+    transactionPrisma.stakeholderProjectTransaction.deleteMany.mockResolvedValue(
+      { count: 2 },
+    );
+    transactionPrisma.stakeholderProjectTransaction.createMany.mockResolvedValue(
+      { count: 2 },
+    );
+    transactionPrisma.stakeholderProjectTransaction.findMany.mockResolvedValue([
+      {
+        amount: '100.00',
+        date: new Date('2026-05-05T00:00:00.000Z'),
+        description: 'Distribution',
+        idProject: 501,
+        idStakeholder: 10,
+        idStakeholderProjectTransaction: 10,
+        transactionType: 'payment',
+      },
+      {
+        amount: '-15.00',
+        date: new Date('2026-05-06T00:00:00.000Z'),
+        description: 'Correction',
+        idProject: 501,
+        idStakeholder: 10,
+        idStakeholderProjectTransaction: 11,
+        transactionType: 'adjustment',
+      },
+    ]);
 
-    const service = new StakeholderProjectTransactionsService(prisma);
+    const service = new StakeholderProjectTransactionsService(
+      asPrismaService(prisma),
+    );
     const result = await service.replaceProjectStakeholderTransactions(
       501,
       10,
@@ -170,19 +179,19 @@ describe('StakeholderProjectTransactionsService', () => {
   });
 
   it('deletes all transactions when replacement payload is empty', async () => {
-    jest
-      .spyOn(transactionPrisma.projectStakeholder, 'findUnique')
-      .mockResolvedValue({
-        idProjectStakeholder: 900,
-      });
-    jest
-      .spyOn(transactionPrisma.stakeholderProjectTransaction, 'deleteMany')
-      .mockResolvedValue({ count: 2 });
-    jest
-      .spyOn(transactionPrisma.stakeholderProjectTransaction, 'findMany')
-      .mockResolvedValue([]);
+    transactionPrisma.projectStakeholder.findUnique.mockResolvedValue({
+      idProjectStakeholder: 900,
+    });
+    transactionPrisma.stakeholderProjectTransaction.deleteMany.mockResolvedValue(
+      { count: 2 },
+    );
+    transactionPrisma.stakeholderProjectTransaction.findMany.mockResolvedValue(
+      [],
+    );
 
-    const service = new StakeholderProjectTransactionsService(prisma);
+    const service = new StakeholderProjectTransactionsService(
+      asPrismaService(prisma),
+    );
     await service.replaceProjectStakeholderTransactions(501, 10, []);
 
     expect(
@@ -196,11 +205,11 @@ describe('StakeholderProjectTransactionsService', () => {
   });
 
   it('rejects replacements when the stakeholder is not assigned to the project', async () => {
-    jest
-      .spyOn(transactionPrisma.projectStakeholder, 'findUnique')
-      .mockResolvedValue(null);
+    transactionPrisma.projectStakeholder.findUnique.mockResolvedValue(null);
 
-    const service = new StakeholderProjectTransactionsService(prisma);
+    const service = new StakeholderProjectTransactionsService(
+      asPrismaService(prisma),
+    );
 
     await expect(
       service.replaceProjectStakeholderTransactions(501, 10, []),
