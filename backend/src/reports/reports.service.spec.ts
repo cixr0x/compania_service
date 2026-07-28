@@ -1,5 +1,5 @@
 import { ReportsService } from './reports.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { asPrismaService } from '../../test/prisma-service.mock';
 
 describe('ReportsService', () => {
   const prisma = {
@@ -10,7 +10,7 @@ describe('ReportsService', () => {
     sale: {
       findMany: jest.fn(),
     },
-  } as any;
+  };
 
   beforeEach(() => jest.resetAllMocks());
 
@@ -24,7 +24,7 @@ describe('ReportsService', () => {
         { date: new Date('2025-12-31T00:00:00.000Z') },
       ]);
 
-    const service = new ReportsService(prisma as PrismaService);
+    const service = new ReportsService(asPrismaService(prisma));
     const result = await service.findSalesSummaryPeriods();
 
     expect(prisma.sale.findMany).toHaveBeenCalledWith({
@@ -104,7 +104,7 @@ describe('ReportsService', () => {
       },
     ]);
 
-    const service = new ReportsService(prisma as PrismaService);
+    const service = new ReportsService(asPrismaService(prisma));
     const result = await service.getSalesSummary({ year: 2026, month: 5 });
 
     expect(prisma.sale.findMany).toHaveBeenCalledWith({
@@ -187,7 +187,7 @@ describe('ReportsService', () => {
       },
     ]);
 
-    const service = new ReportsService(prisma as PrismaService);
+    const service = new ReportsService(asPrismaService(prisma));
     const result = await service.getSalesSummary({ year: 2026 });
 
     expect(result.sources).toEqual(['store', 'ecommerce', 'event', 'surface']);
@@ -243,7 +243,7 @@ describe('ReportsService', () => {
       },
     ]);
 
-    const service = new ReportsService(prisma as PrismaService);
+    const service = new ReportsService(asPrismaService(prisma));
     const result = await service.getSalesSummary({
       year: 2026,
       stakeholderId: 10,
@@ -350,7 +350,7 @@ describe('ReportsService', () => {
       units: 10,
     });
 
-    const service = new ReportsService(prisma as PrismaService);
+    const service = new ReportsService(asPrismaService(prisma));
     const result = await service.getStakeholderProjectsReport({
       projectId: 501,
       stakeholderId: 10,
@@ -409,7 +409,7 @@ describe('ReportsService', () => {
   it('returns an empty stakeholder project report when the stakeholder is not assigned to the project', async () => {
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null);
 
-    const service = new ReportsService(prisma as PrismaService);
+    const service = new ReportsService(asPrismaService(prisma));
     const result = await service.getStakeholderProjectsReport({
       projectId: 501,
       stakeholderId: 99,
