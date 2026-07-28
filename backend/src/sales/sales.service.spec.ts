@@ -1,51 +1,58 @@
 import { SalesService } from './sales.service';
-import { PrismaService } from '../prisma/prisma.service';
 import { SaleFeeCalculatorService } from './sale-fee-calculator.service';
 import { SaleFinancialsCalculatorService } from './sale-financials-calculator.service';
+import { publicProjectSummarySelect } from '../projects/project-public-select';
+import { asPrismaService } from '../../test/prisma-service.mock';
+
+type AsyncMock = (args: unknown) => Promise<unknown>;
 
 describe('SalesService', () => {
   const prisma = {
     sale: {
-      create: jest.fn(),
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
+      create: jest.fn<AsyncMock>(),
+      findMany: jest.fn<AsyncMock>(),
+      findUnique: jest.fn<AsyncMock>(),
+      update: jest.fn<AsyncMock>(),
     },
     product: {
-      findUnique: jest.fn(),
+      findUnique: jest.fn<AsyncMock>(),
     },
     project: {
-      findUnique: jest.fn(),
+      findUnique: jest.fn<AsyncMock>(),
     },
     setting: {
-      findUnique: jest.fn(),
+      findUnique: jest.fn<AsyncMock>(),
     },
-  } as any;
+  };
+  const calculateFee = jest.fn<SaleFeeCalculatorService['calculateFee']>();
+  const calculateFinancials =
+    jest.fn<SaleFinancialsCalculatorService['calculateFinancials']>();
   const feeCalculator = {
-    calculateFee: jest.fn(),
-  } as unknown as jest.Mocked<SaleFeeCalculatorService>;
+    calculateFee,
+  } as unknown as SaleFeeCalculatorService;
   const financialsCalculator = {
-    calculateFinancials: jest.fn(),
-  } as unknown as jest.Mocked<SaleFinancialsCalculatorService>;
+    calculateFinancials,
+  } as unknown as SaleFinancialsCalculatorService;
 
   beforeEach(() => {
     jest.resetAllMocks();
-    jest.spyOn(feeCalculator, 'calculateFee').mockResolvedValue(9.5);
-    jest
-      .spyOn(financialsCalculator, 'calculateFinancials')
-      .mockResolvedValue({ ownerProfit: 27.63, profit: 110.5 });
+    calculateFee.mockResolvedValue(9.5);
+    calculateFinancials.mockResolvedValue({
+      ownerProfit: 27.63,
+      profit: 110.5,
+    });
   });
 
   function buildService() {
     return new SalesService(
-      prisma as PrismaService,
+      asPrismaService(prisma),
       feeCalculator,
       financialsCalculator,
     );
   }
 
   it('loads product names for sale project references in list responses', async () => {
-    jest.spyOn(prisma.sale, 'findMany').mockResolvedValue([]);
+    prisma.sale.findMany.mockResolvedValue([]);
 
     const service = buildService();
     await service.findAll({ page: 1, pageSize: 25 });
@@ -54,23 +61,18 @@ describe('SalesService', () => {
       include: {
         product: true,
         project: {
-          select: expect.objectContaining({
-            name: true,
-            product: true,
-          }),
+          select: publicProjectSummarySelect,
         },
       },
       orderBy: { idSale: 'desc' },
       skip: 0,
       take: 25,
     });
-    expect(
-      prisma.sale.findMany.mock.calls[0][0].include.project.select,
-    ).not.toHaveProperty('createdDate');
+    expect(publicProjectSummarySelect).not.toHaveProperty('createdDate');
   });
 
   it('filters list responses by product, project, and sale month', async () => {
-    jest.spyOn(prisma.sale, 'findMany').mockResolvedValue([]);
+    prisma.sale.findMany.mockResolvedValue([]);
 
     const service = buildService();
     await service.findAll({
@@ -85,10 +87,7 @@ describe('SalesService', () => {
       include: {
         product: true,
         project: {
-          select: expect.objectContaining({
-            name: true,
-            product: true,
-          }),
+          select: publicProjectSummarySelect,
         },
       },
       orderBy: { idSale: 'desc' },
@@ -106,7 +105,7 @@ describe('SalesService', () => {
   });
 
   it('creates a sale with default fee and persisted profit fields when fee is omitted', async () => {
-    jest.spyOn(prisma.sale, 'create').mockResolvedValue({
+    prisma.sale.create.mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
@@ -115,10 +114,11 @@ describe('SalesService', () => {
       source: 'ecommerce',
       fee: '0.00',
     });
-    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
-    jest
-      .spyOn(prisma.project, 'findUnique')
-      .mockResolvedValue({ idProject: 51, idProduct: 7 });
+    prisma.product.findUnique.mockResolvedValue({ id: 7 });
+    prisma.project.findUnique.mockResolvedValue({
+      idProject: 51,
+      idProduct: 7,
+    });
 
     const service = buildService();
     await service.create({
@@ -144,13 +144,13 @@ describe('SalesService', () => {
         profit: 110.5,
       },
     });
-    expect(feeCalculator.calculateFee).toHaveBeenCalledWith({
+    expect(calculateFee).toHaveBeenCalledWith({
       amount: 120,
       idProject: 51,
       quantity: 2,
     });
     expect(prisma.setting.findUnique).not.toHaveBeenCalled();
-    expect(financialsCalculator.calculateFinancials).toHaveBeenCalledWith({
+    expect(calculateFinancials).toHaveBeenCalledWith({
       amount: 120,
       fee: 9.5,
       idProduct: 7,
@@ -158,7 +158,7 @@ describe('SalesService', () => {
   });
 
   it('creates a sale with a Date instance when date is a string', async () => {
-    jest.spyOn(prisma.sale, 'create').mockResolvedValue({
+    prisma.sale.create.mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
@@ -167,10 +167,11 @@ describe('SalesService', () => {
       source: 'ecommerce',
       fee: '1.50',
     });
-    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
-    jest
-      .spyOn(prisma.project, 'findUnique')
-      .mockResolvedValue({ idProject: 51, idProduct: 7 });
+    prisma.product.findUnique.mockResolvedValue({ id: 7 });
+    prisma.project.findUnique.mockResolvedValue({
+      idProject: 51,
+      idProduct: 7,
+    });
 
     const service = buildService();
     await service.create({
@@ -184,15 +185,22 @@ describe('SalesService', () => {
       feeOverride: true,
     });
 
-    const call = prisma.sale.create.mock.calls[0][0];
-    expect(call.data.date).toBeInstanceOf(Date);
-    expect(call.data.date).toEqual(new Date('2026-05-05'));
-    expect(call.data.fee).toBe(1.5);
-    expect(call.data.feeOverride).toBe(true);
-    expect(call.data.profit).toBe(110.5);
-    expect(call.data.ownerProfit).toBe(27.63);
-    expect(feeCalculator.calculateFee).not.toHaveBeenCalled();
-    expect(financialsCalculator.calculateFinancials).toHaveBeenCalledWith({
+    expect(prisma.sale.create).toHaveBeenCalledWith({
+      data: {
+        date: new Date('2026-05-05'),
+        idProject: 51,
+        idProduct: 7,
+        quantity: 2,
+        amount: 120,
+        source: 'ecommerce',
+        fee: 1.5,
+        feeOverride: true,
+        ownerProfit: 27.63,
+        profit: 110.5,
+      },
+    });
+    expect(calculateFee).not.toHaveBeenCalled();
+    expect(calculateFinancials).toHaveBeenCalledWith({
       amount: 120,
       fee: 1.5,
       idProduct: 7,
@@ -200,7 +208,7 @@ describe('SalesService', () => {
   });
 
   it('recalculates fee in update data when fee override is disabled', async () => {
-    jest.spyOn(prisma.sale, 'findUnique').mockResolvedValue({
+    prisma.sale.findUnique.mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
@@ -210,7 +218,7 @@ describe('SalesService', () => {
       source: 'ecommerce',
       fee: '1.50',
     });
-    jest.spyOn(prisma.sale, 'update').mockResolvedValue({
+    prisma.sale.update.mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
@@ -228,7 +236,7 @@ describe('SalesService', () => {
       where: { idSale: 1 },
       data: { quantity: 3, fee: 9.5, ownerProfit: 27.63, profit: 110.5 },
     });
-    expect(feeCalculator.calculateFee).toHaveBeenCalledWith({
+    expect(calculateFee).toHaveBeenCalledWith({
       amount: '120.00',
       idProject: 51,
       quantity: 3,
@@ -236,7 +244,7 @@ describe('SalesService', () => {
   });
 
   it('does not include date in update data when date is omitted', async () => {
-    jest.spyOn(prisma.sale, 'findUnique').mockResolvedValue({
+    prisma.sale.findUnique.mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
@@ -246,7 +254,7 @@ describe('SalesService', () => {
       source: 'ecommerce',
       fee: '1.50',
     });
-    jest.spyOn(prisma.sale, 'update').mockResolvedValue({
+    prisma.sale.update.mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
@@ -269,7 +277,7 @@ describe('SalesService', () => {
         profit: 110.5,
       },
     });
-    expect(feeCalculator.calculateFee).toHaveBeenCalledWith({
+    expect(calculateFee).toHaveBeenCalledWith({
       amount: 130,
       idProject: 51,
       quantity: 2,
@@ -277,7 +285,7 @@ describe('SalesService', () => {
   });
 
   it('preserves manual fee when fee override is enabled', async () => {
-    jest.spyOn(prisma.sale, 'findUnique').mockResolvedValue({
+    prisma.sale.findUnique.mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
@@ -288,7 +296,7 @@ describe('SalesService', () => {
       fee: '1.50',
       feeOverride: true,
     });
-    jest.spyOn(prisma.sale, 'update').mockResolvedValue({
+    prisma.sale.update.mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
@@ -311,8 +319,8 @@ describe('SalesService', () => {
         profit: 110.5,
       },
     });
-    expect(feeCalculator.calculateFee).not.toHaveBeenCalled();
-    expect(financialsCalculator.calculateFinancials).toHaveBeenCalledWith({
+    expect(calculateFee).not.toHaveBeenCalled();
+    expect(calculateFinancials).toHaveBeenCalledWith({
       amount: '120.00',
       fee: 2,
       idProduct: 7,
@@ -320,12 +328,13 @@ describe('SalesService', () => {
   });
 
   it('does not require a sales tax setting when creating a sale', async () => {
-    jest.spyOn(prisma.setting, 'findUnique').mockResolvedValue(null);
-    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
-    jest
-      .spyOn(prisma.project, 'findUnique')
-      .mockResolvedValue({ idProject: 51, idProduct: 7 });
-    jest.spyOn(prisma.sale, 'create').mockResolvedValue({
+    prisma.setting.findUnique.mockResolvedValue(null);
+    prisma.product.findUnique.mockResolvedValue({ id: 7 });
+    prisma.project.findUnique.mockResolvedValue({
+      idProject: 51,
+      idProduct: 7,
+    });
+    prisma.sale.create.mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProject: 51,
@@ -349,19 +358,28 @@ describe('SalesService', () => {
 
     expect(prisma.setting.findUnique).not.toHaveBeenCalled();
     expect(prisma.sale.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
+      data: {
+        date: new Date('2026-05-05'),
+        idProject: 51,
+        idProduct: 7,
+        quantity: 2,
+        amount: 120,
+        source: 'ecommerce',
+        fee: 9.5,
+        feeOverride: false,
         ownerProfit: 27.63,
         profit: 110.5,
-      }),
+      },
     });
   });
 
   it('creates a sale only after verifying the project belongs to the product', async () => {
-    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
-    jest
-      .spyOn(prisma.project, 'findUnique')
-      .mockResolvedValue({ idProject: 51, idProduct: 7 });
-    jest.spyOn(prisma.sale, 'create').mockResolvedValue({
+    prisma.product.findUnique.mockResolvedValue({ id: 7 });
+    prisma.project.findUnique.mockResolvedValue({
+      idProject: 51,
+      idProduct: 7,
+    });
+    prisma.sale.create.mockResolvedValue({
       idSale: 2,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProject: 51,
@@ -387,15 +405,27 @@ describe('SalesService', () => {
       select: { idProject: true, idProduct: true },
     });
     expect(prisma.sale.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ idProject: 51, idProduct: 7 }),
+      data: {
+        date: new Date('2026-05-05'),
+        idProject: 51,
+        idProduct: 7,
+        quantity: 2,
+        amount: 120,
+        source: 'ecommerce',
+        fee: 9.5,
+        feeOverride: false,
+        ownerProfit: 27.63,
+        profit: 110.5,
+      },
     });
   });
 
   it('throws a client error when create references a project for a different product', async () => {
-    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue({ id: 7 });
-    jest
-      .spyOn(prisma.project, 'findUnique')
-      .mockResolvedValue({ idProject: 51, idProduct: 8 });
+    prisma.product.findUnique.mockResolvedValue({ id: 7 });
+    prisma.project.findUnique.mockResolvedValue({
+      idProject: 51,
+      idProduct: 8,
+    });
 
     const service = buildService();
 
@@ -413,7 +443,7 @@ describe('SalesService', () => {
   });
 
   it('throws a client error when create references a missing product', async () => {
-    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue(null);
+    prisma.product.findUnique.mockResolvedValue(null);
 
     const service = buildService();
 
@@ -432,7 +462,7 @@ describe('SalesService', () => {
   });
 
   it('throws a client error when update references a missing product', async () => {
-    jest.spyOn(prisma.sale, 'findUnique').mockResolvedValue({
+    prisma.sale.findUnique.mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
@@ -442,7 +472,7 @@ describe('SalesService', () => {
       source: 'ecommerce',
       fee: '1.50',
     });
-    jest.spyOn(prisma.product, 'findUnique').mockResolvedValue(null);
+    prisma.product.findUnique.mockResolvedValue(null);
 
     const service = buildService();
 
@@ -453,7 +483,7 @@ describe('SalesService', () => {
   });
 
   it('validates the next project and product pair when updating either side', async () => {
-    jest.spyOn(prisma.sale, 'findUnique').mockResolvedValue({
+    prisma.sale.findUnique.mockResolvedValue({
       idSale: 1,
       date: new Date('2026-05-05T00:00:00.000Z'),
       idProduct: 7,
@@ -463,9 +493,10 @@ describe('SalesService', () => {
       source: 'ecommerce',
       fee: '1.50',
     });
-    jest
-      .spyOn(prisma.project, 'findUnique')
-      .mockResolvedValue({ idProject: 52, idProduct: 8 });
+    prisma.project.findUnique.mockResolvedValue({
+      idProject: 52,
+      idProduct: 8,
+    });
 
     const service = buildService();
 
