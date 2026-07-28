@@ -10,7 +10,10 @@ export class ProjectStakeholdersTotalService {
       where: { idProject },
       select: { stakePercentage: true },
     });
-    const total = rows.reduce((sum, row) => sum + Number(row.stakePercentage), 0);
+    const total = rows.reduce(
+      (sum, row) => sum + Number(row.stakePercentage),
+      0,
+    );
 
     if (Math.round(total * 100) !== 10000) {
       throw new BadRequestException('Project stakeholder total must equal 100');

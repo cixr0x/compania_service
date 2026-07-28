@@ -35,7 +35,10 @@ describe('validation error factory', () => {
 
     expect(flattenValidationErrors(errors)).toEqual([
       { field: 'name', message: 'name must not be empty' },
-      { field: 'items.0.quantity', message: 'quantity must not be less than 1' },
+      {
+        field: 'items.0.quantity',
+        message: 'quantity must not be less than 1',
+      },
     ]);
   });
 

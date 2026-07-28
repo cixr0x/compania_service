@@ -46,7 +46,10 @@ export class StakeholdersService {
 
   async update(id: number, dto: UpdateStakeholderDto) {
     await this.findOne(id);
-    return this.prisma.stakeholder.update({ where: { idStakeholder: id }, data: dto });
+    return this.prisma.stakeholder.update({
+      where: { idStakeholder: id },
+      data: dto,
+    });
   }
 
   async remove(id: number) {

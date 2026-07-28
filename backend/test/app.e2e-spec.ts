@@ -24,9 +24,7 @@ describe('AppController (e2e)', () => {
   });
 
   it('initializes the app module with a mocked Prisma service', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(404);
+    return request(app.getHttpServer()).get('/').expect(404);
   });
 
   afterEach(async () => {

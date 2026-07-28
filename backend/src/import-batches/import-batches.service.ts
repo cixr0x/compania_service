@@ -213,7 +213,9 @@ export class ImportBatchesService {
         where: { idImportBatch },
       });
       if (!batch) {
-        throw new NotFoundException(`Import batch ${idImportBatch} was not found`);
+        throw new NotFoundException(
+          `Import batch ${idImportBatch} was not found`,
+        );
       }
       this.ensureBatchCanMutate(batch.status);
 

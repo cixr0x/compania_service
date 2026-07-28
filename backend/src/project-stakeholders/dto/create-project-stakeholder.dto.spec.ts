@@ -13,6 +13,8 @@ describe('CreateProjectStakeholderDto', () => {
 
     const errors = await validate(dto);
 
-    expect(errors.some((error) => error.property === 'stakePercentage')).toBe(true);
+    expect(errors.some((error) => error.property === 'stakePercentage')).toBe(
+      true,
+    );
   });
 });

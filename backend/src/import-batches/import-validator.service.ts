@@ -195,7 +195,11 @@ function resolveProjectId(
   selectedProjectId: number | null | undefined,
   product: ProductLookup | undefined,
 ) {
-  if (!product || !Array.isArray(product.projects) || product.projects.length === 0) {
+  if (
+    !product ||
+    !Array.isArray(product.projects) ||
+    product.projects.length === 0
+  ) {
     return null;
   }
 
@@ -207,7 +211,9 @@ function resolveProjectId(
     return null;
   }
 
-  return product.projects.some((project) => project.idProject === selectedProjectId)
+  return product.projects.some(
+    (project) => project.idProject === selectedProjectId,
+  )
     ? selectedProjectId
     : null;
 }

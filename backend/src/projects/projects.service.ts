@@ -99,7 +99,9 @@ export class ProjectsService {
     };
   }
 
-  private toUpdateData(dto: UpdateProjectDto): Prisma.ProjectUncheckedUpdateInput {
+  private toUpdateData(
+    dto: UpdateProjectDto,
+  ): Prisma.ProjectUncheckedUpdateInput {
     const { feeModel, feeValue, name, ...rest } = dto;
     const data: Prisma.ProjectUncheckedUpdateInput = { ...rest };
 

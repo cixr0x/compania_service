@@ -24,8 +24,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
         errors: Array.isArray(exceptionBody.errors)
           ? exceptionBody.errors
           : Array.isArray(message)
-          ? message.map((item) => ({ message: item }))
-          : [],
+            ? message.map((item) => ({ message: item }))
+            : [],
       });
       return;
     }

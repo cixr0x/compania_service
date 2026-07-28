@@ -18,7 +18,9 @@ export class ReportsController {
   }
 
   @Get('stakeholder-projects')
-  getStakeholderProjectsReport(@Query() query: StakeholderProjectReportQueryDto) {
+  getStakeholderProjectsReport(
+    @Query() query: StakeholderProjectReportQueryDto,
+  ) {
     return this.reportsService.getStakeholderProjectsReport(query);
   }
 }

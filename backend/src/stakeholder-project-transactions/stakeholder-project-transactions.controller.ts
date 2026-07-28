@@ -31,7 +31,9 @@ export class StakeholderProjectTransactionsController {
   replaceProjectStakeholderTransactions(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Param('stakeholderId', ParseIntPipe) stakeholderId: number,
-    @Body(new ParseArrayPipe({ items: ReplaceStakeholderProjectTransactionDto }))
+    @Body(
+      new ParseArrayPipe({ items: ReplaceStakeholderProjectTransactionDto }),
+    )
     dto: ReplaceStakeholderProjectTransactionDto[],
   ) {
     return this.stakeholderProjectTransactionsService.replaceProjectStakeholderTransactions(
