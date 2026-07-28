@@ -134,6 +134,11 @@ const aliciaReport = {
   sources: ['store', 'ecommerce', 'event'],
 }
 
+const mapleProjectLabel = 'Maple Shelf (Project #501)'
+const walnutProjectLabel = 'Walnut Table (Project #502)'
+const eventKitProjectLabel = 'Event Kit (Project #701)'
+const oakDeskProjectLabel = 'Oak Desk (Project #503)'
+
 function renderReportsRoute() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -241,7 +246,7 @@ describe('SalesReportPage', () => {
     expect(
       within(table).queryByRole('columnheader', { name: 'Project ID' }),
     ).not.toBeInTheDocument()
-    expect(columnHeaders[0]).toHaveTextContent('Project')
+    expect(columnHeaders[0]).toHaveTextContent('Product / Project')
     const storeHeader = within(table).getByRole('columnheader', {
       name: 'Store',
     })
@@ -277,15 +282,17 @@ describe('SalesReportPage', () => {
       within(table).getAllByRole('columnheader', { name: 'Avg Price' }),
     ).toHaveLength(4)
 
-    const reportRow = screen.getByText('Maple Shelf Launch').closest('tr')!
-    expect(within(reportRow).queryByText('501')).not.toBeInTheDocument()
-    expect(within(reportRow).getByText('Maple Shelf Launch')).toBeVisible()
+    const reportRow = screen.getByText(mapleProjectLabel).closest('tr')!
     expect(
-      within(reportRow).getByRole('link', { name: 'Maple Shelf Launch' }),
+      within(reportRow).queryByText('Maple Shelf Launch'),
+    ).not.toBeInTheDocument()
+    expect(within(reportRow).getByText(mapleProjectLabel)).toBeVisible()
+    expect(
+      within(reportRow).getByRole('link', { name: mapleProjectLabel }),
     ).toHaveAttribute('href', '/projects/501')
     expect(
       within(reportRow).getByRole('img', {
-        name: 'Maple Shelf Launch thumbnail',
+        name: 'Maple Shelf thumbnail',
       }),
     ).toHaveAttribute('src', 'https://example.test/maple-shelf.jpg')
     expect(
@@ -314,11 +321,11 @@ describe('SalesReportPage', () => {
     expect(within(totalsRow).getByText('$37.00')).toBeVisible()
     expect(within(totalsRow).getByText('$763.00')).toBeVisible()
 
-    await selectAntOption(user, projectSelect, 'Maple Shelf Launch')
+    await selectAntOption(user, projectSelect, mapleProjectLabel)
 
     await waitFor(() => {
       expect(
-        screen.queryByRole('row', { name: /Walnut Table Holiday Run/ }),
+        screen.queryByRole('row', { name: walnutProjectLabel }),
       ).not.toBeInTheDocument()
     })
     const filteredTotalsRow = screen.getByText('Totals').closest('tr')!
@@ -350,7 +357,7 @@ describe('SalesReportPage', () => {
 
     renderReportsRoute()
 
-    await screen.findByText('Maple Shelf Launch')
+    await screen.findByText(mapleProjectLabel)
     const yearSelect = screen.getByRole('combobox', { name: 'Year' })
     const monthSelect = screen.getByRole('combobox', { name: 'Month' })
 
@@ -370,7 +377,7 @@ describe('SalesReportPage', () => {
     expect(
       screen.getByRole('columnheader', { name: 'Surface' }).closest('table'),
     ).toHaveStyle({ width: '1770px' })
-    expect(screen.getByText('Event Kit Surface Run')).toBeVisible()
+    expect(screen.getByText(eventKitProjectLabel)).toBeVisible()
 
     const projectSelect = screen.getByRole('combobox', { name: 'Project' })
     expect(projectSelect.closest('.ant-select')).toHaveTextContent(
@@ -378,9 +385,9 @@ describe('SalesReportPage', () => {
     )
     await user.click(projectSelect)
     expect(
-      await screen.findByTitle('Event Kit Surface Run'),
+      await screen.findByTitle(eventKitProjectLabel),
     ).toBeInTheDocument()
-    expect(screen.queryByTitle('Maple Shelf Launch')).not.toBeInTheDocument()
+    expect(screen.queryByTitle(mapleProjectLabel)).not.toBeInTheDocument()
   })
 
   it('shows assigned zero-sales projects and stakeholder income when a stakeholder is selected', async () => {
@@ -409,7 +416,7 @@ describe('SalesReportPage', () => {
 
     renderReportsRoute()
 
-    await screen.findByText('Maple Shelf Launch')
+    await screen.findByText(mapleProjectLabel)
     await selectAntOption(
       user,
       screen.getByRole('combobox', { name: 'Stakeholder' }),
@@ -421,7 +428,7 @@ describe('SalesReportPage', () => {
         '/reports/sales-summary?year=2026&stakeholderId=10',
       )
     })
-    expect(await screen.findByText('Oak Desk Reserve')).toBeVisible()
+    expect(await screen.findByText(oakDeskProjectLabel)).toBeVisible()
 
     const stakeholderIncomeHeader = screen.getByRole('columnheader', {
       name: 'Stakeholder Income',
@@ -435,11 +442,11 @@ describe('SalesReportPage', () => {
       within(table).queryByRole('columnheader', { name: 'Owner Profit' }),
     ).not.toBeInTheDocument()
 
-    const salesRow = screen.getByText('Maple Shelf Launch').closest('tr')!
+    const salesRow = screen.getByText(mapleProjectLabel).closest('tr')!
     expect(within(salesRow).getByText('60%')).toBeVisible()
     expect(within(salesRow).getByText('$205.80')).toBeVisible()
 
-    const zeroSalesRow = screen.getByText('Oak Desk Reserve').closest('tr')!
+    const zeroSalesRow = screen.getByText(oakDeskProjectLabel).closest('tr')!
     expect(within(zeroSalesRow).getByText('25%')).toBeVisible()
     expect(within(zeroSalesRow).getAllByText('$0.00').length).toBeGreaterThan(0)
 
@@ -447,7 +454,7 @@ describe('SalesReportPage', () => {
     expect(within(totalsRow).getByText('-')).toBeVisible()
     expect(within(totalsRow).getByText('$205.80')).toBeVisible()
     expect(
-      screen.queryByRole('row', { name: /Walnut Table Holiday Run/ }),
+      screen.queryByRole('row', { name: walnutProjectLabel }),
     ).not.toBeInTheDocument()
   })
 
@@ -494,17 +501,17 @@ describe('SalesReportPage', () => {
     try {
       renderReportsRoute()
 
-      await screen.findByText('Maple Shelf Launch')
+      await screen.findByText(mapleProjectLabel)
       await selectAntOption(
         user,
         screen.getByRole('combobox', { name: 'Stakeholder' }),
         'Alicia',
       )
-      await screen.findByText('Oak Desk Reserve')
+      await screen.findByText(oakDeskProjectLabel)
       await selectAntOption(
         user,
         screen.getByRole('combobox', { name: 'Project' }),
-        'Maple Shelf Launch',
+        mapleProjectLabel,
       )
       await user.click(
         screen.getByRole('button', {
@@ -522,6 +529,7 @@ describe('SalesReportPage', () => {
       expect(exportedContent).toContain('Sales Report')
       expect(exportedContent).toContain('2026')
       expect(exportedContent).toContain('Alicia')
+      expect(exportedContent).toContain(mapleProjectLabel)
       expect(exportedContent).toContain('Maple Shelf Launch')
       expect(exportedContent).toContain('Stake %')
       expect(exportedContent).toContain('Stakeholder Income')
@@ -584,7 +592,7 @@ describe('SalesReportPage', () => {
 
     renderReportsRoute()
 
-    await screen.findByText('Maple Shelf Launch')
+    await screen.findByText(mapleProjectLabel)
     await selectAntOption(
       user,
       screen.getByRole('combobox', { name: 'Month' }),

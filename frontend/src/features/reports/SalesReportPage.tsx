@@ -77,6 +77,15 @@ function formatMonth(month: number) {
   return monthFormatter.format(new Date(Date.UTC(2026, month - 1, 1)))
 }
 
+function formatProjectLabel(
+  row: Pick<SalesReportRow, 'productName' | 'projectId'>,
+) {
+  const productName = row.productName.trim()
+  return productName
+    ? `${productName} (Project #${row.projectId})`
+    : `Project #${row.projectId}`
+}
+
 function buildReportPath(year: string, month: string, stakeholderId: string) {
   const query = new URLSearchParams({ year })
   if (month) {
@@ -213,13 +222,15 @@ export function SalesReportPage() {
     const optionsByProject = new Map<number, string>()
 
     for (const row of rows) {
-      optionsByProject.set(row.projectId, row.projectName)
+      optionsByProject.set(row.projectId, formatProjectLabel(row))
     }
 
     return [...optionsByProject.entries()]
-      .sort(([, leftName], [, rightName]) => leftName.localeCompare(rightName))
-      .map(([projectId, projectName]) => ({
-        label: projectName,
+      .sort(([, leftLabel], [, rightLabel]) =>
+        leftLabel.localeCompare(rightLabel),
+      )
+      .map(([projectId, projectLabel]) => ({
+        label: projectLabel,
         value: String(projectId),
       }))
   }, [rows])
@@ -263,26 +274,30 @@ export function SalesReportPage() {
   const columns = useMemo<ColumnsType<SalesReportRow>>(
     () => [
       {
-        dataIndex: 'projectName',
-        key: 'projectName',
+        dataIndex: 'productName',
+        key: 'productProject',
         ellipsis: true,
         render: (
-          _value: SalesReportRow['projectName'],
+          _value: SalesReportRow['productName'],
           row: SalesReportRow,
-        ) => (
-          <Link
-            aria-label={row.projectName}
-            className="entity-reference-link"
-            to={`/projects/${row.projectId}`}
-          >
-            <ProductNameCell
-              imageUrl={row.productImage}
-              name={row.projectName}
-              thumbnailAlt={`${row.projectName} thumbnail`}
-            />
-          </Link>
-        ),
-        title: 'Project',
+        ) => {
+          const projectLabel = formatProjectLabel(row)
+
+          return (
+            <Link
+              aria-label={projectLabel}
+              className="entity-reference-link"
+              to={`/projects/${row.projectId}`}
+            >
+              <ProductNameCell
+                imageUrl={row.productImage}
+                name={projectLabel}
+                thumbnailAlt={`${row.productName} thumbnail`}
+              />
+            </Link>
+          )
+        },
+        title: 'Product / Project',
         width: REPORT_COLUMN_WIDTHS.project,
       },
       ...sources.map((source) => {
