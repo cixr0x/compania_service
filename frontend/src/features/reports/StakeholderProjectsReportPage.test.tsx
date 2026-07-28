@@ -240,6 +240,8 @@ describe('StakeholderProjectsReportPage', () => {
     expect(within(projectRegion).getByText('$33.00')).toBeVisible()
     expect(within(projectRegion).getByText('Utilidad')).toBeVisible()
     expect(within(projectRegion).getByText('$310.00')).toBeVisible()
+    expect(within(projectRegion).getByText('ROI del proyecto')).toBeVisible()
+    expect(within(projectRegion).getByText('939.39%')).toBeVisible()
 
     const stakeholderRegion = screen.getByRole('region', {
       name: 'Alicia, detalle del socio',
@@ -352,6 +354,8 @@ describe('StakeholderProjectsReportPage', () => {
     ).toHaveAttribute('href', '/products/42')
     expect(within(projectRegion).getByText('Proyecto #501')).toBeVisible()
     expect(within(projectRegion).getByText('$310.00')).toBeVisible()
+    expect(within(projectRegion).getByText('ROI del proyecto')).toBeVisible()
+    expect(within(projectRegion).getByText('939.39%')).toBeVisible()
 
     const stakeholderRegion = screen.getByRole('region', {
       name: 'Alicia, detalle del socio',
@@ -387,6 +391,59 @@ describe('StakeholderProjectsReportPage', () => {
     expect(
       screen.queryByRole('button', { name: /Eliminar fila/i }),
     ).not.toBeInTheDocument()
+  })
+
+  it('shows an unavailable project ROI when calculated cost is zero', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation((path: string) => {
+      if (path === '/projects?pageSize=100') {
+        return Promise.resolve(projects)
+      }
+
+      if (
+        path === '/reports/stakeholder-projects?projectId=501&stakeholderId=10'
+      ) {
+        return Promise.resolve({
+          ...stakeholderProjectsReport,
+          row: {
+            ...stakeholderProjectsReport.row,
+            calculatedCost: 0,
+          },
+        })
+      }
+
+      if (
+        path ===
+        '/stakeholder-project-transactions/projects/501/stakeholders/10'
+      ) {
+        return Promise.resolve([])
+      }
+
+      return Promise.reject(new Error(`Unexpected GET ${path}`))
+    })
+
+    renderStakeholderProjectsReportRoute()
+
+    await selectAntOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Proyecto' }),
+      'Proyecto #501 - Maple Shelf',
+    )
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Socio' }),
+      'Alicia',
+    )
+
+    const projectRegion = await screen.findByRole('region', {
+      name: 'Maple Shelf, proyecto 501',
+    })
+    const roiMetric = within(projectRegion)
+      .getByText('ROI del proyecto')
+      .closest<HTMLElement>('.stakeholder-project-metric')
+
+    expect(roiMetric).not.toBeNull()
+    expect(within(roiMetric!).getByText('-')).toBeVisible()
   })
 
   it('renders report load failures as an Ant Design alert', async () => {

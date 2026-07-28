@@ -61,6 +61,21 @@ function formatUnitCount(value: unknown) {
   return `${formatUnits(numericValue)} ${numericValue === 1 ? 'unidad' : 'unidades'}`
 }
 
+function formatProjectRoi(profit: unknown, calculatedCost: unknown) {
+  const numericProfit = Number(profit)
+  const numericCalculatedCost = Number(calculatedCost)
+
+  if (
+    !Number.isFinite(numericProfit) ||
+    !Number.isFinite(numericCalculatedCost) ||
+    numericCalculatedCost === 0
+  ) {
+    return '-'
+  }
+
+  return formatPercentage((numericProfit / numericCalculatedCost) * 100)
+}
+
 function buildReportPath(projectId: number, stakeholderId: number) {
   return buildStakeholderProjectsPath(
     '/reports/stakeholder-projects',
@@ -466,6 +481,10 @@ function StakeholderProjectsReportContent({
             label="Utilidad"
             tone="positive"
             value={formatCurrency(row.profit)}
+          />
+          <Metric
+            label="ROI del proyecto"
+            value={formatProjectRoi(row.profit, row.calculatedCost)}
           />
         </div>
       </section>
