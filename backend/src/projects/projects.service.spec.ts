@@ -1,4 +1,5 @@
-import { PrismaService } from '../prisma/prisma.service';
+import { asPrismaService } from '../../test/prisma-service.mock';
+import { publicProjectDetailSelect } from './project-public-select';
 import { ProjectsService } from './projects.service';
 
 type ProjectCreateMock = (args: {
@@ -23,7 +24,9 @@ type ProjectFindFirstMock = (
 type ProjectFindManyMock = (args: unknown) => Promise<unknown[]>;
 type ProjectFindUniqueMock = (args: unknown) => Promise<unknown>;
 type ProjectUpdateMock = (args: unknown) => Promise<unknown>;
-type ProductFindUniqueMock = (args: unknown) => Promise<{ name: string } | null>;
+type ProductFindUniqueMock = (
+  args: unknown,
+) => Promise<{ name: string } | null>;
 type ProjectTransactionMock = {
   product: {
     findUnique: jest.MockedFunction<ProductFindUniqueMock>;
@@ -72,7 +75,7 @@ describe('ProjectsService', () => {
     product: {
       findUnique: productFindUnique,
     },
-  } as unknown as PrismaService;
+  };
 
   beforeEach(() => {
     jest.resetAllMocks();
@@ -98,7 +101,7 @@ describe('ProjectsService', () => {
   });
 
   it('creates projects with production cost and active flag', async () => {
-    const service = new ProjectsService(prisma);
+    const service = new ProjectsService(asPrismaService(prisma));
     await service.create({
       feeModel: 'percentage',
       feeValue: 18,
@@ -129,17 +132,13 @@ describe('ProjectsService', () => {
         costAdjustment: 0,
         isActive: true,
       },
-      select: expect.objectContaining({
-        name: true,
-      }),
+      select: publicProjectDetailSelect,
     });
-    expect(projectCreate.mock.calls[0]?.[0].select).not.toHaveProperty(
-      'createdDate',
-    );
+    expect(publicProjectDetailSelect).not.toHaveProperty('createdDate');
   });
 
   it('creates projects with signed cost adjustment details', async () => {
-    const service = new ProjectsService(prisma);
+    const service = new ProjectsService(asPrismaService(prisma));
     await service.create({
       feeModel: 'fixed',
       feeValue: 125.5,
@@ -165,17 +164,13 @@ describe('ProjectsService', () => {
         costAdjustment: -1.5,
         adjustmentDescription: 'Damaged packaging discount',
       },
-      select: expect.objectContaining({
-        name: true,
-      }),
+      select: publicProjectDetailSelect,
     });
-    expect(projectCreate.mock.calls[0]?.[0].select).not.toHaveProperty(
-      'createdDate',
-    );
+    expect(publicProjectDetailSelect).not.toHaveProperty('createdDate');
   });
 
   it('defaults omitted unit fields to zero without forcing active status when creating projects', async () => {
-    const service = new ProjectsService(prisma);
+    const service = new ProjectsService(asPrismaService(prisma));
     await service.create({
       feeModel: 'percentage',
       feeValue: 18,
@@ -194,22 +189,15 @@ describe('ProjectsService', () => {
         adminCost: 0,
         costAdjustment: 0,
       },
-      select: expect.objectContaining({
-        name: true,
-      }),
+      select: publicProjectDetailSelect,
     });
-    expect(projectCreate.mock.calls[0]?.[0].select).not.toHaveProperty(
-      'createdDate',
-    );
-    expect(projectCreate.mock.calls[0]?.[0].data).not.toHaveProperty(
-      'isActive',
-    );
+    expect(publicProjectDetailSelect).not.toHaveProperty('createdDate');
   });
 
   it('allows creating multiple active projects for the same product', async () => {
     projectFindFirst.mockResolvedValue({ idProject: 500 });
 
-    const service = new ProjectsService(prisma);
+    const service = new ProjectsService(asPrismaService(prisma));
 
     await service.create({
       feeModel: 'percentage',
@@ -224,43 +212,40 @@ describe('ProjectsService', () => {
 
     expect(projectFindFirst).not.toHaveBeenCalled();
     expect(projectCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({
+      data: {
+        adminCost: 2.25,
+        costAdjustment: 0,
         feeModel: 'percentage',
         feeValue: 18,
         idProduct: 42,
         isActive: true,
         name: 'Maple Shelf',
-      }),
-      select: expect.objectContaining({
-        name: true,
-      }),
+        productionCost: 7.75,
+        unitCost: 4.5,
+        units: 10,
+      },
+      select: publicProjectDetailSelect,
     });
-    expect(projectCreate.mock.calls[0]?.[0].select).not.toHaveProperty(
-      'createdDate',
-    );
+    expect(publicProjectDetailSelect).not.toHaveProperty('createdDate');
   });
 
   it('uses an explicit public project select when listing projects', async () => {
-    const service = new ProjectsService(prisma);
+    const service = new ProjectsService(asPrismaService(prisma));
 
     await service.findAll({ page: 1, pageSize: 25 });
 
     expect(projectFindMany).toHaveBeenCalledWith({
       orderBy: { idProject: 'desc' },
-      select: expect.objectContaining({
-        name: true,
-        product: true,
-      }),
+      select: publicProjectDetailSelect,
       skip: 0,
       take: 25,
     });
-    expect(projectFindMany.mock.calls[0]?.[0]).not.toHaveProperty('include');
   });
 
   it('allows updating a project to active when the product already has one', async () => {
     projectFindFirst.mockResolvedValue({ idProject: 500 });
 
-    const service = new ProjectsService(prisma);
+    const service = new ProjectsService(asPrismaService(prisma));
 
     await service.update(501, {
       isActive: true,
@@ -269,9 +254,7 @@ describe('ProjectsService', () => {
     expect(projectFindFirst).not.toHaveBeenCalled();
     expect(projectUpdate).toHaveBeenCalledWith({
       data: { isActive: true },
-      select: expect.objectContaining({
-        name: true,
-      }),
+      select: publicProjectDetailSelect,
       where: { idProject: 501 },
     });
   });
