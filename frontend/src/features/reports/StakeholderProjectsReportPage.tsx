@@ -468,7 +468,7 @@ function StakeholderProjectsReportContent({
               <Typography.Text className="stakeholder-source-units">
                 {formatUnitCount(row[source].quantity)}
               </Typography.Text>
-              {!row.fixedRoi ? (
+              {!isFixedRoiPrintView ? (
                 <Typography.Text className="stakeholder-source-amount">
                   {formatCurrency(row[source].amount)}
                 </Typography.Text>

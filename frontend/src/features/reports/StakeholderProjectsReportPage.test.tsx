@@ -314,7 +314,7 @@ describe('StakeholderProjectsReportPage', () => {
     expect(within(projectRegion).queryByText('Bruno')).not.toBeInTheDocument()
   })
 
-  it('shows fixed ROI project metrics, hides channel amounts, and uses fixed stakeholder income', async () => {
+  it('shows fixed ROI project metrics, channel amounts, and fixed stakeholder income', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation((path: string) => {
       if (path === '/projects?pageSize=100') {
@@ -359,8 +359,8 @@ describe('StakeholderProjectsReportPage', () => {
 
     expect(within(sourceTiles).getByText('2 unidades')).toBeVisible()
     expect(within(sourceTiles).getByText('1 unidad')).toBeVisible()
-    expect(within(sourceTiles).queryByText('$200.00')).not.toBeInTheDocument()
-    expect(within(sourceTiles).queryByText('$150.00')).not.toBeInTheDocument()
+    expect(within(sourceTiles).getByText('$200.00')).toBeVisible()
+    expect(within(sourceTiles).getByText('$150.00')).toBeVisible()
     expect(within(projectRegion).getByText('ROI fijo')).toBeVisible()
     expect(within(projectRegion).getByText('20%')).toBeVisible()
     expect(within(projectRegion).getByText('Utilidad otorgada')).toBeVisible()
