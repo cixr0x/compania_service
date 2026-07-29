@@ -47,6 +47,8 @@ export type Project = {
   name: string
   feeModel: ProjectFeeModel
   feeValue: DecimalValue
+  fixedRoi: boolean
+  fixedRoiPercentage: DecimalValue | null
   isActive: boolean
   units: number
   unitCost: DecimalValue
@@ -209,10 +211,14 @@ export type StakeholderProjectReportRow = Record<
   StakeholderProjectsReportSourceTotals
 > & {
   calculatedCost: number
+  fixedRoi: boolean
+  fixedRoiPercentage: number | null
+  fixedRoiProfit: number | null
   netSalesTotal: number
   productImage: string | null
   productName: string
   profit: number
+  profitDifference: number | null
   projectId: number
   projectProgress: number
   projectTotalCost: number

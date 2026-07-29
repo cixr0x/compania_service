@@ -809,6 +809,11 @@ describe('EntityEditPage', () => {
       'true',
     )
     await user.type(screen.getByLabelText('Percentage Fee'), '18')
+    expect(
+      screen.queryByLabelText('Fixed ROI Percentage'),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByLabelText('Fixed ROI'))
+    await user.type(screen.getByLabelText('Fixed ROI Percentage'), '25.5')
     expect(screen.getByLabelText('Active')).toBeChecked()
     await user.type(screen.getByLabelText('Units'), '10')
     await user.type(screen.getByLabelText('Unit Cost'), '1,000,000.00')
@@ -821,6 +826,8 @@ describe('EntityEditPage', () => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
         feeModel: 'percentage',
         feeValue: 18,
+        fixedRoi: true,
+        fixedRoiPercentage: 25.5,
         idProduct: 42,
         isActive: true,
         name: 'Wholesale launch',
@@ -850,6 +857,22 @@ describe('EntityEditPage', () => {
     expect(feeModelSelect).toHaveAttribute('aria-required', 'true')
     expect(feeModelSelect.closest('.ant-select')).toHaveTextContent('Percentage fee')
     expect(screen.getByLabelText('Percentage Fee')).toBeVisible()
+    expect(screen.getByLabelText('Fixed ROI')).not.toBeChecked()
+    expect(
+      screen.queryByLabelText('Fixed ROI Percentage'),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByLabelText('Fixed ROI'))
+    const fixedRoiPercentage = screen.getByLabelText('Fixed ROI Percentage')
+    await user.type(fixedRoiPercentage, '20')
+    expect(fixedRoiPercentage).toHaveValue('20')
+
+    await user.click(screen.getByLabelText('Fixed ROI'))
+    expect(
+      screen.queryByLabelText('Fixed ROI Percentage'),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByLabelText('Fixed ROI'))
+    expect(screen.getByLabelText('Fixed ROI Percentage')).toHaveValue('')
 
     await user.click(feeModelSelect)
     expect(await screen.findByTitle('Fixed fee per unit')).toBeInTheDocument()
@@ -887,6 +910,7 @@ describe('EntityEditPage', () => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
         feeModel: 'percentage',
         feeValue: 18,
+        fixedRoi: false,
         idProduct: 42,
         isActive: true,
         units: 10,
@@ -1005,6 +1029,7 @@ describe('EntityEditPage', () => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
         feeModel: 'percentage',
         feeValue: 18,
+        fixedRoi: false,
         idProduct: 42,
         isActive: true,
       })
@@ -1339,6 +1364,7 @@ describe('EntityEditPage', () => {
       expect(postJson).toHaveBeenCalledWith('/projects', {
         feeModel: 'percentage',
         feeValue: 18,
+        fixedRoi: false,
         idProduct: 42,
         isActive: true,
         unitCost: 1000000,
@@ -1448,6 +1474,7 @@ describe('EntityEditPage', () => {
       expect(patchJson).toHaveBeenCalledWith('/projects/77', {
         feeModel: 'percentage',
         feeValue: 18,
+        fixedRoi: false,
         idProduct: 42,
         isActive: true,
         unitCost: 1000000,

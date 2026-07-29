@@ -19,6 +19,11 @@ type ProjectNameLookupClient = {
   };
 };
 
+type ProjectFixedRoiState = {
+  fixedRoi: boolean;
+  fixedRoiPercentage: unknown;
+};
+
 @Injectable()
 export class ProjectsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -58,7 +63,11 @@ export class ProjectsService {
     return this.prisma.$transaction(async (tx) => {
       const current = await tx.project.findUnique({
         where: { idProject: id },
-        select: { idProject: true },
+        select: {
+          fixedRoi: true,
+          fixedRoiPercentage: true,
+          idProject: true,
+        },
       });
       if (!current) {
         throw new NotFoundException(`Project ${id} was not found`);
@@ -66,7 +75,7 @@ export class ProjectsService {
 
       return tx.project.update({
         where: { idProject: id },
-        data: this.toUpdateData(dto),
+        data: this.toUpdateData(dto, current),
         select: publicProjectDetailSelect,
       });
     });
@@ -84,12 +93,24 @@ export class ProjectsService {
     dto: CreateProjectDto,
     client: ProjectNameLookupClient,
   ): Promise<Prisma.ProjectUncheckedCreateInput> {
-    const { feeModel, feeValue, name, ...rest } = dto;
+    const { feeModel, feeValue, fixedRoi, fixedRoiPercentage, name, ...rest } =
+      dto;
+    const fixedRoiData =
+      fixedRoi === undefined && fixedRoiPercentage === undefined
+        ? {}
+        : {
+            fixedRoi: fixedRoi === true,
+            fixedRoiPercentage: resolveFixedRoiPercentage(
+              fixedRoi === true,
+              fixedRoiPercentage,
+            ),
+          };
 
     return {
       ...rest,
       feeModel: normalizeFeeModel(feeModel),
       feeValue: validateFeeValue(feeValue),
+      ...fixedRoiData,
       name: await resolveProjectName(client, dto.idProduct, name),
       units: dto.units ?? 0,
       unitCost: dto.unitCost ?? 0,
@@ -101,8 +122,10 @@ export class ProjectsService {
 
   private toUpdateData(
     dto: UpdateProjectDto,
+    current: ProjectFixedRoiState,
   ): Prisma.ProjectUncheckedUpdateInput {
-    const { feeModel, feeValue, name, ...rest } = dto;
+    const { feeModel, feeValue, fixedRoi, fixedRoiPercentage, name, ...rest } =
+      dto;
     const data: Prisma.ProjectUncheckedUpdateInput = { ...rest };
 
     if (feeModel !== undefined) {
@@ -115,6 +138,24 @@ export class ProjectsService {
 
     if (name !== undefined) {
       data.name = normalizeProjectNameForUpdate(name);
+    }
+
+    const nextFixedRoi = fixedRoi ?? current.fixedRoi;
+    if (fixedRoi !== undefined) {
+      data.fixedRoi = fixedRoi;
+    }
+
+    if (!nextFixedRoi) {
+      if (fixedRoi !== undefined || fixedRoiPercentage !== undefined) {
+        data.fixedRoiPercentage = null;
+      }
+    } else if (fixedRoiPercentage !== undefined) {
+      data.fixedRoiPercentage = resolveFixedRoiPercentage(
+        true,
+        fixedRoiPercentage,
+      );
+    } else {
+      resolveFixedRoiPercentage(true, current.fixedRoiPercentage);
     }
 
     return data;
@@ -186,4 +227,19 @@ function validateFeeValue(value: number) {
   }
 
   return value;
+}
+
+function resolveFixedRoiPercentage(fixedRoi: boolean, value: unknown) {
+  if (!fixedRoi) {
+    return null;
+  }
+
+  const percentage = Number(value);
+  if (!Number.isFinite(percentage) || percentage < 0) {
+    throw new BadRequestException(
+      'Fixed ROI percentage must be a non-negative number when Fixed ROI is enabled',
+    );
+  }
+
+  return percentage;
 }

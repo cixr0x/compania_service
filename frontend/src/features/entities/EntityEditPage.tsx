@@ -831,6 +831,10 @@ export function EntityEditPage() {
             : ''
       }
 
+      if (config?.path === 'projects' && name === 'fixedRoi' && value === false) {
+        nextValues.fixedRoiPercentage = ''
+      }
+
       return nextValues
     })
   }

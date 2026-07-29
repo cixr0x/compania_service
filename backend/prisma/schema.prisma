@@ -30,6 +30,8 @@ model Project {
   name                  String               @db.VarChar(255)
   feeModel              String               @default("percentage") @map("fee_model") @db.VarChar(50)
   feeValue              Decimal              @default(0) @map("fee_value") @db.Decimal(12, 2)
+  fixedRoi              Boolean              @default(false) @map("fixed_roi")
+  fixedRoiPercentage    Decimal?             @map("fixed_roi_percentage") @db.Decimal(7, 2)
   createdDate           DateTime             @default(now()) @map("created_date")
   isActive              Boolean              @default(false) @map("is_active")
   units                 Int

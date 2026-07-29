@@ -34,6 +34,10 @@ const sourceTones: Record<StakeholderProjectsReportSource, string> = {
 }
 
 function formatPercentage(value: unknown) {
+  if (value === null || value === undefined || value === '') {
+    return '-'
+  }
+
   const numericValue = Number(value)
   if (!Number.isFinite(numericValue)) {
     return '-'
@@ -373,6 +377,16 @@ function StakeholderProjectsReportContent({
   selectedProjectProductId: number | null
   sources: StakeholderProjectsReportSource[]
 }) {
+  const isFixedRoiPrintView = readOnlyTransactions && row.fixedRoi
+  const profitDifferenceTone =
+    row.profitDifference === null
+      ? undefined
+      : row.profitDifference < 0
+        ? 'negative'
+        : row.profitDifference > 0
+          ? 'positive'
+          : undefined
+
   return (
     <>
       <section
@@ -417,75 +431,124 @@ function StakeholderProjectsReportContent({
             </div>
           </div>
 
-          <div className="stakeholder-project-progress">
-            <Typography.Text type="secondary">
-              {`${formatUnits(row.totalUnitsSold)} / ${formatUnits(row.totalUnits)} unidades vendidas`}
-            </Typography.Text>
-            <div className="stakeholder-project-progress-row">
-              <Progress
-                percent={row.projectProgress}
-                showInfo={false}
-                size="small"
-                strokeColor="#f59e0b"
-              />
-              <Typography.Text className="stakeholder-project-progress-value">
-                {formatPercentage(row.projectProgress)}
+          {!isFixedRoiPrintView ? (
+            <div className="stakeholder-project-progress">
+              <Typography.Text type="secondary">
+                {`${formatUnits(row.totalUnitsSold)} / ${formatUnits(row.totalUnits)} unidades vendidas`}
               </Typography.Text>
+              <div className="stakeholder-project-progress-row">
+                <Progress
+                  percent={row.projectProgress}
+                  showInfo={false}
+                  size="small"
+                  strokeColor="#f59e0b"
+                />
+                <Typography.Text className="stakeholder-project-progress-value">
+                  {formatPercentage(row.projectProgress)}
+                </Typography.Text>
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
-        <div
-          aria-label={`${row.productName}, totales por origen`}
-          className="stakeholder-source-grid"
-          role="list"
-        >
-          {sources.map((source) => (
-            <div
-              className={`stakeholder-source-card stakeholder-source-card-${sourceTones[source]}`}
-              key={source}
-              role="listitem"
-            >
-              <Typography.Text className="stakeholder-source-label">
-                {sourceLabels[source]}
-              </Typography.Text>
-              <Typography.Text className="stakeholder-source-units">
-                {formatUnitCount(row[source].quantity)}
-              </Typography.Text>
-              <Typography.Text className="stakeholder-source-amount">
-                {formatCurrency(row[source].amount)}
-              </Typography.Text>
-            </div>
-          ))}
-        </div>
+        {!isFixedRoiPrintView ? (
+          <div
+            aria-label={`${row.productName}, totales por origen`}
+            className="stakeholder-source-grid"
+            role="list"
+          >
+            {sources.map((source) => (
+              <div
+                className={`stakeholder-source-card stakeholder-source-card-${sourceTones[source]}`}
+                key={source}
+                role="listitem"
+              >
+                <Typography.Text className="stakeholder-source-label">
+                  {sourceLabels[source]}
+                </Typography.Text>
+                <Typography.Text className="stakeholder-source-units">
+                  {formatUnitCount(row[source].quantity)}
+                </Typography.Text>
+                {!row.fixedRoi ? (
+                  <Typography.Text className="stakeholder-source-amount">
+                    {formatCurrency(row[source].amount)}
+                  </Typography.Text>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
 
         <div className="stakeholder-project-metrics">
-          <Metric
-            label="Unidades restantes"
-            value={formatUnits(row.unitsLeft)}
-          />
-          <Metric label="Ventas totales" value={formatCurrency(row.totalSales)} />
-          <Metric
-            label="Comisiones totales"
-            value={formatCurrency(row.totalFees)}
-          />
-          <Metric
-            label="Ventas netas totales"
-            value={formatCurrency(row.netSalesTotal)}
-          />
-          <Metric
-            label="Costo calculado"
-            value={formatCurrency(row.calculatedCost)}
-          />
-          <Metric
-            label="Utilidad"
-            tone="positive"
-            value={formatCurrency(row.profit)}
-          />
-          <Metric
-            label="ROI del proyecto"
-            value={formatProjectRoi(row.profit, row.calculatedCost)}
-          />
+          {isFixedRoiPrintView ? (
+            <>
+              <Metric
+                label="Unidades vendidas"
+                value={formatUnits(row.totalUnitsSold)}
+              />
+              <Metric
+                label="Costo calculado"
+                value={formatCurrency(row.calculatedCost)}
+              />
+              <Metric
+                label="ROI fijo"
+                value={formatPercentage(row.fixedRoiPercentage)}
+              />
+              <Metric
+                label="Utilidad otorgada"
+                value={formatCurrency(row.fixedRoiProfit)}
+              />
+            </>
+          ) : (
+            <>
+              <Metric
+                label="Unidades restantes"
+                value={formatUnits(row.unitsLeft)}
+              />
+              <Metric
+                label="Ventas totales"
+                value={formatCurrency(row.totalSales)}
+              />
+              <Metric
+                label="Comisiones totales"
+                value={formatCurrency(row.totalFees)}
+              />
+              <Metric
+                label="Ventas netas totales"
+                value={formatCurrency(row.netSalesTotal)}
+              />
+              <Metric
+                label="Costo calculado"
+                value={formatCurrency(row.calculatedCost)}
+              />
+              <Metric
+                label="Utilidad"
+                tone="positive"
+                value={formatCurrency(row.profit)}
+              />
+              <Metric
+                label="ROI del proyecto"
+                value={formatProjectRoi(row.profit, row.calculatedCost)}
+              />
+              {row.fixedRoi ? (
+                <>
+                  <Metric
+                    label="ROI fijo"
+                    value={formatPercentage(row.fixedRoiPercentage)}
+                  />
+                  <Metric
+                    label="Utilidad otorgada"
+                    value={formatCurrency(row.fixedRoiProfit)}
+                  />
+                  <Metric
+                    label="Diferencia de utilidad"
+                    tone={profitDifferenceTone}
+                    value={formatCurrency(row.profitDifference)}
+                  />
+                </>
+              ) : null}
+            </>
+          )}
         </div>
       </section>
 

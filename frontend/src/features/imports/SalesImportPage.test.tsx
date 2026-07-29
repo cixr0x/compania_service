@@ -29,6 +29,8 @@ const starterProject = {
   name: 'Starter launch',
   feeModel: 'percentage' as const,
   feeValue: '18',
+  fixedRoi: false,
+  fixedRoiPercentage: null,
   isActive: true,
   units: 100,
   unitCost: '10',

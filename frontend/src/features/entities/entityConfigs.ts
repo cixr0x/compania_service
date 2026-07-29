@@ -276,6 +276,24 @@ function isFixedFeeModel(row: EntityRow) {
   return row.feeModel === 'fixed'
 }
 
+function isFixedRoiEnabled(row: EntityRow) {
+  return (
+    row.fixedRoi === true ||
+    row.fixedRoi === 'true' ||
+    row.fixedRoi === 1 ||
+    row.fixedRoi === '1'
+  )
+}
+
+function getFixedRoiPercentageDisplay(row: EntityRow) {
+  if (!isFixedRoiEnabled(row)) {
+    return '-'
+  }
+
+  const percentage = parseMoneyNumber(row.fixedRoiPercentage)
+  return percentage === null ? '-' : `${percentage}%`
+}
+
 function getProjectTransactions(row: EntityRow) {
   return Array.isArray(row.transactions) ? (row.transactions as EntityRow[]) : []
 }
@@ -434,6 +452,12 @@ export const entityConfigs = {
         valueType: 'string',
         width: 130,
       }),
+      column('fixedRoi', 'Fixed ROI'),
+      column('fixedRoiPercentage', 'Fixed ROI %', {
+        valueGetter: getFixedRoiPercentageDisplay,
+        valueType: 'string',
+        width: 130,
+      }),
       column('isActive', 'Active'),
       column('units', 'Units'),
       column('unitCost', 'Unit Cost', { valueFormat: 'money' }),
@@ -475,6 +499,16 @@ export const entityConfigs = {
         step: 0.01,
         valueFormat: 'money',
         visibleWhen: isFixedFeeModel,
+      }),
+      checkbox('fixedRoi', 'Fixed ROI', {
+        defaultValue: false,
+      }),
+      number('fixedRoiPercentage', 'Fixed ROI Percentage', {
+        min: 0,
+        required: true,
+        step: 0.01,
+        suffix: '%',
+        visibleWhen: isFixedRoiEnabled,
       }),
       checkbox('isActive', 'Active', {
         defaultValue: true,

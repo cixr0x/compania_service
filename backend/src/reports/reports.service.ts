@@ -57,10 +57,14 @@ type StakeholderProjectStakeholderRow = {
 
 type StakeholderProjectRow = Record<ReportSource, SourceTotals> & {
   calculatedCost: number;
+  fixedRoi: boolean;
+  fixedRoiPercentage: number | null;
+  fixedRoiProfit: number | null;
   netSalesTotal: number;
   productImage: string | null;
   productName: string;
   profit: number;
+  profitDifference: number | null;
   projectId: number;
   projectProgress: number;
   projectTotalCost: number;
@@ -276,6 +280,19 @@ export class ReportsService {
     row.netSalesTotal = roundCurrency(row.totalSales - row.totalFees);
     row.calculatedCost = roundCurrency(row.totalUnitsSold * rawUnitPrice);
     row.profit = roundCurrency(row.netSalesTotal - row.calculatedCost);
+    row.fixedRoi = project.fixedRoi;
+    row.fixedRoiPercentage = project.fixedRoi
+      ? toNumber(project.fixedRoiPercentage)
+      : null;
+    row.fixedRoiProfit = project.fixedRoi
+      ? roundCurrency(
+          row.calculatedCost * ((row.fixedRoiPercentage ?? 0) / 100),
+        )
+      : null;
+    row.profitDifference =
+      row.fixedRoiProfit === null
+        ? null
+        : roundCurrency(row.profit - row.fixedRoiProfit);
     row.projectProgress =
       project.units === 0
         ? 0
@@ -293,9 +310,15 @@ export class ReportsService {
     const transactionTotals = calculateStakeholderTransactionTotals(
       stakeholderRow.transactions,
     );
-    const income = roundCurrency(
-      row.calculatedCost * stakeRatio + row.profit * stakeRatio,
-    );
+    const income = row.fixedRoi
+      ? roundCurrency(
+          row.calculatedCost *
+            ((row.fixedRoiPercentage ?? 0) / 100) *
+            stakeRatio,
+        )
+      : roundCurrency(
+          row.calculatedCost * stakeRatio + row.profit * stakeRatio,
+        );
     row.stakeholder = {
       adjustmentCount: transactionTotals.adjustmentCount,
       adjustments: transactionTotals.adjustments,
@@ -389,10 +412,14 @@ function createEmptyStakeholderProjectRow({
     calculatedCost: 0,
     ecommerce: createEmptySourceTotals(),
     event: createEmptySourceTotals(),
+    fixedRoi: false,
+    fixedRoiPercentage: null,
+    fixedRoiProfit: null,
     netSalesTotal: 0,
     productImage,
     productName,
     profit: 0,
+    profitDifference: null,
     projectId,
     projectProgress: 0,
     projectTotalCost: 0,

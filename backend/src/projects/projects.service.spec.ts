@@ -6,6 +6,8 @@ type ProjectCreateMock = (args: {
   data: {
     feeModel: string;
     feeValue: number;
+    fixedRoi?: boolean;
+    fixedRoiPercentage?: number | null;
     idProduct: number;
     name: string;
     units: number;
@@ -89,6 +91,8 @@ describe('ProjectsService', () => {
     projectFindUnique.mockResolvedValue({
       idProject: 501,
       idProduct: 42,
+      fixedRoi: false,
+      fixedRoiPercentage: null,
       name: 'Maple Shelf',
       units: 10,
       unitCost: '4.50',
@@ -167,6 +171,50 @@ describe('ProjectsService', () => {
       select: publicProjectDetailSelect,
     });
     expect(publicProjectDetailSelect).not.toHaveProperty('createdDate');
+  });
+
+  it('creates a project with a fixed ROI percentage', async () => {
+    const service = new ProjectsService(asPrismaService(prisma));
+    await service.create({
+      feeModel: 'percentage',
+      feeValue: 18,
+      fixedRoi: true,
+      fixedRoiPercentage: 25.5,
+      idProduct: 42,
+    });
+
+    expect(projectCreate).toHaveBeenCalledWith({
+      data: {
+        adminCost: 0,
+        costAdjustment: 0,
+        feeModel: 'percentage',
+        feeValue: 18,
+        fixedRoi: true,
+        fixedRoiPercentage: 25.5,
+        idProduct: 42,
+        name: 'Maple Shelf',
+        productionCost: 0,
+        unitCost: 0,
+        units: 0,
+      },
+      select: publicProjectDetailSelect,
+    });
+  });
+
+  it('rejects a fixed ROI project without a percentage', async () => {
+    const service = new ProjectsService(asPrismaService(prisma));
+
+    await expect(
+      service.create({
+        feeModel: 'percentage',
+        feeValue: 18,
+        fixedRoi: true,
+        idProduct: 42,
+      }),
+    ).rejects.toThrow(
+      'Fixed ROI percentage must be a non-negative number when Fixed ROI is enabled',
+    );
+    expect(projectCreate).not.toHaveBeenCalled();
   });
 
   it('defaults omitted unit fields to zero without forcing active status when creating projects', async () => {
@@ -254,6 +302,28 @@ describe('ProjectsService', () => {
     expect(projectFindFirst).not.toHaveBeenCalled();
     expect(projectUpdate).toHaveBeenCalledWith({
       data: { isActive: true },
+      select: publicProjectDetailSelect,
+      where: { idProject: 501 },
+    });
+  });
+
+  it('clears the fixed ROI percentage when the model is disabled', async () => {
+    projectFindUnique.mockResolvedValue({
+      fixedRoi: true,
+      fixedRoiPercentage: '25.50',
+      idProject: 501,
+    });
+    const service = new ProjectsService(asPrismaService(prisma));
+
+    await service.update(501, {
+      fixedRoi: false,
+    });
+
+    expect(projectUpdate).toHaveBeenCalledWith({
+      data: {
+        fixedRoi: false,
+        fixedRoiPercentage: null,
+      },
       select: publicProjectDetailSelect,
       where: { idProject: 501 },
     });

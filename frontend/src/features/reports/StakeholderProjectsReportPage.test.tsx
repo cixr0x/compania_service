@@ -22,10 +22,14 @@ const stakeholderProjectsReport = {
     calculatedCost: 33,
     ecommerce: { amount: 150, quantity: 1 },
     event: { amount: 0, quantity: 0 },
+    fixedRoi: false,
+    fixedRoiPercentage: null,
+    fixedRoiProfit: null,
     netSalesTotal: 343,
     productImage: 'https://example.test/maple-shelf.jpg',
     productName: 'Maple Shelf',
     profit: 310,
+    profitDifference: null,
     projectId: 501,
     projectProgress: 30,
     projectTotalCost: 110,
@@ -53,8 +57,26 @@ const stakeholderProjectsReport = {
   sources: ['store', 'ecommerce', 'event'],
 }
 
+const fixedRoiStakeholderProjectsReport = {
+  ...stakeholderProjectsReport,
+  row: {
+    ...stakeholderProjectsReport.row,
+    fixedRoi: true,
+    fixedRoiPercentage: 20,
+    fixedRoiProfit: 6.6,
+    profitDifference: 303.4,
+    stakeholder: {
+      ...stakeholderProjectsReport.row.stakeholder,
+      balance: -111.29,
+      income: 3.96,
+    },
+  },
+}
+
 const projects = [
   {
+    fixedRoi: false,
+    fixedRoiPercentage: null,
     idProject: 501,
     idProduct: 42,
     product: {
@@ -292,6 +314,70 @@ describe('StakeholderProjectsReportPage', () => {
     expect(within(projectRegion).queryByText('Bruno')).not.toBeInTheDocument()
   })
 
+  it('shows fixed ROI project metrics, hides channel amounts, and uses fixed stakeholder income', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation((path: string) => {
+      if (path === '/projects?pageSize=100') {
+        return Promise.resolve(projects)
+      }
+
+      if (
+        path === '/reports/stakeholder-projects?projectId=501&stakeholderId=10'
+      ) {
+        return Promise.resolve(fixedRoiStakeholderProjectsReport)
+      }
+
+      if (
+        path ===
+        '/stakeholder-project-transactions/projects/501/stakeholders/10'
+      ) {
+        return Promise.resolve([])
+      }
+
+      return Promise.reject(new Error(`Unexpected GET ${path}`))
+    })
+
+    renderStakeholderProjectsReportRoute()
+
+    await selectAntOption(
+      user,
+      await screen.findByRole('combobox', { name: 'Proyecto' }),
+      'Proyecto #501 - Maple Shelf',
+    )
+    await selectAntOption(
+      user,
+      screen.getByRole('combobox', { name: 'Socio' }),
+      'Alicia',
+    )
+
+    const projectRegion = await screen.findByRole('region', {
+      name: 'Maple Shelf, proyecto 501',
+    })
+    const sourceTiles = within(projectRegion).getByRole('list', {
+      name: 'Maple Shelf, totales por origen',
+    })
+
+    expect(within(sourceTiles).getByText('2 unidades')).toBeVisible()
+    expect(within(sourceTiles).getByText('1 unidad')).toBeVisible()
+    expect(within(sourceTiles).queryByText('$200.00')).not.toBeInTheDocument()
+    expect(within(sourceTiles).queryByText('$150.00')).not.toBeInTheDocument()
+    expect(within(projectRegion).getByText('ROI fijo')).toBeVisible()
+    expect(within(projectRegion).getByText('20%')).toBeVisible()
+    expect(within(projectRegion).getByText('Utilidad otorgada')).toBeVisible()
+    expect(within(projectRegion).getByText('$6.60')).toBeVisible()
+    expect(
+      within(projectRegion).getByText('Diferencia de utilidad'),
+    ).toBeVisible()
+    expect(within(projectRegion).getByText('$303.40')).toBeVisible()
+    expect(within(projectRegion).getByText('Ventas totales')).toBeVisible()
+
+    const stakeholderRegion = screen.getByRole('region', {
+      name: 'Alicia, detalle del socio',
+    })
+    expect(within(stakeholderRegion).getByText('$3.96')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$-111.29')).toBeVisible()
+  })
+
   it('renders a printable stakeholder projects report without selectors or transaction controls', async () => {
     vi.mocked(getJson).mockImplementation((path: string) => {
       if (
@@ -391,6 +477,82 @@ describe('StakeholderProjectsReportPage', () => {
     expect(
       screen.queryByRole('button', { name: /Eliminar fila/i }),
     ).not.toBeInTheDocument()
+  })
+
+  it('prints only the approved fixed ROI project metrics', async () => {
+    vi.mocked(getJson).mockImplementation((path: string) => {
+      if (
+        path === '/reports/stakeholder-projects?projectId=501&stakeholderId=10'
+      ) {
+        return Promise.resolve(fixedRoiStakeholderProjectsReport)
+      }
+
+      if (path === '/projects/501') {
+        return Promise.resolve({
+          ...projects[0],
+          fixedRoi: true,
+          fixedRoiPercentage: 20,
+        })
+      }
+
+      if (
+        path ===
+        '/stakeholder-project-transactions/projects/501/stakeholders/10'
+      ) {
+        return Promise.resolve([])
+      }
+
+      return Promise.reject(new Error(`Unexpected GET ${path}`))
+    })
+
+    renderStakeholderProjectsReportRoute(
+      '/reports/stakeholder-projects/print?projectId=501&stakeholderId=10',
+    )
+
+    const projectRegion = await screen.findByRole('region', {
+      name: 'Maple Shelf, proyecto 501',
+    })
+
+    expect(within(projectRegion).getByText('Unidades vendidas')).toBeVisible()
+    expect(within(projectRegion).getByText('3')).toBeVisible()
+    expect(within(projectRegion).getByText('Costo calculado')).toBeVisible()
+    expect(within(projectRegion).getByText('$33.00')).toBeVisible()
+    expect(within(projectRegion).getByText('ROI fijo')).toBeVisible()
+    expect(within(projectRegion).getByText('20%')).toBeVisible()
+    expect(within(projectRegion).getByText('Utilidad otorgada')).toBeVisible()
+    expect(within(projectRegion).getByText('$6.60')).toBeVisible()
+    expect(
+      within(projectRegion).queryByRole('list', {
+        name: 'Maple Shelf, totales por origen',
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(projectRegion).queryByText('3 / 10 unidades vendidas'),
+    ).not.toBeInTheDocument()
+    expect(
+      within(projectRegion).queryByText('Unidades restantes'),
+    ).not.toBeInTheDocument()
+    expect(
+      within(projectRegion).queryByText('Ventas totales'),
+    ).not.toBeInTheDocument()
+    expect(
+      within(projectRegion).queryByText('Comisiones totales'),
+    ).not.toBeInTheDocument()
+    expect(
+      within(projectRegion).queryByText('Ventas netas totales'),
+    ).not.toBeInTheDocument()
+    expect(within(projectRegion).queryByText('Utilidad')).not.toBeInTheDocument()
+    expect(
+      within(projectRegion).queryByText('ROI del proyecto'),
+    ).not.toBeInTheDocument()
+    expect(
+      within(projectRegion).queryByText('Diferencia de utilidad'),
+    ).not.toBeInTheDocument()
+
+    const stakeholderRegion = screen.getByRole('region', {
+      name: 'Alicia, detalle del socio',
+    })
+    expect(within(stakeholderRegion).getByText('$3.96')).toBeVisible()
   })
 
   it('shows an unavailable project ROI when calculated cost is zero', async () => {

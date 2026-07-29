@@ -6,6 +6,8 @@ export const publicProjectBaseSelect = {
   name: true,
   feeModel: true,
   feeValue: true,
+  fixedRoi: true,
+  fixedRoiPercentage: true,
   isActive: true,
   units: true,
   unitCost: true,

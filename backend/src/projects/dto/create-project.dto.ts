@@ -1,12 +1,14 @@
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsDefined,
   IsInt,
   IsIn,
   IsNumber,
   IsOptional,
   IsString,
   Min,
+  ValidateIf,
 } from 'class-validator';
 
 export const PROJECT_FEE_MODELS = ['percentage', 'fixed'] as const;
@@ -29,6 +31,20 @@ export class CreateProjectDto {
   @IsNumber()
   @Min(0)
   feeValue!: number;
+
+  @IsOptional()
+  @IsBoolean()
+  fixedRoi?: boolean;
+
+  @ValidateIf(
+    (dto: CreateProjectDto) =>
+      dto.fixedRoi === true || dto.fixedRoiPercentage !== undefined,
+  )
+  @IsDefined()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  fixedRoiPercentage?: number;
 
   @IsOptional()
   @IsBoolean()

@@ -310,6 +310,8 @@ describe('ReportsService', () => {
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue({
       adminCost: '20.00',
       costAdjustment: '-10.00',
+      fixedRoi: false,
+      fixedRoiPercentage: null,
       idProject: 501,
       product: {
         image: 'https://example.test/maple-shelf.jpg',
@@ -376,10 +378,14 @@ describe('ReportsService', () => {
       calculatedCost: 33,
       ecommerce: { amount: 150, quantity: 1 },
       event: { amount: 0, quantity: 0 },
+      fixedRoi: false,
+      fixedRoiPercentage: null,
+      fixedRoiProfit: null,
       netSalesTotal: 343,
       productImage: 'https://example.test/maple-shelf.jpg',
       productName: 'Maple Shelf',
       profit: 310,
+      profitDifference: null,
       projectId: 501,
       projectProgress: 30,
       projectTotalCost: 110,
@@ -404,6 +410,66 @@ describe('ReportsService', () => {
       unitPrice: 11,
       unitsLeft: 7,
     });
+  });
+
+  it('uses the fixed project ROI for stakeholder income and profit metrics', async () => {
+    jest.spyOn(prisma.project, 'findFirst').mockResolvedValue({
+      fixedRoi: true,
+      fixedRoiPercentage: '20.00',
+      idProject: 501,
+      product: {
+        image: 'https://example.test/maple-shelf.jpg',
+        name: 'Maple Shelf',
+      },
+      sales: [
+        {
+          amount: '200.00',
+          fee: '5.00',
+          quantity: 2,
+          source: 'store',
+        },
+        {
+          amount: '150.00',
+          fee: '2.00',
+          quantity: 1,
+          source: 'ecommerce',
+        },
+      ],
+      stakeholders: [
+        {
+          idProjectStakeholder: 900,
+          stakePercentage: '60.00',
+          stakeholder: { idStakeholder: 10, name: 'Alicia' },
+          transactions: [
+            { amount: '100.00', transactionType: 'investment' },
+            { amount: '125.50', transactionType: 'payment' },
+            { amount: '15.25', transactionType: 'adjustment' },
+            { amount: '-5.00', transactionType: 'adjustment' },
+          ],
+        },
+      ],
+      transactions: [
+        { amount: '100.00' },
+        { amount: '20.00' },
+        { amount: '-10.00' },
+      ],
+      units: 10,
+    });
+
+    const service = new ReportsService(asPrismaService(prisma));
+    const result = await service.getStakeholderProjectsReport({
+      projectId: 501,
+      stakeholderId: 10,
+    });
+
+    expect(result.row?.calculatedCost).toBe(33);
+    expect(result.row?.fixedRoi).toBe(true);
+    expect(result.row?.fixedRoiPercentage).toBe(20);
+    expect(result.row?.fixedRoiProfit).toBe(6.6);
+    expect(result.row?.profit).toBe(310);
+    expect(result.row?.profitDifference).toBe(303.4);
+    expect(result.row?.stakeholder.balance).toBe(-111.29);
+    expect(result.row?.stakeholder.income).toBe(3.96);
   });
 
   it('returns an empty stakeholder project report when the stakeholder is not assigned to the project', async () => {
