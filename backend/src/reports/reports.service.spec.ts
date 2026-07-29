@@ -468,8 +468,8 @@ describe('ReportsService', () => {
     expect(result.row?.fixedRoiProfit).toBe(6.6);
     expect(result.row?.profit).toBe(310);
     expect(result.row?.profitDifference).toBe(303.4);
-    expect(result.row?.stakeholder.balance).toBe(-111.29);
-    expect(result.row?.stakeholder.income).toBe(3.96);
+    expect(result.row?.stakeholder.balance).toBe(-78.29);
+    expect(result.row?.stakeholder.income).toBe(36.96);
   });
 
   it('returns an empty stakeholder project report when the stakeholder is not assigned to the project', async () => {

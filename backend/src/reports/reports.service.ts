@@ -312,9 +312,10 @@ export class ReportsService {
     );
     const income = row.fixedRoi
       ? roundCurrency(
-          row.calculatedCost *
-            ((row.fixedRoiPercentage ?? 0) / 100) *
-            stakeRatio,
+          row.calculatedCost +
+            row.calculatedCost *
+              ((row.fixedRoiPercentage ?? 0) / 100) *
+              stakeRatio,
         )
       : roundCurrency(
           row.calculatedCost * stakeRatio + row.profit * stakeRatio,

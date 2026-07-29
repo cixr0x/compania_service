@@ -67,8 +67,8 @@ const fixedRoiStakeholderProjectsReport = {
     profitDifference: 303.4,
     stakeholder: {
       ...stakeholderProjectsReport.row.stakeholder,
-      balance: -111.29,
-      income: 3.96,
+      balance: -78.29,
+      income: 36.96,
     },
   },
 }
@@ -374,8 +374,8 @@ describe('StakeholderProjectsReportPage', () => {
     const stakeholderRegion = screen.getByRole('region', {
       name: 'Alicia, detalle del socio',
     })
-    expect(within(stakeholderRegion).getByText('$3.96')).toBeVisible()
-    expect(within(stakeholderRegion).getByText('$-111.29')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$36.96')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$-78.29')).toBeVisible()
   })
 
   it('renders a printable stakeholder projects report without selectors or transaction controls', async () => {
@@ -479,7 +479,7 @@ describe('StakeholderProjectsReportPage', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('prints only the approved fixed ROI project metrics', async () => {
+  it('prints fixed ROI project metrics and channel units without channel amounts', async () => {
     vi.mocked(getJson).mockImplementation((path: string) => {
       if (
         path === '/reports/stakeholder-projects?projectId=501&stakeholderId=10'
@@ -521,11 +521,17 @@ describe('StakeholderProjectsReportPage', () => {
     expect(within(projectRegion).getByText('20%')).toBeVisible()
     expect(within(projectRegion).getByText('Utilidad otorgada')).toBeVisible()
     expect(within(projectRegion).getByText('$6.60')).toBeVisible()
-    expect(
-      within(projectRegion).queryByRole('list', {
-        name: 'Maple Shelf, totales por origen',
-      }),
-    ).not.toBeInTheDocument()
+    const sourceTiles = within(projectRegion).getByRole('list', {
+      name: 'Maple Shelf, totales por origen',
+    })
+    expect(within(sourceTiles).getByText('Tienda')).toBeVisible()
+    expect(within(sourceTiles).getByText('2 unidades')).toBeVisible()
+    expect(within(sourceTiles).getByText('Comercio electrónico')).toBeVisible()
+    expect(within(sourceTiles).getByText('1 unidad')).toBeVisible()
+    expect(within(sourceTiles).getByText('Evento')).toBeVisible()
+    expect(within(sourceTiles).getByText('0 unidades')).toBeVisible()
+    expect(within(sourceTiles).queryByText('$200.00')).not.toBeInTheDocument()
+    expect(within(sourceTiles).queryByText('$150.00')).not.toBeInTheDocument()
     expect(
       within(projectRegion).queryByText('3 / 10 unidades vendidas'),
     ).not.toBeInTheDocument()
@@ -552,7 +558,7 @@ describe('StakeholderProjectsReportPage', () => {
     const stakeholderRegion = screen.getByRole('region', {
       name: 'Alicia, detalle del socio',
     })
-    expect(within(stakeholderRegion).getByText('$3.96')).toBeVisible()
+    expect(within(stakeholderRegion).getByText('$36.96')).toBeVisible()
   })
 
   it('shows an unavailable project ROI when calculated cost is zero', async () => {

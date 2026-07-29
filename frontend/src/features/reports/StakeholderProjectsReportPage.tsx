@@ -451,33 +451,31 @@ function StakeholderProjectsReportContent({
           ) : null}
         </div>
 
-        {!isFixedRoiPrintView ? (
-          <div
-            aria-label={`${row.productName}, totales por origen`}
-            className="stakeholder-source-grid"
-            role="list"
-          >
-            {sources.map((source) => (
-              <div
-                className={`stakeholder-source-card stakeholder-source-card-${sourceTones[source]}`}
-                key={source}
-                role="listitem"
-              >
-                <Typography.Text className="stakeholder-source-label">
-                  {sourceLabels[source]}
+        <div
+          aria-label={`${row.productName}, totales por origen`}
+          className="stakeholder-source-grid"
+          role="list"
+        >
+          {sources.map((source) => (
+            <div
+              className={`stakeholder-source-card stakeholder-source-card-${sourceTones[source]}`}
+              key={source}
+              role="listitem"
+            >
+              <Typography.Text className="stakeholder-source-label">
+                {sourceLabels[source]}
+              </Typography.Text>
+              <Typography.Text className="stakeholder-source-units">
+                {formatUnitCount(row[source].quantity)}
+              </Typography.Text>
+              {!row.fixedRoi ? (
+                <Typography.Text className="stakeholder-source-amount">
+                  {formatCurrency(row[source].amount)}
                 </Typography.Text>
-                <Typography.Text className="stakeholder-source-units">
-                  {formatUnitCount(row[source].quantity)}
-                </Typography.Text>
-                {!row.fixedRoi ? (
-                  <Typography.Text className="stakeholder-source-amount">
-                    {formatCurrency(row[source].amount)}
-                  </Typography.Text>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        ) : null}
+              ) : null}
+            </div>
+          ))}
+        </div>
 
         <div className="stakeholder-project-metrics">
           {isFixedRoiPrintView ? (
