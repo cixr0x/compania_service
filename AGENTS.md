@@ -17,9 +17,14 @@ Do not run DDL or DML SQL commands without user confirmation.
 
 When the user requests a deployment, deploy through Git by default:
 
+- Read `deploy/README.md` completely before inspecting or changing production. It is the authoritative runbook for the current VM target and filesystem layout.
 - Verify local changes are committed and pushed to the remote branch first.
-- On the VM, pull the latest changes from the repository checkout.
+- Deploy the exact approved commit to GCP VM `compania` in project `crypto-matic`, zone `us-central1-b`.
+- The Git checkout is `/home/robertorojas87/compania_service`; `/opt/compania_service` is not the deployment checkout and only supplies the backend environment file.
+- On the VM, pull the latest changes from the repository checkout as `robertorojas87`.
 - Build and restart/reload services from the VM checkout.
+- Preserve `/home/robertorojas87/compania_service/backend/.env` as `robertorojas87:compania` mode `640`; stop if it differs from `/opt/compania_service/backend/.env`.
+- Before production migrations, confirm a recoverable database snapshot, show every pending migration's exact SQL, and obtain explicit approval.
 - Do not deploy by copying local files directly unless the user explicitly asks for that fallback.
 
 ## Frontend UI Direction

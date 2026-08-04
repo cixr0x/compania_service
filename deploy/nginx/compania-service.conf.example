@@ -1,8 +1,10 @@
+# HTTP bootstrap template. Production HTTPS is managed by Certbot; do not
+# overwrite the active production site during a routine application deploy.
 server {
     listen 80;
-    server_name your-domain.example;
+    server_name compania.bobbycrimson.com;
 
-    root /opt/compania_service/frontend/dist;
+    root /home/robertorojas87/compania_service/frontend/dist;
     index index.html;
 
     client_max_body_size 25m;

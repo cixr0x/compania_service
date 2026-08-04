@@ -75,25 +75,11 @@ The API should then be available at `http://localhost:3000/api`.
 
 ## Production Deployment
 
-Linux VM deployment templates and the deployment runbook are in [deploy/README.md](deploy/README.md).
-
-Production build commands:
-
-```powershell
-Set-Location backend
-npm.cmd ci
-npx.cmd prisma generate
-npx.cmd prisma migrate deploy
-npm.cmd run build
-```
-
-```powershell
-Set-Location frontend
-npm.cmd ci
-$env:VITE_API_BASE_URL="/api"
-npm.cmd run build
-Remove-Item Env:VITE_API_BASE_URL
-```
+The authoritative production target, safety checks, build sequence, migration approval gate, environment-file permissions, restart procedure, and live verification steps are in [deploy/README.md](deploy/README.md). Read that runbook completely before issuing production commands; the current Git checkout and runtime environment are intentionally stored in different paths.
 
 The backend exposes a health check at `/api/health` for service and reverse proxy verification.
 Production frontend builds default to same-origin `/api`; setting `VITE_API_BASE_URL="/api"` explicitly prevents accidentally embedding a local development API URL.
+
+## User Guides
+
+- [August 2026 production functional changes](docs/functional-changes-1c70043-to-8b9cf07.md)

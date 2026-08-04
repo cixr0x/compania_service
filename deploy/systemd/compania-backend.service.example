@@ -1,15 +1,19 @@
 [Unit]
 Description=Compania Service Backend
-After=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
 User=compania
-WorkingDirectory=/opt/compania_service/backend
+Group=compania
+WorkingDirectory=/home/robertorojas87/compania_service/backend
+Environment=NODE_ENV=production
 EnvironmentFile=/opt/compania_service/backend/.env
-ExecStart=/usr/bin/node dist/src/main.js
+ExecStart=/usr/bin/node /home/robertorojas87/compania_service/backend/dist/src/main.js
 Restart=always
 RestartSec=5
+NoNewPrivileges=true
 
 [Install]
 WantedBy=multi-user.target
