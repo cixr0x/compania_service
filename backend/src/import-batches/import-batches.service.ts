@@ -38,6 +38,7 @@ const importStageInclude = {
 };
 
 const mutableTerminalStatuses: ImportStatus[] = ['committed', 'cancelled'];
+const importTransactionOptions = { timeout: 30_000 };
 type TransactionClient = Prisma.TransactionClient;
 type StageForParse = {
   rowNumber: number;
@@ -290,7 +291,7 @@ export class ImportBatchesService {
         },
         include: batchDetailInclude,
       });
-    });
+    }, importTransactionOptions);
   }
 
   async commit(id: number) {
@@ -400,7 +401,7 @@ export class ImportBatchesService {
         data: { status: 'committed', committedAt: new Date() },
         include: batchDetailInclude,
       });
-    });
+    }, importTransactionOptions);
 
     if ('rejected' in result && result.rejected) {
       throw new BadRequestException('Batch has validation errors');

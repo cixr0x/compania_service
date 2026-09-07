@@ -23,6 +23,7 @@ type ImportBatchUpdateArgs = {
 type ImportBatchUpdateMock = (args: ImportBatchUpdateArgs) => Promise<unknown>;
 type TransactionMock = (
   callback: (client: Prisma.TransactionClient) => Promise<unknown>,
+  options?: { timeout?: number },
 ) => Promise<unknown>;
 type CalculateFeeMock = (
   row: {
@@ -127,6 +128,27 @@ describe('ImportBatchesService', () => {
       financialsCalculator,
     );
   }
+
+  it('uses a 30-second Prisma transaction timeout for validate and commit', async () => {
+    prisma.$transaction
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce({});
+    const service = buildService();
+
+    await service.validate(1);
+    await service.commit(1);
+
+    expect(prisma.$transaction).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Function),
+      { timeout: 30_000 },
+    );
+    expect(prisma.$transaction).toHaveBeenNthCalledWith(
+      2,
+      expect.any(Function),
+      { timeout: 30_000 },
+    );
+  });
 
   it('rejects commit when import date is missing', async () => {
     prisma.importBatch.findUnique.mockResolvedValue({
