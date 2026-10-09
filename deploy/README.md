@@ -45,9 +45,10 @@ Before a deployment:
 1. Confirm the intended local revision is committed and pushed.
 2. Record the full expected commit SHA.
 3. Confirm the VM checkout is clean.
-4. Confirm a recoverable production database snapshot exists.
-5. Run `prisma migrate status` read-only.
+4. Run `prisma migrate status` read-only.
+5. If the deployment includes database changes, such as migrations, DDL, or DML, confirm a recoverable production database snapshot exists before applying those changes. Releases without database changes do not require a snapshot.
 6. If migrations are pending, show the user the exact SQL from every pending migration and obtain explicit approval before `prisma migrate deploy`.
+7. Before executing any other DDL or DML, show the user the exact SQL and obtain explicit approval.
 
 Never run `prisma migrate dev` against production. Never print, copy into chat, or commit the contents of either production `.env` file.
 
@@ -115,7 +116,7 @@ cd /home/robertorojas87/compania_service/backend
 EOF
 ```
 
-This status command is read-only. Do not proceed to migration deployment until the snapshot and SQL approvals are documented.
+This status command is read-only and is required even for releases without database changes. If migrations are pending, do not proceed to migration deployment until a recoverable database snapshot is confirmed and the exact SQL approvals are documented. A release without database changes does not require a snapshot.
 
 ## Deployment
 
@@ -179,9 +180,9 @@ sudo -n stat -c '%a %U:%G' /home/robertorojas87/compania_service/backend/.env
 
 Expected metadata is `640 robertorojas87:compania`. If `cmp` fails, stop; do not overwrite either environment file automatically.
 
-### 5. Apply approved migrations
+### 5. Apply approved migrations when pending
 
-Only after the database snapshot and exact SQL are approved:
+Skip this step if no migrations are pending. For pending migrations, confirm a recoverable database snapshot and obtain explicit approval for every pending migration's exact SQL before running:
 
 ```bash
 sudo -n -u compania bash <<'EOF'
