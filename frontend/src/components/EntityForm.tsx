@@ -14,6 +14,7 @@ import {
   InputNumber,
   Select,
   Typography,
+  type SelectProps,
 } from 'antd'
 import type {
   EntityConfig,
@@ -32,6 +33,10 @@ type EntityFormProps = {
   isCreate?: boolean
   isSaving?: boolean
   errorMessage?: string | null
+  selectSearchByField?: Record<
+    string,
+    Pick<SelectProps<string>, 'showSearch' | 'loading' | 'notFoundContent' | 'labelRender'>
+  >
 }
 
 function normalizeDateValue(value: unknown): string {
@@ -143,6 +148,7 @@ export function EntityForm({
   isCreate = false,
   isSaving = false,
   errorMessage = null,
+  selectSearchByField,
 }: EntityFormProps) {
   const visibleFields = config.fields.filter((field) =>
     isFieldVisible(field, values),
@@ -238,6 +244,7 @@ export function EntityForm({
         ) : field.type === 'select' ? (
           <>
             <Select
+              {...selectSearchByField?.[field.name]}
               aria-label={field.label}
               aria-required={isRequired}
               disabled={readOnly}

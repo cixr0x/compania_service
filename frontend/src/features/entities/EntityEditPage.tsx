@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQueries, useQuery } from '@tanstack/react-query'
 import {
   Alert,
@@ -634,6 +634,8 @@ export function EntityEditPage() {
   const [draftValues, setDraftValues] = useState<EntityRow>({})
   const [isDirty, setIsDirty] = useState(false)
   const [mutationError, setMutationError] = useState<string | null>(null)
+  const [productSearch, setProductSearch] = useState('')
+  const [debouncedProductSearch, setDebouncedProductSearch] = useState('')
   const [touchedFieldNames, setTouchedFieldNames] = useState<Set<string>>(
     () => new Set(),
   )
@@ -642,22 +644,48 @@ export function EntityEditPage() {
   const [projectTransactionState, setProjectTransactionState] =
     useState<ProjectTransactionState>(EMPTY_PROJECT_TRANSACTION_STATE)
   const optionSources = useMemo(() => getOptionSources(config), [config])
+
+  useEffect(() => {
+    const timeout = window.setTimeout(
+      () => setDebouncedProductSearch(productSearch.trim()),
+      300,
+    )
+    return () => window.clearTimeout(timeout)
+  }, [productSearch])
+
   const optionSourceQueries = useQueries({
-    queries: optionSources.map((path) => ({
-      enabled: Boolean(config),
-      queryKey: ['entity-options', path],
-      queryFn: () => getJson<EntityRow[]>(`/${path}`),
-    })),
+    queries: optionSources.map((path) => {
+      const search =
+        config?.path === 'projects' && path === 'products'
+          ? debouncedProductSearch
+          : ''
+      const query = new URLSearchParams({ search, page: '1', pageSize: '25' })
+      return {
+        enabled: Boolean(config),
+        queryKey: search
+          ? ['entity-options', path, search]
+          : ['entity-options', path],
+        queryFn: () => getJson<EntityRow[]>(search ? `/${path}?${query}` : `/${path}`),
+      }
+    }),
   })
+  const productOptionsQuery = optionSourceQueries[optionSources.indexOf('products')]
+  const isProductSearchPending =
+    config?.path === 'projects' &&
+    (productSearch.trim() !== debouncedProductSearch || Boolean(productOptionsQuery?.isFetching))
   const optionRowsByPath = useMemo(
     () =>
       Object.fromEntries(
         optionSources.map((path, index) => [
           path,
-          optionSourceQueries[index]?.data ?? [],
+          config?.path === 'projects' &&
+          path === 'products' &&
+          (isProductSearchPending || optionSourceQueries[index]?.isError)
+            ? []
+            : optionSourceQueries[index]?.data ?? [],
         ]),
       ) as Partial<Record<EntityConfig['path'], EntityRow[]>>,
-    [optionSourceQueries, optionSources],
+    [config?.path, isProductSearchPending, optionSourceQueries, optionSources],
   )
   const detailQuery = useQuery({
     enabled: Boolean(
@@ -788,6 +816,10 @@ export function EntityEditPage() {
     () => resolveDynamicOptions(config, optionRowsByPath, displayedFormValues),
     [config, displayedFormValues, optionRowsByPath],
   )
+  const selectedProjectProduct = getSelectedProduct(
+    displayedFormValues,
+    optionRowsByPath.products,
+  )
 
   if (!config || !formConfig) {
     return (
@@ -806,6 +838,9 @@ export function EntityEditPage() {
   }
 
   function handleChange(name: string, value: boolean | string) {
+    if (config?.path === 'projects' && name === 'idProduct') {
+      setProductSearch('')
+    }
     setIsDirty(true)
     setTouchedFieldNames((currentFields) => {
       const nextFields = new Set(currentFields)
@@ -816,6 +851,12 @@ export function EntityEditPage() {
       const nextValues = {
         ...(isDirty ? currentValues : (detailQuery.data ?? {})),
         [name]: value,
+      }
+
+      if (config?.path === 'projects' && name === 'idProduct') {
+        nextValues.product = optionRowsByPath.products?.find(
+          (product) => getNumericId(product.id) === getNumericId(value),
+        )
       }
 
       if (config?.path === 'sales' && name === 'idProduct') {
@@ -888,6 +929,35 @@ export function EntityEditPage() {
             onChange={handleChange}
             onCancel={handleCancel}
             onSubmit={handleSave}
+            selectSearchByField={
+              config.path === 'projects'
+                ? {
+                    idProduct: {
+                      showSearch: {
+                        filterOption: false,
+                        onSearch: setProductSearch,
+                        searchValue: productSearch,
+                      },
+                      loading: isProductSearchPending,
+                      notFoundContent: isProductSearchPending ? (
+                        <Typography.Text type="secondary">
+                          Loading products...
+                        </Typography.Text>
+                      ) : productOptionsQuery?.isError ? (
+                        <Typography.Text role="alert" type="danger">
+                          Unable to load products. Try searching again.
+                        </Typography.Text>
+                      ) : (
+                        <Typography.Text type="secondary">
+                          No products found.
+                        </Typography.Text>
+                      ),
+                      labelRender: ({ label, value }) =>
+                        getNestedEntityName(selectedProjectProduct) ?? label ?? value,
+                    },
+                  }
+                : undefined
+            }
             values={displayedFormValues}
           >
             {config.path === 'projects' && shouldManageProjectDetails ? (
