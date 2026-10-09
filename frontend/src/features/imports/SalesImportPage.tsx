@@ -755,7 +755,11 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
                   ? 'No staged rows'
                   : 'Upload a file to stage rows before validation.',
               }}
-              pagination={{ pageSize: 10, showSizeChanger: false }}
+              pagination={{
+                pageSize: 50,
+                placement: ['topEnd'],
+                showSizeChanger: false,
+              }}
               rowKey="idImportStage"
               scroll={{ x: IMPORT_STAGE_TABLE_WIDTH }}
               size="small"

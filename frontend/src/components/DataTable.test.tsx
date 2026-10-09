@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -225,13 +225,13 @@ describe('DataTable', () => {
     )
   })
 
-  it('paginates longer datasets with a result range summary', () => {
+  it('shows 50 rows per page with a single pager above the table', () => {
     render(
       <DataTable
         columns={columns}
         getRowId={(row) => row.id}
         onRowDoubleClick={vi.fn()}
-        rows={Array.from({ length: 12 }, (_, index) => ({
+        rows={Array.from({ length: 52 }, (_, index) => ({
           id: index + 1,
           name: `Project ${index + 1}`,
           tag: 'batch',
@@ -239,10 +239,143 @@ describe('DataTable', () => {
       />,
     )
 
-    expect(screen.getByText('1-10 of 12')).toBeVisible()
+    expect(screen.getByText('1-50 of 52')).toBeVisible()
     expect(screen.getByText('Project 1')).toBeVisible()
-    expect(screen.queryByText('Project 12')).not.toBeInTheDocument()
+    expect(screen.getByText('Project 50')).toBeVisible()
+    expect(screen.queryByText('Project 51')).not.toBeInTheDocument()
+    const table = screen.getByRole('table')
+    expect(table.querySelectorAll('tbody tr[data-row-key]')).toHaveLength(50)
+    const pager = document.querySelector('.ant-pagination')!
+    expect(document.querySelectorAll('.ant-pagination')).toHaveLength(1)
+    expect(
+      pager.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    fireEvent.click(screen.getByTitle('2'))
+    expect(screen.getByText('51-52 of 52')).toBeVisible()
+    expect(screen.getByText('Project 52')).toBeVisible()
+    expect(screen.queryByText('Project 1')).not.toBeInTheDocument()
   })
+
+  it('does not add pagination to a dataset that fits on one page', () => {
+    render(<DataTableHarness />)
+    expect(document.querySelector('.ant-pagination')).not.toBeInTheDocument()
+  })
+
+  it('searches displayed and raw values without exposing hidden fields', () => {
+    render(
+      <DataTable<ProductRow>
+        columns={[
+          { key: 'id', header: 'ID' },
+          { key: 'name', header: 'Name' },
+          { key: 'isActive', header: 'Active', valueType: 'boolean' },
+          { key: 'saleDate', header: 'Date', valueType: 'date' },
+          { key: 'amount', header: 'Amount', valueFormat: 'money' },
+          {
+            key: 'totalCost',
+            header: 'Total Cost',
+            valueFormat: 'money',
+            valueGetter: (row) =>
+              (row.productionCost ?? 0) + (row.adminCost ?? 0),
+          },
+        ]}
+        getRowId={(row) => row.id}
+        onRowDoubleClick={vi.fn()}
+        rows={[
+          {
+            id: 901,
+            name: 'Walnut Desk',
+            tag: 'secret-hidden',
+            amount: 1250,
+            productionCost: 800,
+            adminCost: 950,
+            isActive: true,
+            saleDate: '2026-05-04',
+          },
+          {
+            id: 902,
+            name: 'Canvas Chair',
+            tag: 'hidden',
+            amount: 90,
+            productionCost: 10,
+            adminCost: 20,
+            isActive: false,
+          },
+        ]}
+        searchable
+      />,
+    )
+
+    const search = screen.getByRole('searchbox', { name: 'Search' })
+    const formattedDate = new Intl.DateTimeFormat(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(2026, 4, 4))
+    for (const query of [
+      '  wAlNuT  ', '901', 'Yes', '1250', '$1,250.00', '$1250.00',
+      '1750', '$1,750.00', formattedDate,
+    ]) {
+      fireEvent.change(search, { target: { value: query } })
+      expect(screen.getByText('Walnut Desk')).toBeVisible()
+      expect(screen.queryByText('Canvas Chair')).not.toBeInTheDocument()
+    }
+    fireEvent.change(search, { target: { value: 'No' } })
+    expect(screen.getByText('Canvas Chair')).toBeVisible()
+    expect(screen.queryByText('Walnut Desk')).not.toBeInTheDocument()
+    for (const query of ['secret-hidden', '800', 'Edit', 'not-a-match']) {
+      fireEvent.change(search, { target: { value: query } })
+      expect(screen.getByText('No records found.')).toBeVisible()
+    }
+    fireEvent.change(search, { target: { value: '   ' } })
+    expect(screen.getByText('Walnut Desk')).toBeVisible()
+    expect(screen.getByText('Canvas Chair')).toBeVisible()
+  })
+
+  it('resets search to page one while preserving sort, links and edit actions', () => {
+    const onRowDoubleClick = vi.fn()
+    render(
+      <MemoryRouter>
+        <DataTable
+          columns={[
+            {
+              key: 'name',
+              header: 'Name',
+              linkGetter: (row) => `/products/${row.id}`,
+            },
+            { key: 'tag', header: 'Tag' },
+          ]}
+          getRowId={(row) => row.id}
+          onRowDoubleClick={onRowDoubleClick}
+          rows={Array.from({ length: 60 }, (_, index) => ({
+            id: index + 1,
+            name: `Product ${index + 1}`,
+            tag: 'batch',
+          }))}
+          searchable
+        />
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByRole('columnheader', { name: 'Name' }))
+    fireEvent.click(screen.getByRole('columnheader', { name: 'Name' }))
+    fireEvent.click(screen.getByTitle('2'))
+    expect(screen.getByText('51-60 of 60')).toBeVisible()
+    const search = screen.getByRole('searchbox', { name: 'Search' })
+    fireEvent.change(search, { target: { value: 'batch' } })
+    expect(screen.getByText('1-50 of 60')).toBeVisible()
+    const table = screen.getByRole('table')
+    expect(table.querySelector('tbody tr[data-row-key]')).toHaveTextContent('Product 60')
+    expect(screen.getByRole('link', { name: 'Product 60' })).toHaveAttribute(
+      'href', '/products/60',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Product 60' }))
+    expect(onRowDoubleClick).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 60 }),
+    )
+    fireEvent.click(screen.getByTitle('2'))
+    fireEvent.change(search, { target: { value: '' } })
+    expect(screen.getByText('1-50 of 60')).toBeVisible()
+    expect(table.querySelector('tbody tr[data-row-key]')).toHaveTextContent('Product 60')
+  }, 10000)
 
   it('renders and sorts derived column values', async () => {
     const user = userEvent.setup()

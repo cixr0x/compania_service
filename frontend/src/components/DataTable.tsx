@@ -1,6 +1,6 @@
-import { EditOutlined } from '@ant-design/icons'
-import type { ReactNode } from 'react'
-import { Button, Table, Tag } from 'antd'
+import { CloseCircleFilled, EditOutlined, SearchOutlined } from '@ant-design/icons'
+import { useMemo, useState, type ReactNode } from 'react'
+import { Button, Input, Table, Tag } from 'antd'
 import type { ColumnType, ColumnsType } from 'antd/es/table'
 import { Link } from 'react-router-dom'
 import { formatCurrency } from '../utils/money'
@@ -35,6 +35,7 @@ type DataTableProps<Row extends Record<string, unknown>> = {
   summaryItems?: DataTableSummaryItem<Row>[]
   toolbarAction?: ReactNode
   toolbarFilters?: ReactNode
+  searchable?: boolean
 }
 
 type ColumnKind = 'boolean' | 'date' | 'id' | 'money' | 'number' | 'string'
@@ -239,7 +240,34 @@ function getColumnValue<Row extends Record<string, unknown>>(
   return column.valueGetter ? column.valueGetter(row) : row[column.key]
 }
 
-const DEFAULT_PAGE_SIZE = 10
+const DEFAULT_PAGE_SIZE = 50
+
+function matchesColumnSearch<Row extends Record<string, unknown>>(
+  row: Row,
+  column: DataTableColumn<Row>,
+  kind: ColumnKind,
+  query: string,
+) {
+  const value = getColumnValue(row, column)
+  if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
+    return false
+  }
+
+  const formattedValue = formatCellValue(value, column, kind)
+  const searchValues = [formattedValue]
+  if (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    searchValues.push(String(value))
+  }
+  if (kind === 'money' || formattedValue.startsWith('$')) {
+    searchValues.push(formattedValue.replaceAll(',', ''))
+  }
+
+  return searchValues.some((text) => text.toLowerCase().includes(query))
+}
 
 function getColumnWidth(kind: ColumnKind, columnWidth: number | undefined) {
   if (columnWidth) {
@@ -318,13 +346,31 @@ export function DataTable<Row extends Record<string, unknown>>({
   summaryItems = [],
   toolbarAction,
   toolbarFilters,
+  searchable = false,
 }: DataTableProps<Row>) {
-  const visibleRows = rows
+  const [search, setSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const configuredColumns = useMemo(
+    () =>
+      columns.map((column) => ({
+        column,
+        kind: inferColumnKind(column, rows),
+      })),
+    [columns, rows],
+  )
+  const visibleRows = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return searchable && query
+      ? rows.filter((row) =>
+          configuredColumns.some(({ column, kind }) =>
+            matchesColumnSearch(row, column, kind, query),
+          ),
+        )
+      : rows
+  }, [configuredColumns, rows, search, searchable])
 
-  const dataColumns: ColumnType<Row>[] = columns.map((column) => {
-    const kind = inferColumnKind(column, visibleRows)
-
-    return {
+  const dataColumns: ColumnType<Row>[] = configuredColumns.map(
+    ({ column, kind }) => ({
       align: isRightAligned(kind) ? ('right' as const) : undefined,
       className: isRightAligned(kind) ? 'ant-table-cell-right' : undefined,
       dataIndex: column.key,
@@ -342,8 +388,8 @@ export function DataTable<Row extends Record<string, unknown>>({
       render: (_value: unknown, row: Row) =>
         renderCellValue(getColumnValue(row, column), column, kind, row),
       width: getColumnWidth(kind, column.width),
-    }
-  })
+    }),
+  )
 
   const tableColumns: ColumnsType<Row> = [
     ...dataColumns,
@@ -382,9 +428,28 @@ export function DataTable<Row extends Record<string, unknown>>({
 
   return (
     <div className="table-stack">
-      {toolbarAction ? (
+      {toolbarAction || searchable ? (
         <div className="table-toolbar">
-          <div className="table-toolbar-actions">{toolbarAction}</div>
+          {searchable ? (
+            <Input
+              allowClear={{
+                clearIcon: <CloseCircleFilled aria-label="Clear search" />,
+              }}
+              aria-label="Search"
+              className="table-search"
+              onChange={(event) => {
+                setSearch(event.target.value)
+                setCurrentPage(1)
+              }}
+              placeholder="Search"
+              prefix={<SearchOutlined />}
+              type="search"
+              value={search}
+            />
+          ) : null}
+          {toolbarAction ? (
+            <div className="table-toolbar-actions">{toolbarAction}</div>
+          ) : null}
         </div>
       ) : null}
       {toolbarFilters ? (
@@ -418,7 +483,10 @@ export function DataTable<Row extends Record<string, unknown>>({
           pagination={
             visibleRows.length > DEFAULT_PAGE_SIZE
               ? {
+                  current: currentPage,
+                  onChange: setCurrentPage,
                   pageSize: DEFAULT_PAGE_SIZE,
+                  placement: ['topEnd'],
                   showSizeChanger: false,
                   showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
                 }

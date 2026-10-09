@@ -346,6 +346,13 @@ button {
   gap: 8px;
 }
 
+.table-search {
+  margin-right: auto;
+  max-width: 320px;
+  min-width: 0;
+  width: 100%;
+}
+
 .table-filter-row {
   min-width: 0;
 }
@@ -1455,6 +1462,10 @@ button {
     flex: 0 0 auto;
     max-width: none;
     width: 100%;
+  }
+
+  .table-search {
+    max-width: none;
   }
 
   .table-toolbar-actions > * {

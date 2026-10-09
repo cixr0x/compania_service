@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
+import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getJson } from '../../api/client'
 import { EntityListPage } from './EntityListPage'
@@ -25,6 +25,8 @@ function renderEntityList(initialEntry = '/products') {
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[initialEntry]}>
+        <Link to="/products">Products list</Link>
+        <Link to="/projects">Projects list</Link>
         <Routes>
           <Route path="/:entityName" element={<EntityListPage />} />
           <Route path="*" element={<LocationProbe />} />
@@ -84,8 +86,8 @@ describe('EntityListPage', () => {
     expect(createLink).toHaveAttribute('href', '/products/new')
     expect(toolbar).toBeInTheDocument()
     expect(
-      within(toolbar as HTMLElement).queryByRole('searchbox', { name: /search/i }),
-    ).not.toBeInTheDocument()
+      within(toolbar as HTMLElement).getByRole('searchbox', { name: 'Search' }),
+    ).toBeVisible()
   })
 
   it('requests an explicit MVP page size for Products', async () => {
@@ -96,6 +98,234 @@ describe('EntityListPage', () => {
     await waitFor(() => {
       expect(getJson).toHaveBeenCalledWith('/products?pageSize=100')
     })
+  })
+
+  it('filters Products by each displayed field and clears without searching hidden data', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        id: 101,
+        name: 'Walnut Desk',
+        tag: 'office',
+        ownership: 37,
+        idEcommerce: 'EC-RED',
+        idStore: 'ST-BLUE',
+        idEvent: 'EV-GREEN',
+        idSurface: 'SF-GOLD',
+        image: 'https://example.test/secret-image.jpg',
+        description: 'secret-description',
+        model: { name: 'secret-object' },
+      },
+      { id: 102, name: 'Canvas Chair', tag: 'studio', ownership: 62 },
+    ])
+    renderProductsList()
+    expect(await screen.findByText('Walnut Desk')).toBeVisible()
+    const search = screen.getByRole('searchbox', { name: 'Search' })
+    for (const query of [
+      '  wAlNuT  ', '101', 'office', '37', 'ec-red', 'ST-BLUE', 'ev-green', 'sf-gold',
+    ]) {
+      fireEvent.change(search, { target: { value: query } })
+      expect(screen.getByText('Walnut Desk')).toBeVisible()
+      expect(screen.queryByText('Canvas Chair')).not.toBeInTheDocument()
+    }
+    for (const query of [
+      'secret-image', 'secret-description', 'secret-object', 'Edit', 'walnut office',
+    ]) {
+      fireEvent.change(search, { target: { value: query } })
+      expect(screen.getByText('No products found.')).toBeVisible()
+    }
+    await user.click(screen.getByRole('button', { name: 'Clear search' }))
+    expect(search).toHaveValue('')
+    expect(screen.getByText('Walnut Desk')).toBeVisible()
+    expect(screen.getByText('Canvas Chair')).toBeVisible()
+  })
+
+  it('searches Projects by related names, statuses and derived fees and costs', async () => {
+    vi.mocked(getJson).mockResolvedValue([
+      {
+        idProject: 501,
+        name: 'Wholesale launch',
+        idProduct: 42,
+        product: {
+          name: 'Walnut Desk',
+          image: 'https://example.test/hidden-cover.jpg',
+          description: 'hidden-product',
+        },
+        feeModel: 'fixed',
+        feeValue: 1250,
+        fixedRoi: true,
+        fixedRoiPercentage: 12,
+        isActive: true,
+        units: 5,
+        unitCost: 1875,
+        transactions: [{ amount: 6500 }, { amount: 2250 }],
+        adminCost: 7722,
+      },
+      {
+        idProject: 502,
+        name: 'Retail launch',
+        idProduct: 43,
+        product: { name: 'Canvas Chair' },
+        feeModel: 'percentage',
+        feeValue: 18,
+        fixedRoi: false,
+        isActive: false,
+        units: 2,
+        unitCost: 20,
+        transactions: [],
+      },
+    ])
+    renderEntityList('/projects')
+    expect(await screen.findByText('Wholesale launch')).toBeVisible()
+    const search = screen.getByRole('searchbox', { name: 'Search' })
+    for (const query of [
+      '501', '  WALNUT  ', 'Fixed fee per unit', 'Yes', '1250', '$1,250.00',
+      '$1250.00', '12%', '1875', '8750', '$8,750.00', '1750',
+    ]) {
+      fireEvent.change(search, { target: { value: query } })
+      expect(screen.getByText('Wholesale launch')).toBeVisible()
+      expect(screen.queryByText('Retail launch')).not.toBeInTheDocument()
+    }
+    expect(screen.getByRole('link', { name: 'Walnut Desk' })).toHaveAttribute(
+      'href', '/products/42',
+    )
+    for (const query of ['No', 'Percentage fee', '18%']) {
+      fireEvent.change(search, { target: { value: query } })
+      expect(screen.getByText('Retail launch')).toBeVisible()
+      expect(screen.queryByText('Wholesale launch')).not.toBeInTheDocument()
+    }
+    for (const query of ['hidden-cover', 'hidden-product', '7722', '6500', '42']) {
+      fireEvent.change(search, { target: { value: query } })
+      expect(screen.getByText('No projects found.')).toBeVisible()
+    }
+  })
+
+  it.each(['products', 'projects'])('searches %s records after the first API page', async (entity) => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => ({
+      id: index + 1,
+      idProject: index + 1,
+      name: `Record ${index + 1}`,
+    }))
+    vi.mocked(getJson).mockImplementation((path) => {
+      if (path === `/${entity}?pageSize=100`) return Promise.resolve(firstPage)
+      if (path === `/${entity}?pageSize=100&page=2`) {
+        return Promise.resolve([
+          { id: 101, idProject: 101, name: 'Beyond first page', tag: 'special-match' },
+        ])
+      }
+      return Promise.reject(new Error(`Unexpected GET ${path}`))
+    })
+    renderEntityList(`/${entity}`)
+    expect(await screen.findByText('1-50 of 101')).toBeVisible()
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search' }), {
+      target: { value: 'Beyond first' },
+    })
+    expect(screen.getByText('Beyond first page')).toBeVisible()
+    expect(screen.queryByText('Record 1')).not.toBeInTheDocument()
+    expect(getJson).toHaveBeenCalledTimes(2)
+  })
+
+  it.each(['products', 'projects'])('stops %s loading after an empty trailing page for exact multiples', async (entity) => {
+    vi.mocked(getJson).mockImplementation((path) => {
+      if (path === `/${entity}?pageSize=100`) {
+        return Promise.resolve(Array.from({ length: 100 }, (_, index) => ({
+          id: index + 1,
+          idProject: index + 1,
+          name: `Record ${index + 1}`,
+        })))
+      }
+      if (path === `/${entity}?pageSize=100&page=2`) return Promise.resolve([])
+      return Promise.reject(new Error(`Unexpected GET ${path}`))
+    })
+    renderEntityList(`/${entity}`)
+    expect(await screen.findByText('1-50 of 100')).toBeVisible()
+    expect(getJson).toHaveBeenCalledTimes(2)
+  })
+
+  it('loads successive full pages before accepting a short final page', async () => {
+    vi.mocked(getJson).mockImplementation((path) => {
+      const page = Number(
+        new URL(path, 'http://example.test').searchParams.get('page') ?? 1,
+      )
+      return Promise.resolve(
+        Array.from({ length: page === 3 ? 1 : 100 }, (_, index) => ({
+          id: (page - 1) * 100 + index + 1,
+          name: page === 3
+            ? 'Third page target'
+            : `Record ${(page - 1) * 100 + index + 1}`,
+        })),
+      )
+    })
+    renderProductsList()
+    expect(await screen.findByText('1-50 of 201')).toBeVisible()
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search' }), {
+      target: { value: 'Third page target' },
+    })
+    expect(screen.getByText('Third page target')).toBeVisible()
+    expect(getJson).toHaveBeenNthCalledWith(3, '/products?pageSize=100&page=3')
+    expect(getJson).toHaveBeenCalledTimes(3)
+  })
+
+  it('shows a later-page failure without presenting partial results as complete', async () => {
+    vi.mocked(getJson).mockImplementation((path) => {
+      if (path === '/products?pageSize=100') {
+        return Promise.resolve(Array.from({ length: 100 }, (_, index) => ({
+          id: index + 1,
+          name: `Partial ${index + 1}`,
+        })))
+      }
+      return Promise.reject(new Error('Page two unavailable'))
+    })
+    renderProductsList()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load products.')
+    expect(screen.queryByText('Partial 1')).not.toBeInTheDocument()
+    expect(screen.queryByText('1-50 of 100')).not.toBeInTheDocument()
+  })
+
+  it('stops requesting additional pages when the entity list is unmounted', async () => {
+    let resolveFirstPage!: (rows: { id: number; name: string }[]) => void
+    vi.mocked(getJson).mockImplementation(() =>
+      new Promise((resolve) => { resolveFirstPage = resolve }),
+    )
+    const { unmount } = renderProductsList()
+    await waitFor(() => expect(getJson).toHaveBeenCalledTimes(1))
+    unmount()
+    await act(async () => resolveFirstPage(
+      Array.from({ length: 100 }, (_, index) => ({
+        id: index + 1,
+        name: `Record ${index + 1}`,
+      })),
+    ))
+    expect(getJson).toHaveBeenCalledTimes(1)
+  })
+
+  it('resets search when navigating between entity lists', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation((path) =>
+      Promise.resolve(path.startsWith('/products')
+        ? [{ id: 101, name: 'Walnut Desk' }]
+        : [{ idProject: 501, name: 'Retail launch' }]),
+    )
+    renderProductsList()
+    expect(await screen.findByText('Walnut Desk')).toBeVisible()
+    await user.type(screen.getByRole('searchbox', { name: 'Search' }), 'Walnut')
+    await user.click(screen.getByRole('link', { name: 'Projects list' }))
+    expect(await screen.findByText('Retail launch')).toBeVisible()
+    expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('')
+  })
+
+  it('keeps other entity lists limited to their existing first page without search', async () => {
+    vi.mocked(getJson).mockResolvedValue(
+      Array.from({ length: 100 }, (_, index) => ({
+        idStakeholder: index + 1,
+        name: `Stakeholder ${index + 1}`,
+      })),
+    )
+    renderEntityList('/stakeholders')
+    expect(await screen.findByText('1-50 of 100')).toBeVisible()
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
+    expect(getJson).toHaveBeenCalledTimes(1)
+    expect(getJson).toHaveBeenCalledWith('/stakeholders?pageSize=100')
   })
 
   it('shows product external ID columns', async () => {

@@ -52,6 +52,23 @@ function buildEntityListPath(
   return `/${path}?${query.toString()}`
 }
 
+async function loadAllEntityRows(listPath: string, signal: AbortSignal) {
+  const rows: EntityRow[] = []
+  let page = 1
+  while (true) {
+    signal.throwIfAborted()
+    const pageRows = await getJson<EntityRow[]>(
+      page === 1 ? listPath : `${listPath}&page=${page}`,
+    )
+    signal.throwIfAborted()
+    rows.push(...pageRows)
+    if (pageRows.length < ENTITY_LIST_PAGE_SIZE) {
+      return rows
+    }
+    page += 1
+  }
+}
+
 function formatProjectOption(project: Project) {
   const projectName = project.name?.trim()
   if (projectName) {
@@ -250,6 +267,8 @@ export function EntityListPage() {
   const [salesFilters, setSalesFilters] = useState<SalesFilters>({})
   const config = getEntityConfig(entityName)
   const isSalesPage = config?.path === 'sales'
+  const isSearchablePage =
+    config?.path === 'products' || config?.path === 'projects'
   const listPath = useMemo(
     () => (config ? buildEntityListPath(config.path, salesFilters) : ''),
     [config, salesFilters],
@@ -258,7 +277,10 @@ export function EntityListPage() {
   const query = useQuery({
     enabled: Boolean(config),
     queryKey: ['entities', listPath],
-    queryFn: () => getJson<EntityRow[]>(listPath),
+    queryFn: ({ signal }) =>
+      isSearchablePage
+        ? loadAllEntityRows(listPath, signal)
+        : getJson<EntityRow[]>(listPath),
   })
   const productsQuery = useQuery({
     enabled: isSalesPage,
@@ -298,6 +320,7 @@ export function EntityListPage() {
       ) : null}
 
       <DataTable
+        key={config.path}
         columns={config.columns}
         emptyMessage={`No ${config.title.toLowerCase()} found.`}
         getRowId={(row) => String(row[config.idField])}
@@ -306,6 +329,7 @@ export function EntityListPage() {
           navigate(`/${config.path}/${String(row[config.idField])}`)
         }
         rows={rows}
+        searchable={isSearchablePage}
         summaryItems={getTableSummaryItems(rows, config.columns, isSalesPage)}
         toolbarAction={
           <Link to={`/${config.path}/new`}>

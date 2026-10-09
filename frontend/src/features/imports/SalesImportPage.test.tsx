@@ -173,6 +173,32 @@ describe('SalesImportPage', () => {
     vi.clearAllMocks()
   })
 
+  it('paginates 50 staged rows at the top with no bottom pager', async () => {
+    const user = userEvent.setup()
+    mockImportQueries(
+      Array.from({ length: 52 }, (_, index) => ({
+        ...stagedRows[0],
+        idImportStage: index + 1,
+        rowNumber: index + 2,
+        importedProductDescription: `Imported item ${index + 1}`,
+      })),
+      [],
+    )
+    renderSalesImportPage()
+    const region = await screen.findByRole('region', { name: 'Staged Rows' })
+    expect(await within(region).findByText('Imported item 50')).toBeVisible()
+    expect(within(region).queryByText('Imported item 51')).not.toBeInTheDocument()
+    const table = within(region).getByRole('table')
+    const pager = region.querySelector('.ant-pagination')!
+    expect(region.querySelectorAll('.ant-pagination')).toHaveLength(1)
+    expect(
+      pager.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    await user.click(within(region).getByTitle('2'))
+    expect(within(region).getByText('Imported item 52')).toBeVisible()
+    expect(within(region).queryByText('Imported item 1')).not.toBeInTheDocument()
+  })
+
   it('renders staged rows in an Ant Design table with expected columns and status tags', async () => {
     mockImportQueries(stagedRows, [])
 
