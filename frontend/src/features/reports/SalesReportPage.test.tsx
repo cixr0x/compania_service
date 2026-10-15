@@ -333,6 +333,54 @@ describe('SalesReportPage', () => {
     expect(filteredTotalsRow).toHaveTextContent('$116.67')
   })
 
+  it('filters Project by trimmed labels and IDs while retaining selected report scope', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/reports/sales-summary/periods') return [{ year: 2026, months: [5] }]
+      if (path === '/reports/sales-summary?year=2026') return yearlyReport
+      if (path === '/reports/sales-summary?year=2026&month=5') return monthlyReport
+      return []
+    })
+    renderReportsRoute()
+    expect(await screen.findByRole('link', { name: mapleProjectLabel })).toBeVisible()
+    const project = screen.getByRole('combobox', { name: 'Project' })
+    await user.click(project)
+    await user.paste('  mApLe  ')
+    expect(screen.getByTitle(mapleProjectLabel)).toBeInTheDocument()
+    expect(screen.queryByTitle(walnutProjectLabel)).not.toBeInTheDocument()
+    await user.clear(project)
+    await user.paste('  501 ')
+    await user.click(screen.getByTitle(mapleProjectLabel))
+    expect(screen.queryByRole('link', { name: walnutProjectLabel })).not.toBeInTheDocument()
+    const requestCount = vi.mocked(getJson).mock.calls.length
+    await user.click(project)
+    await user.paste('unmatched')
+    await user.tab()
+    expect(project.closest('.ant-select')).toHaveTextContent(mapleProjectLabel)
+    expect(getJson).toHaveBeenCalledTimes(requestCount)
+  })
+
+  it('keeps searchable Project choices limited to report rows in the selected period', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/reports/sales-summary/periods') return [{ year: 2026, months: [5] }]
+      if (path === '/reports/sales-summary?year=2026') return yearlyReport
+      if (path === '/reports/sales-summary?year=2026&month=5') return monthlyReport
+      return []
+    })
+    renderReportsRoute()
+    expect(await screen.findByRole('link', { name: mapleProjectLabel })).toBeVisible()
+    await selectAntOption(user, screen.getByRole('combobox', { name: 'Month' }), 'May')
+    expect(await screen.findByRole('link', { name: eventKitProjectLabel })).toBeVisible()
+    const project = screen.getByRole('combobox', { name: 'Project' })
+    await user.click(project)
+    await user.clear(project)
+    await user.paste('Maple')
+    expect(screen.queryByTitle(mapleProjectLabel)).not.toBeInTheDocument()
+    await user.clear(project)
+    await user.paste('  701 ')
+    expect(screen.getByTitle(eventKitProjectLabel)).toBeInTheDocument()
+  })
   it('uses Ant Select controls to load a selected month and adds surface only when returned', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation((path: string) => {

@@ -399,11 +399,11 @@ describe('EntityEditPage', () => {
 
   it('normalizes existing sale ISO date values for display and update payloads', async () => {
     vi.mocked(getJson).mockImplementation(async (path) => {
-      if (path === '/products') {
+      if (path === '/products?pageSize=100') {
         return [{ id: 101, name: 'Walnut Desk', ownership: 25 }]
       }
 
-      if (path === '/projects') {
+      if (path === '/projects?pageSize=100') {
         return [
           {
             idProject: 501,
@@ -463,7 +463,7 @@ describe('EntityEditPage', () => {
   it('auto assigns and disables the sale project when the selected product has one project', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
-      if (path === '/products') {
+      if (path === '/products?pageSize=100') {
         return [
           {
             id: 101,
@@ -474,7 +474,7 @@ describe('EntityEditPage', () => {
         ]
       }
 
-      if (path === '/projects') {
+      if (path === '/projects?pageSize=100') {
         return [
           {
             feeModel: 'fixed',
@@ -554,14 +554,14 @@ describe('EntityEditPage', () => {
         source: 'store',
       })
     })
-    expect(getJson).toHaveBeenCalledWith('/products')
-    expect(getJson).toHaveBeenCalledWith('/projects')
+    expect(getJson).toHaveBeenCalledWith('/products?pageSize=100')
+    expect(getJson).toHaveBeenCalledWith('/projects?pageSize=100')
   })
 
   it('requires selecting a sale project when the selected product has multiple projects', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
-      if (path === '/products') {
+      if (path === '/products?pageSize=100') {
         return [
           {
             id: 101,
@@ -572,7 +572,7 @@ describe('EntityEditPage', () => {
         ]
       }
 
-      if (path === '/projects') {
+      if (path === '/projects?pageSize=100') {
         return [
           {
             feeModel: 'percentage',
@@ -624,7 +624,7 @@ describe('EntityEditPage', () => {
   it('allows a manual sale fee only when override fee is enabled', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
-      if (path === '/products') {
+      if (path === '/products?pageSize=100') {
         return [
           {
             id: 101,
@@ -634,7 +634,7 @@ describe('EntityEditPage', () => {
         ]
       }
 
-      if (path === '/projects') {
+      if (path === '/projects?pageSize=100') {
         return [
           {
             feeModel: 'percentage',
@@ -702,7 +702,7 @@ describe('EntityEditPage', () => {
   it('calculates configured sale percentage fees from the sale amount', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation(async (path) => {
-      if (path === '/products') {
+      if (path === '/products?pageSize=100') {
         return [
           {
             id: 101,
@@ -712,7 +712,7 @@ describe('EntityEditPage', () => {
         ]
       }
 
-      if (path === '/projects') {
+      if (path === '/projects?pageSize=100') {
         return [
           {
             feeModel: 'percentage',

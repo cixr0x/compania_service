@@ -33,6 +33,7 @@ import type {
   Project,
 } from '../../api/types'
 import { formatCurrency } from '../../utils/money'
+import { entitySelectSearch } from '../../utils/entitySelectSearch'
 
 type SalesImportPageProps = {
   initialBatchId?: number
@@ -467,6 +468,7 @@ export function SalesImportPage({ initialBatchId }: SalesImportPageProps) {
             value: project.idProject,
           }))}
           placeholder="Select project"
+          showSearch={entitySelectSearch}
           size="small"
           style={{ width: '100%' }}
           value={row.idProject ?? undefined}

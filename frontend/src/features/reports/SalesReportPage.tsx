@@ -24,6 +24,7 @@ import type {
 import { ProductNameCell } from '../../components/ProductNameCell'
 import { getChannelHeaderClass } from '../../utils/channelHeaders'
 import { formatCurrency } from '../../utils/money'
+import { entitySelectSearch } from '../../utils/entitySelectSearch'
 import { downloadSalesReportExcel } from './salesReportExport'
 
 const sourceLabels: Record<SalesReportSource, string> = {
@@ -511,12 +512,11 @@ export function SalesReportPage() {
               aria-label="Project"
               disabled={rows.length === 0}
               onChange={(value) => setSelectedProjectId(value)}
-              optionFilterProp="label"
               options={[
                 { label: 'All projects', value: '' },
                 ...projectOptions,
               ]}
-              showSearch
+              showSearch={entitySelectSearch}
               style={{ minWidth: 220 }}
               value={activeProjectId}
             />

@@ -4,6 +4,7 @@ import { Button, Select, Typography } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getJson } from '../../api/client'
+import { ENTITY_PAGE_SIZE, loadAllPages } from '../../api/loadAllPages'
 import type { Product, Project, SalesReportPeriod } from '../../api/types'
 import {
   DataTable,
@@ -11,9 +12,8 @@ import {
   type DataTableSummaryItem,
 } from '../../components/DataTable'
 import { parseMoneyNumber } from '../../utils/money'
+import { entitySelectSearch } from '../../utils/entitySelectSearch'
 import { getEntityConfig, type EntityRow } from './entityConfigs'
-
-const ENTITY_LIST_PAGE_SIZE = 100
 
 type SalesFilters = {
   idProduct?: string
@@ -32,7 +32,7 @@ function buildEntityListPath(
   salesFilters: SalesFilters,
 ) {
   const query = new URLSearchParams({
-    pageSize: String(ENTITY_LIST_PAGE_SIZE),
+    pageSize: String(ENTITY_PAGE_SIZE),
   })
 
   if (path === 'sales') {
@@ -50,23 +50,6 @@ function buildEntityListPath(
   }
 
   return `/${path}?${query.toString()}`
-}
-
-async function loadAllEntityRows(listPath: string, signal: AbortSignal) {
-  const rows: EntityRow[] = []
-  let page = 1
-  while (true) {
-    signal.throwIfAborted()
-    const pageRows = await getJson<EntityRow[]>(
-      page === 1 ? listPath : `${listPath}&page=${page}`,
-    )
-    signal.throwIfAborted()
-    rows.push(...pageRows)
-    if (pageRows.length < ENTITY_LIST_PAGE_SIZE) {
-      return rows
-    }
-    page += 1
-  }
 }
 
 function formatProjectOption(project: Project) {
@@ -148,7 +131,9 @@ type SalesTableFiltersProps = {
   isLoading: boolean
   periods: SalesReportPeriod[]
   products: Product[]
+  productError: boolean
   projects: Project[]
+  projectError: boolean
   setFilters: Dispatch<SetStateAction<SalesFilters>>
 }
 
@@ -157,7 +142,9 @@ function SalesTableFilters({
   isLoading,
   periods,
   products,
+  productError,
   projects,
+  projectError,
   setFilters,
 }: SalesTableFiltersProps) {
   const selectedProductId = filters.idProduct
@@ -189,10 +176,10 @@ function SalesTableFilters({
           allowClear
           aria-label="Product filter"
           loading={isLoading}
-          optionFilterProp="label"
+          notFoundContent={isLoading ? 'Loading products...' : productError ? 'Unable to load products.' : 'No products found.'}
           options={productOptions}
           placeholder="All products"
-          showSearch
+          showSearch={entitySelectSearch}
           value={filters.idProduct}
           onChange={(value?: string) => {
             setFilters((current) => {
@@ -221,10 +208,10 @@ function SalesTableFilters({
           allowClear
           aria-label="Project filter"
           loading={isLoading}
-          optionFilterProp="label"
+          notFoundContent={isLoading ? 'Loading projects...' : projectError ? 'Unable to load projects.' : 'No projects found.'}
           options={projectOptions}
           placeholder="All projects"
-          showSearch
+          showSearch={entitySelectSearch}
           value={filters.idProject}
           onChange={(value?: string) =>
             setFilters((current) => ({ ...current, idProject: value }))
@@ -279,18 +266,18 @@ export function EntityListPage() {
     queryKey: ['entities', listPath],
     queryFn: ({ signal }) =>
       isSearchablePage
-        ? loadAllEntityRows(listPath, signal)
+        ? loadAllPages<EntityRow>(listPath, signal)
         : getJson<EntityRow[]>(listPath),
   })
   const productsQuery = useQuery({
     enabled: isSalesPage,
-    queryKey: ['sales-table-filters', 'products'],
-    queryFn: () => getJson<Product[]>('/products?pageSize=100'),
+    queryKey: ['entity-options-all', 'products'],
+    queryFn: ({ signal }) => loadAllPages<Product>(`/products?pageSize=${ENTITY_PAGE_SIZE}`, signal),
   })
   const projectsQuery = useQuery({
     enabled: isSalesPage,
-    queryKey: ['sales-table-filters', 'projects'],
-    queryFn: () => getJson<Project[]>('/projects?pageSize=100'),
+    queryKey: ['entity-options-all', 'projects'],
+    queryFn: ({ signal }) => loadAllPages<Project>(`/projects?pageSize=${ENTITY_PAGE_SIZE}`, signal),
   })
   const periodsQuery = useQuery({
     enabled: isSalesPage,
@@ -349,7 +336,9 @@ export function EntityListPage() {
               }
               periods={periodsQuery.data ?? []}
               products={productsQuery.data ?? []}
+              productError={productsQuery.isError}
               projects={projectsQuery.data ?? []}
+              projectError={projectsQuery.isError}
               setFilters={setSalesFilters}
             />
           ) : null

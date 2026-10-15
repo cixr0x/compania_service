@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Alert, Button, Empty, Progress, Select, Spin, Typography } from 'antd'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getJson } from '../../api/client'
+import { ENTITY_PAGE_SIZE, loadAllPages } from '../../api/loadAllPages'
 import type {
   Project,
   StakeholderProjectReportRow,
@@ -12,9 +13,9 @@ import type {
   StakeholderProjectsReportSource,
 } from '../../api/types'
 import { formatCurrency } from '../../utils/money'
+import { entitySelectSearch } from '../../utils/entitySelectSearch'
 import { StakeholderProjectTransactionLines } from './StakeholderProjectTransactionLines'
 
-const OPTION_LIST_PAGE_SIZE = 100
 const sourceLabels: Record<StakeholderProjectsReportSource, string> = {
   ecommerce: 'Comercio electrónico',
   event: 'Evento',
@@ -135,9 +136,9 @@ export function StakeholderProjectsReportPage() {
     number | null
   >(null)
   const projectsQuery = useQuery({
-    queryKey: ['reports', 'stakeholder-projects', 'projects'],
-    queryFn: () =>
-      getJson<Project[]>(`/projects?pageSize=${OPTION_LIST_PAGE_SIZE}`),
+    queryKey: ['entity-options-all', 'projects'],
+    queryFn: ({ signal }) =>
+      loadAllPages<Project>(`/projects?pageSize=${ENTITY_PAGE_SIZE}`, signal),
   })
   const reportQuery = useQuery({
     enabled: selectedProjectId !== null && selectedStakeholderId !== null,
@@ -220,9 +221,9 @@ export function StakeholderProjectsReportPage() {
                 label: formatProjectOption(project),
                 value: project.idProject,
               }))}
-              notFoundContent="No se encontraron proyectos."
+              notFoundContent={projectsQuery.isLoading ? 'Cargando proyectos...' : projectsQuery.isError ? 'No se pudieron cargar los proyectos.' : 'No se encontraron proyectos.'}
               placeholder="Selecciona un proyecto"
-              showSearch
+              showSearch={entitySelectSearch}
               value={selectedProjectId}
             />
           </label>

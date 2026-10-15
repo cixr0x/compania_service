@@ -314,6 +314,42 @@ describe('StakeholderProjectsReportPage', () => {
     expect(within(projectRegion).queryByText('Bruno')).not.toBeInTheDocument()
   })
 
+  it('searches project labels and IDs beyond the first page and resets stakeholder only when selecting a project', async () => {
+    const user = userEvent.setup()
+    const laterProject = { ...projects[0], idProject: 701, name: 'Autumn launch' }
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/projects?pageSize=100') return Array.from({ length: 100 }, (_, i) => ({ ...projects[0], idProject: i + 1, name: `Project ${i + 1}` }))
+      if (path === '/projects?pageSize=100&page=2') return [projects[0], laterProject]
+      if (path.startsWith('/reports/stakeholder-projects?')) return stakeholderProjectsReport
+      return []
+    })
+    renderStakeholderProjectsReportRoute()
+    const project = screen.getByRole('combobox', { name: 'Proyecto' })
+    await user.click(project)
+    await user.paste('  MAPLE  ')
+    expect(screen.getByTitle('Proyecto #501 - Maple Shelf')).toBeInTheDocument()
+    expect(screen.queryByTitle('Project 1 (#1)')).not.toBeInTheDocument()
+    await user.click(screen.getByTitle('Proyecto #501 - Maple Shelf'))
+    const stakeholder = screen.getByRole('combobox', { name: 'Socio' })
+    await selectAntOption(user, stakeholder, 'Alicia')
+    await waitFor(() => expect(getJson).toHaveBeenCalledWith('/reports/stakeholder-projects?projectId=501&stakeholderId=10'))
+    const requestCount = vi.mocked(getJson).mock.calls.length
+    await user.click(project)
+    await user.paste('unmatched')
+    await user.tab()
+    expect(project.closest('.ant-select')).toHaveTextContent('Proyecto #501 - Maple Shelf')
+    expect(stakeholder.closest('.ant-select')).toHaveTextContent('Alicia')
+    expect(getJson).toHaveBeenCalledTimes(requestCount)
+    await user.click(project)
+    await user.clear(project)
+    await user.paste('  AUTUMN  ')
+    expect(screen.getByTitle('Autumn launch (#701)')).toBeInTheDocument()
+    await user.clear(project)
+    await user.paste('  701 ')
+    await user.click(screen.getByTitle('Autumn launch (#701)'))
+    expect(stakeholder.closest('.ant-select')).not.toHaveTextContent('Alicia')
+    expect(getJson).not.toHaveBeenCalledWith('/reports/stakeholder-projects?projectId=701&stakeholderId=10')
+  })
   it('shows fixed ROI project metrics, channel amounts, and fixed stakeholder income', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation((path: string) => {

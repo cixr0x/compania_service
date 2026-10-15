@@ -295,6 +295,33 @@ describe('SalesImportPage', () => {
     })
   })
 
+  it('filters staged projects by trimmed labels or IDs without patching until a real option is selected', async () => {
+    const user = userEvent.setup()
+    const row: ImportStageRow = {
+      ...stagedRows[0],
+      product: { ...stagedRows[0].product!, projects: [starterProject, consignaProject] },
+    }
+    mockImportQueries([row], [])
+    vi.mocked(patchJson).mockResolvedValue({ ...row, idProject: 502, project: consignaProject })
+    renderSalesImportPage()
+    const project = await screen.findByRole('combobox', { name: 'Project for row 2' })
+    await user.click(project)
+    await user.paste('  cOnSiGnA  ')
+    expect(screen.getByTitle('Consigna launch (#502)')).toBeInTheDocument()
+    expect(screen.queryAllByTitle('Starter launch (#501)').filter((element) => element.classList.contains('ant-select-item-option'))).toHaveLength(0)
+    expect(patchJson).not.toHaveBeenCalled()
+    await user.clear(project)
+    await user.paste('unmatched')
+    expect(screen.queryByTitle('Consigna launch (#502)')).not.toBeInTheDocument()
+    await user.tab()
+    expect(project.closest('.ant-select')).toHaveTextContent('Starter launch (#501)')
+    expect(patchJson).not.toHaveBeenCalled()
+    await user.click(project)
+    await user.clear(project)
+    await user.paste('  502  ')
+    await user.click(screen.getByTitle('Consigna launch (#502)'))
+    await waitFor(() => expect(patchJson).toHaveBeenCalledExactlyOnceWith('/import-batches/1/stage/10', { idProject: 502 }))
+  })
   it('keeps revalidation disabled while a staged project selection is being saved', async () => {
     const user = userEvent.setup()
     const multiProjectRow: ImportStageRow = {

@@ -10,6 +10,7 @@ import {
   Spin,
   Table,
   Typography,
+  type SelectProps,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -21,6 +22,7 @@ import {
   postJson,
   putJson,
 } from '../../api/client'
+import { ENTITY_PAGE_SIZE, loadAllPages } from '../../api/loadAllPages'
 import { EntityForm } from '../../components/EntityForm'
 import { ProductNameCell } from '../../components/ProductNameCell'
 import { parseMoneyNumber } from '../../utils/money'
@@ -655,20 +657,28 @@ export function EntityEditPage() {
 
   const optionSourceQueries = useQueries({
     queries: optionSources.map((path) => {
-      const search =
-        config?.path === 'projects' && path === 'products'
-          ? debouncedProductSearch
-          : ''
+      const isRemoteProduct = config?.path === 'projects' && path === 'products'
+      const isCompleteCatalog =
+        !isRemoteProduct && (path === 'products' || path === 'projects')
+      const search = isRemoteProduct ? debouncedProductSearch : ''
       const query = new URLSearchParams({ search, page: '1', pageSize: '25' })
       return {
         enabled: Boolean(config),
-        queryKey: search
-          ? ['entity-options', path, search]
-          : ['entity-options', path],
-        queryFn: () => getJson<EntityRow[]>(search ? `/${path}?${query}` : `/${path}`),
+        queryKey: isCompleteCatalog
+          ? ['entity-options-all', path]
+          : search
+            ? ['entity-options', path, search]
+            : ['entity-options', path],
+        queryFn: isCompleteCatalog
+          ? ({ signal }: { signal: AbortSignal }) =>
+              loadAllPages<EntityRow>(`/${path}?pageSize=${ENTITY_PAGE_SIZE}`, signal)
+          : () => getJson<EntityRow[]>(search ? `/${path}?${query}` : `/${path}`),
       }
     }),
   })
+  const salesProjectsQuery = optionSourceQueries[optionSources.indexOf('projects')]
+  const isSalesProjectCatalogUnavailable =
+    config?.path === 'sales' && !salesProjectsQuery?.data
   const productOptionsQuery = optionSourceQueries[optionSources.indexOf('products')]
   const isProductSearchPending =
     config?.path === 'projects' &&
@@ -678,14 +688,21 @@ export function EntityEditPage() {
       Object.fromEntries(
         optionSources.map((path, index) => [
           path,
-          config?.path === 'projects' &&
-          path === 'products' &&
-          (isProductSearchPending || optionSourceQueries[index]?.isError)
+          (isSalesProjectCatalogUnavailable && path === 'products') ||
+          (config?.path === 'projects' &&
+            path === 'products' &&
+            (isProductSearchPending || optionSourceQueries[index]?.isError))
             ? []
             : optionSourceQueries[index]?.data ?? [],
         ]),
       ) as Partial<Record<EntityConfig['path'], EntityRow[]>>,
-    [config?.path, isProductSearchPending, optionSourceQueries, optionSources],
+    [
+      config?.path,
+      isProductSearchPending,
+      isSalesProjectCatalogUnavailable,
+      optionSourceQueries,
+      optionSources,
+    ],
   )
   const detailQuery = useQuery({
     enabled: Boolean(
@@ -837,6 +854,40 @@ export function EntityEditPage() {
     )
   }
 
+  const catalogSelectFeedback = Object.fromEntries(
+    config.fields.flatMap((field) => {
+      const path = field.optionSource?.path
+      if (
+        (path !== 'products' && path !== 'projects') ||
+        (config.path === 'projects' && path === 'products')
+      ) {
+        return []
+      }
+      const sourceQuery = optionSourceQueries[optionSources.indexOf(path)]
+      const needsProjects = isSalesProjectCatalogUnavailable && path === 'products'
+      const query = sourceQuery?.isError || !needsProjects ? sourceQuery : salesProjectsQuery
+      const feedbackPath = needsProjects && !sourceQuery?.isError ? 'projects' : path
+      const selectedRow = path === 'products'
+        ? getSelectedProduct(displayedFormValues, optionRowsByPath.products)
+        : getSelectedProject(displayedFormValues, optionRowsByPath.projects)
+      const selectedLabel = selectedRow
+        ? field.optionSource?.labelFormatter?.(selectedRow) ?? getNestedEntityName(selectedRow)
+        : undefined
+      const feedback: Pick<SelectProps<string>, 'loading' | 'notFoundContent' | 'labelRender'> = {
+        loading: query?.isFetching,
+        labelRender: ({ label, value }) => selectedLabel ?? label ?? value,
+        notFoundContent: query?.isFetching ? (
+          <Typography.Text type="secondary">Loading {feedbackPath}...</Typography.Text>
+        ) : query?.isError ? (
+          <Typography.Text role="alert" type="danger">Unable to load {feedbackPath}.</Typography.Text>
+        ) : (
+          <Typography.Text type="secondary">No {path} found.</Typography.Text>
+        ),
+      }
+      return [[field.name, feedback]]
+    }),
+  )
+
   function handleChange(name: string, value: boolean | string) {
     if (config?.path === 'projects' && name === 'idProduct') {
       setProductSearch('')
@@ -932,6 +983,7 @@ export function EntityEditPage() {
             selectSearchByField={
               config.path === 'projects'
                 ? {
+                    ...catalogSelectFeedback,
                     idProduct: {
                       showSearch: {
                         filterOption: false,
@@ -956,7 +1008,7 @@ export function EntityEditPage() {
                         getNestedEntityName(selectedProjectProduct) ?? label ?? value,
                     },
                   }
-                : undefined
+                : catalogSelectFeedback
             }
             values={displayedFormValues}
           >

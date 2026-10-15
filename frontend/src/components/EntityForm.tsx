@@ -22,6 +22,7 @@ import type {
   EntityRow,
 } from '../features/entities/entityConfigs'
 import { formatMoney } from '../utils/money'
+import { entitySelectSearch } from '../utils/entitySelectSearch'
 
 type EntityFormProps = {
   config: EntityConfig
@@ -244,6 +245,11 @@ export function EntityForm({
         ) : field.type === 'select' ? (
           <>
             <Select
+              showSearch={
+                field.optionSource?.path === 'products' || field.optionSource?.path === 'projects'
+                  ? entitySelectSearch
+                  : undefined
+              }
               {...selectSearchByField?.[field.name]}
               aria-label={field.label}
               aria-required={isRequired}

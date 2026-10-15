@@ -659,6 +659,46 @@ describe('EntityListPage', () => {
     })
   })
 
+  it('searches all Sales filter catalog pages and changes filters only on selection', async () => {
+    const user = userEvent.setup()
+    vi.mocked(getJson).mockImplementation(async (path) => {
+      if (path === '/products?pageSize=100') return Array.from({ length: 100 }, (_, i) => ({ id: i + 1, name: `Product ${i + 1}` }))
+      if (path === '/products?pageSize=100&page=2') return [{ id: 131, name: 'Needle & Oak' }]
+      if (path === '/projects?pageSize=100') return Array.from({ length: 100 }, (_, i) => ({ idProject: i + 1, idProduct: 999, name: `Other ${i + 1}` }))
+      if (path === '/projects?pageSize=100&page=2') return [
+        { idProject: 231, idProduct: 131, name: 'Autumn launch' },
+        { idProject: 232, idProduct: 999, name: 'Unrelated launch' },
+      ]
+      return []
+    })
+    renderEntityList('/sales')
+    const product = screen.getByRole('combobox', { name: 'Product filter' })
+    await user.click(product)
+    await user.paste('  NEEDLE ')
+    expect(screen.getByTitle('Needle & Oak')).toBeInTheDocument()
+    expect(screen.queryByTitle('Product 1')).not.toBeInTheDocument()
+    expect(getJson).not.toHaveBeenCalledWith('/sales?pageSize=100&idProduct=131')
+    await user.click(screen.getByTitle('Needle & Oak'))
+    await waitFor(() => expect(getJson).toHaveBeenCalledWith('/sales?pageSize=100&idProduct=131'))
+    const project = screen.getByRole('combobox', { name: 'Project filter' })
+    await user.click(project)
+    await user.paste('  231 ')
+    expect(screen.getByTitle('Autumn launch (#231)')).toBeInTheDocument()
+    expect(screen.queryByTitle('Unrelated launch (#232)')).not.toBeInTheDocument()
+    await user.click(screen.getByTitle('Autumn launch (#231)'))
+    await waitFor(() => expect(getJson).toHaveBeenCalledWith('/sales?pageSize=100&idProduct=131&idProject=231'))
+    const requestCount = vi.mocked(getJson).mock.calls.length
+    await user.click(project)
+    await user.paste('missing')
+    await user.clear(project)
+    await user.paste('still missing')
+    await user.tab()
+    expect(project.closest('.ant-select')).toHaveTextContent('Autumn launch (#231)')
+    expect(getJson).toHaveBeenCalledTimes(requestCount)
+    await user.click(project.closest('.ant-select')!.querySelector('.ant-select-clear')!)
+    await waitFor(() => expect(project.closest('.ant-select')).not.toHaveTextContent('Autumn launch (#231)'))
+    expect(product.closest('.ant-select')).toHaveTextContent('Needle & Oak')
+  })
   it('shows total owner profit for the currently loaded sales rows', async () => {
     vi.mocked(getJson).mockImplementation((path: string) => {
       if (path === '/sales?pageSize=100') {
