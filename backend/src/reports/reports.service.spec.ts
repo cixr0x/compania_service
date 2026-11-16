@@ -10,6 +10,10 @@ describe('ReportsService', () => {
     sale: {
       findMany: jest.fn(),
     },
+    stakeholder: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+    },
   };
 
   beforeEach(() => jest.resetAllMocks());
@@ -470,6 +474,121 @@ describe('ReportsService', () => {
     expect(result.row?.profitDifference).toBe(303.4);
     expect(result.row?.stakeholder.balance).toBe(-78.29);
     expect(result.row?.stakeholder.income).toBe(36.96);
+  });
+
+  it('lists all stakeholders by name, including those without projects', async () => {
+    prisma.stakeholder.findMany.mockResolvedValue([
+      { idStakeholder: 10, name: 'Alicia', _count: { projects: 2 } },
+      { idStakeholder: 11, name: 'Bruno', _count: { projects: 0 } },
+    ]);
+
+    const service = new ReportsService(asPrismaService(prisma));
+
+    await expect(service.findStakeholderProjectCounts()).resolves.toEqual([
+      { stakeholderId: 10, stakeholderName: 'Alicia', projectCount: 2 },
+      { stakeholderId: 11, stakeholderName: 'Bruno', projectCount: 0 },
+    ]);
+    expect(prisma.stakeholder.findMany).toHaveBeenCalledWith({
+      orderBy: [{ name: 'asc' }, { idStakeholder: 'asc' }],
+      select: {
+        idStakeholder: true,
+        name: true,
+        _count: { select: { projects: true } },
+      },
+    });
+  });
+
+  it('keeps drill-down totals aligned with detail reports for active and inactive project assignments', async () => {
+    const stakeholder = { idStakeholder: 10, name: 'Alicia' };
+    const projectInputs = {
+      units: 3,
+      sales: [{ amount: '110.08', fee: '4.17', quantity: 1, source: 'store' }],
+      stakeholders: [
+        {
+          stakePercentage: '62.50',
+          stakeholder,
+          transactions: [
+            { amount: '-73.41', transactionType: 'investment' },
+            { amount: '20.21', transactionType: 'payment' },
+            { amount: '-5.25', transactionType: 'adjustment' },
+            { amount: '1.12', transactionType: 'adjustment' },
+          ],
+        },
+      ],
+      transactions: [{ amount: '100.00' }],
+      product: { name: 'Maple Shelf', image: null },
+    };
+    const standardProject = {
+      ...projectInputs,
+      idProject: 501,
+      name: 'Current project',
+      isActive: true,
+      fixedRoi: false,
+      fixedRoiPercentage: null,
+    };
+    const fixedProject = {
+      ...projectInputs,
+      idProject: 502,
+      name: 'Finished project',
+      isActive: false,
+      fixedRoi: true,
+      fixedRoiPercentage: '17.25',
+    };
+    prisma.stakeholder.findUnique.mockResolvedValue(stakeholder);
+    prisma.project.findMany.mockResolvedValue([standardProject, fixedProject]);
+    prisma.project.findFirst
+      .mockResolvedValueOnce(standardProject)
+      .mockResolvedValueOnce(fixedProject);
+
+    const service = new ReportsService(asPrismaService(prisma));
+    const summary = await service.findProjectsForStakeholder(10);
+
+    expect(summary).toEqual({
+      stakeholderId: 10,
+      stakeholderName: 'Alicia',
+      projects: [
+        {
+          projectId: 501,
+          projectName: 'Current project',
+          stakePercentage: 62.5,
+          investment: -53.2,
+          payments: 20.21,
+          income: 66.19,
+          balance: 41.85,
+        },
+        {
+          projectId: 502,
+          projectName: 'Finished project',
+          stakePercentage: 62.5,
+          investment: -53.2,
+          payments: 20.21,
+          income: 36.92,
+          balance: 12.58,
+        },
+      ],
+    });
+    expect(prisma.project.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.project.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ name: 'asc' }, { idProject: 'asc' }],
+        where: { stakeholders: { some: { idStakeholder: 10 } } },
+      }),
+    );
+    expect(prisma.project.findFirst).not.toHaveBeenCalled();
+
+    for (const project of summary.projects) {
+      const detail = await service.getStakeholderProjectsReport({
+        projectId: project.projectId,
+        stakeholderId: 10,
+      });
+      expect(detail.row?.stakeholder).toMatchObject({
+        balance: project.balance,
+        income: project.income,
+        investment: project.investment,
+        payments: project.payments,
+        stakePercentage: project.stakePercentage,
+      });
+    }
   });
 
   it('returns an empty stakeholder project report when the stakeholder is not assigned to the project', async () => {

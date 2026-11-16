@@ -1,10 +1,12 @@
-import { PieChartOutlined, PrinterOutlined } from '@ant-design/icons'
-import { useState } from 'react'
+import {
+  ArrowLeftOutlined,
+  PieChartOutlined,
+  PrinterOutlined,
+} from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Button, Empty, Progress, Select, Spin, Typography } from 'antd'
+import { Alert, Button, Empty, Progress, Space, Spin, Typography } from 'antd'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getJson } from '../../api/client'
-import { ENTITY_PAGE_SIZE, loadAllPages } from '../../api/loadAllPages'
 import type {
   Project,
   StakeholderProjectReportRow,
@@ -13,8 +15,17 @@ import type {
   StakeholderProjectsReportSource,
 } from '../../api/types'
 import { formatCurrency } from '../../utils/money'
-import { entitySelectSearch } from '../../utils/entitySelectSearch'
 import { StakeholderProjectTransactionLines } from './StakeholderProjectTransactionLines'
+import {
+  ProjectsForStakeholder,
+  StakeholderProjectCounts,
+} from './StakeholderProjectsDrillDown'
+import {
+  buildProjectReportPath,
+  buildStakeholderProjectsPath,
+  stakeholderProjectsReportKeys,
+  stakeholderProjectsReportPath,
+} from './stakeholderProjectsReportQueries'
 
 const sourceLabels: Record<StakeholderProjectsReportSource, string> = {
   ecommerce: 'Comercio electrónico',
@@ -81,96 +92,54 @@ function formatProjectRoi(profit: unknown, calculatedCost: unknown) {
   return formatPercentage((numericProfit / numericCalculatedCost) * 100)
 }
 
-function buildReportPath(projectId: number, stakeholderId: number) {
-  return buildStakeholderProjectsPath(
-    '/reports/stakeholder-projects',
-    projectId,
-    stakeholderId,
-  )
-}
-
 function buildPrintReportPath(projectId: number, stakeholderId: number) {
-  return buildStakeholderProjectsPath(
-    '/reports/stakeholder-projects/print',
-    projectId,
-    stakeholderId,
-  )
+  return `${stakeholderProjectsReportPath}/print?projectId=${projectId}&stakeholderId=${stakeholderId}`
 }
 
-function buildStakeholderProjectsPath(
-  basePath: string,
-  projectId: number,
-  stakeholderId: number,
-) {
-  const query = new URLSearchParams({
-    projectId: String(projectId),
-    stakeholderId: String(stakeholderId),
+function useReportProject(projectId: number | null) {
+  return useQuery({
+    enabled: projectId !== null,
+    queryKey: stakeholderProjectsReportKeys.project(projectId),
+    queryFn: () => getJson<Project>(`/projects/${projectId!}`),
   })
+}
 
-  return `${basePath}?${query.toString()}`
+function useStakeholderProjectReport(
+  projectId: number | null,
+  stakeholderId: number | null,
+) {
+  return useQuery({
+    enabled: projectId !== null && stakeholderId !== null,
+    queryKey: stakeholderProjectsReportKeys.detail(projectId, stakeholderId),
+    queryFn: () =>
+      getJson<StakeholderProjectsReport>(
+        buildProjectReportPath(projectId!, stakeholderId!),
+      ),
+  })
 }
 
 function parseIdParam(value: string | null) {
   const numericValue = Number(value)
 
-  return Number.isInteger(numericValue) && numericValue > 0
+  return Number.isSafeInteger(numericValue) && numericValue > 0
     ? numericValue
     : null
 }
 
-function formatProjectOption(project: Project) {
-  const projectName = project.name?.trim()
-  if (projectName) {
-    return `${projectName} (#${project.idProject})`
-  }
-
-  const productName = project.product?.name?.trim()
-  return productName
-    ? `Proyecto #${project.idProject} - ${productName}`
-    : `Proyecto #${project.idProject}`
-}
-
 export function StakeholderProjectsReportPage() {
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
-  const [selectedStakeholderId, setSelectedStakeholderId] = useState<
-    number | null
-  >(null)
-  const projectsQuery = useQuery({
-    queryKey: ['entity-options-all', 'projects'],
-    queryFn: ({ signal }) =>
-      loadAllPages<Project>(`/projects?pageSize=${ENTITY_PAGE_SIZE}`, signal),
-  })
-  const reportQuery = useQuery({
-    enabled: selectedProjectId !== null && selectedStakeholderId !== null,
-    queryKey: [
-      'reports',
-      'stakeholder-projects',
-      selectedProjectId,
-      selectedStakeholderId,
-    ],
-    queryFn: () =>
-      getJson<StakeholderProjectsReport>(
-        buildReportPath(selectedProjectId!, selectedStakeholderId!),
-      ),
-  })
-  const projects = projectsQuery.data ?? []
-  const selectedProject = projects.find(
-    (project) => project.idProject === selectedProjectId,
-  )
-  const selectedProjectProductId = selectedProject?.idProduct ?? null
-  const stakeholderOptions =
-    selectedProject?.stakeholders?.map((line) => ({
-      label: line.stakeholder?.name ?? `Socio #${line.idStakeholder}`,
-      value: line.idStakeholder,
-    })) ?? []
-  const report = reportQuery.data
-  const sources = report?.sources ?? DEFAULT_REPORT_SOURCES
-  const row = report?.row ?? null
-  const hasSelectedScope =
-    selectedProjectId !== null && selectedStakeholderId !== null
-  const isLoading =
-    projectsQuery.isLoading ||
-    (hasSelectedScope && reportQuery.isLoading)
+  const [searchParams] = useSearchParams()
+  const projectId = parseIdParam(searchParams.get('projectId'))
+  const stakeholderId = parseIdParam(searchParams.get('stakeholderId'))
+  const isInvalidScope =
+    (searchParams.has('stakeholderId') && stakeholderId === null) ||
+    (searchParams.has('projectId') &&
+      (projectId === null || stakeholderId === null))
+  const hasSelectedScope = projectId !== null && stakeholderId !== null
+  const projectQuery = useReportProject(hasSelectedScope ? projectId : null)
+  const reportQuery = useStakeholderProjectReport(projectId, stakeholderId)
+  const row = reportQuery.data?.row ?? null
+  const isLoadingDetail =
+    reportQuery.isLoading || (row !== null && projectQuery.isLoading)
   const printReportPath = row
     ? buildPrintReportPath(row.projectId, row.stakeholder.stakeholderId)
     : null
@@ -206,50 +175,33 @@ export function StakeholderProjectsReportPage() {
         ) : null}
       </div>
 
-      <div className="stakeholder-report-controls">
-        <div className="stakeholder-report-filter-row">
-          <label className="stakeholder-report-filter">
-            Proyecto
-            <Select
-              aria-label="Proyecto"
-              loading={projectsQuery.isLoading}
-              onChange={(value) => {
-                setSelectedProjectId(value)
-                setSelectedStakeholderId(null)
-              }}
-              options={projects.map((project) => ({
-                label: formatProjectOption(project),
-                value: project.idProject,
-              }))}
-              notFoundContent={projectsQuery.isLoading ? 'Cargando proyectos...' : projectsQuery.isError ? 'No se pudieron cargar los proyectos.' : 'No se encontraron proyectos.'}
-              placeholder="Selecciona un proyecto"
-              showSearch={entitySelectSearch}
-              value={selectedProjectId}
-            />
-          </label>
+      {stakeholderId !== null || isInvalidScope ? (
+        <nav aria-label="Navegación del reporte">
+          <Link
+            to={
+              hasSelectedScope
+                ? buildStakeholderProjectsPath(stakeholderId)
+                : stakeholderProjectsReportPath
+            }
+          >
+            <Space size="small">
+              <ArrowLeftOutlined aria-hidden="true" />
+              {hasSelectedScope
+                ? 'Volver a los proyectos del socio'
+                : 'Volver a los socios'}
+            </Space>
+          </Link>
+        </nav>
+      ) : null}
 
-          <label className="stakeholder-report-filter">
-            Socio
-            <Select
-              aria-label="Socio"
-              disabled={selectedProjectId === null}
-              onChange={(value) => setSelectedStakeholderId(value)}
-              options={stakeholderOptions}
-              notFoundContent="No se encontraron socios."
-              placeholder="Selecciona un socio"
-              showSearch
-              value={selectedStakeholderId}
-            />
-          </label>
-        </div>
-      </div>
+      {isInvalidScope ? (
+        <Alert showIcon title="El enlace del reporte no es válido." type="error" />
+      ) : null}
 
-      {projectsQuery.isError ? (
-        <Alert
-          showIcon
-          title="No se pudieron cargar las opciones del reporte."
-          type="error"
-        />
+      {!isInvalidScope && stakeholderId === null ? <StakeholderProjectCounts /> : null}
+
+      {!isInvalidScope && stakeholderId !== null && projectId === null ? (
+        <ProjectsForStakeholder stakeholderId={stakeholderId} />
       ) : null}
 
       {reportQuery.isError ? (
@@ -260,26 +212,26 @@ export function StakeholderProjectsReportPage() {
         />
       ) : null}
 
-      {isLoading ? (
+      {row && projectQuery.isError ? (
+        <Alert showIcon title="No se pudo cargar el enlace del producto." type="error" />
+      ) : null}
+
+      {isLoadingDetail ? (
         <div className="report-loading">
           <Spin />
         </div>
       ) : null}
 
-      {!isLoading && !hasSelectedScope ? (
-        <Empty description="Selecciona un proyecto y un socio para cargar el reporte." />
-      ) : null}
-
-      {!isLoading && hasSelectedScope && !reportQuery.isError && !row ? (
+      {hasSelectedScope && !isLoadingDetail && !reportQuery.isError && !row ? (
         <Empty description="No se encontró un reporte para el proyecto y el socio seleccionados." />
       ) : null}
 
-      {!isLoading && row ? (
+      {!isLoadingDetail && row ? (
         <StakeholderProjectsReportContent
           readOnlyTransactions={false}
           row={row}
-          selectedProjectProductId={selectedProjectProductId}
-          sources={sources}
+          selectedProjectProductId={projectQuery.data?.idProduct ?? null}
+          sources={reportQuery.data?.sources ?? DEFAULT_REPORT_SOURCES}
         />
       ) : null}
     </section>
@@ -292,24 +244,12 @@ export function StakeholderProjectsReportPrintPage() {
   const selectedStakeholderId = parseIdParam(searchParams.get('stakeholderId'))
   const hasSelectedScope =
     selectedProjectId !== null && selectedStakeholderId !== null
-  const projectQuery = useQuery({
-    enabled: selectedProjectId !== null,
-    queryKey: ['reports', 'stakeholder-projects', 'project', selectedProjectId],
-    queryFn: () => getJson<Project>(`/projects/${selectedProjectId!}`),
-  })
-  const reportQuery = useQuery({
-    enabled: hasSelectedScope,
-    queryKey: [
-      'reports',
-      'stakeholder-projects',
-      selectedProjectId,
-      selectedStakeholderId,
-    ],
-    queryFn: () =>
-      getJson<StakeholderProjectsReport>(
-        buildReportPath(selectedProjectId!, selectedStakeholderId!),
-      ),
-  })
+
+  const projectQuery = useReportProject(selectedProjectId)
+  const reportQuery = useStakeholderProjectReport(
+    selectedProjectId,
+    selectedStakeholderId,
+  )
   const report = reportQuery.data
   const sources = report?.sources ?? DEFAULT_REPORT_SOURCES
   const row = report?.row ?? null

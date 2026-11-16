@@ -26,6 +26,7 @@ import type {
   StakeholderProjectTransactionType,
 } from '../../api/types'
 import { formatMoney, parseMoneyNumber } from '../../utils/money'
+import { stakeholderProjectsReportKeys } from './stakeholderProjectsReportQueries'
 
 const EMPTY_TRANSACTION_ROW = {
   amount: '',
@@ -222,7 +223,10 @@ export function StakeholderProjectTransactionLines({
       setDraftRows(sortTransactionRows(rows.map(buildDraftRow)))
       setSaveError(null)
       void queryClient.invalidateQueries({
-        queryKey: ['reports', 'stakeholder-projects', projectId, stakeholderId],
+        queryKey: stakeholderProjectsReportKeys.detail(projectId, stakeholderId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: stakeholderProjectsReportKeys.projects(stakeholderId),
       })
     },
   })

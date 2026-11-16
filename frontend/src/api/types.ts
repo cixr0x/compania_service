@@ -236,3 +236,23 @@ export type StakeholderProjectsReport = {
   row: StakeholderProjectReportRow | null
   sources: StakeholderProjectsReportSource[]
 }
+
+export type StakeholderProjectCount = {
+  projectCount: number
+  stakeholderId: number
+  stakeholderName: string
+}
+
+export type StakeholderProjectSummaryRow = Pick<
+  StakeholderProjectStakeholderRow,
+  'balance' | 'income' | 'investment' | 'payments' | 'stakePercentage'
+> & {
+  projectId: number
+  projectName: string
+}
+
+export type StakeholderProjectSummary = {
+  projects: StakeholderProjectSummaryRow[]
+  stakeholderId: number
+  stakeholderName: string
+}

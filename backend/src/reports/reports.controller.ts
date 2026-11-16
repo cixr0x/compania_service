@@ -1,4 +1,5 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
+import { IdParamDto } from '../common/dto/id-param.dto';
 import { SalesSummaryQueryDto } from './dto/sales-summary-query.dto';
 import { StakeholderProjectReportQueryDto } from './dto/stakeholder-project-report-query.dto';
 import { ReportsService } from './reports.service';
@@ -22,5 +23,15 @@ export class ReportsController {
     @Query() query: StakeholderProjectReportQueryDto,
   ) {
     return this.reportsService.getStakeholderProjectsReport(query);
+  }
+
+  @Get('stakeholder-projects/stakeholders')
+  findStakeholderProjectCounts() {
+    return this.reportsService.findStakeholderProjectCounts();
+  }
+
+  @Get('stakeholder-projects/stakeholders/:id')
+  findProjectsForStakeholder(@Param() { id }: IdParamDto) {
+    return this.reportsService.findProjectsForStakeholder(id);
   }
 }

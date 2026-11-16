@@ -965,33 +965,12 @@ button {
   margin-top: 2px;
 }
 
-.stakeholder-report-controls {
-  display: flex;
+.stakeholder-report-list {
   min-width: 0;
 }
 
-.stakeholder-report-filter-row {
-  align-items: end;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  min-width: 0;
-}
-
-.stakeholder-report-filter {
-  color: #40577a;
-  display: grid;
-  font-size: 12px;
-  gap: 5px;
-  min-width: 0;
-}
-
-.stakeholder-report-filter:first-child {
-  width: 240px;
-}
-
-.stakeholder-report-filter:last-child {
-  width: 124px;
+.stakeholder-report-link-row {
+  cursor: pointer;
 }
 
 .stakeholder-project-card,
@@ -1584,17 +1563,6 @@ button {
   .report-filter-row .form-field,
   .report-filter-row .ant-select {
     min-width: 0;
-    width: 100%;
-  }
-
-  .stakeholder-report-filter-row {
-    display: grid;
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
-
-  .stakeholder-report-filter:first-child,
-  .stakeholder-report-filter:last-child {
     width: 100%;
   }
 

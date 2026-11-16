@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ImportSource } from '../common/constants/import-sources';
 import { PrismaService } from '../prisma/prisma.service';
@@ -97,6 +97,27 @@ const salesReportInclude = {
   product: true,
   project: true,
 };
+
+const projectFinancialSelect = {
+  fixedRoi: true,
+  fixedRoiPercentage: true,
+  sales: { select: { amount: true, fee: true, quantity: true, source: true } },
+  transactions: { select: { amount: true } },
+  units: true,
+} as const;
+
+const stakeholderFinancialSelect = {
+  stakePercentage: true,
+  transactions: { select: { amount: true, transactionType: true } },
+} as const;
+
+type ProjectFinancialInput = Prisma.ProjectGetPayload<{
+  select: typeof projectFinancialSelect;
+}>;
+
+type StakeholderFinancialInput = Prisma.ProjectStakeholderGetPayload<{
+  select: typeof stakeholderFinancialSelect;
+}>;
 
 @Injectable()
 export class ReportsService {
@@ -221,6 +242,74 @@ export class ReportsService {
     return { rows, sources };
   }
 
+  async findStakeholderProjectCounts() {
+    const stakeholders = await this.prisma.stakeholder.findMany({
+      orderBy: [{ name: 'asc' }, { idStakeholder: 'asc' }],
+      select: {
+        idStakeholder: true,
+        name: true,
+        _count: { select: { projects: true } },
+      },
+    });
+
+    return stakeholders.map((stakeholder) => ({
+      stakeholderId: stakeholder.idStakeholder,
+      stakeholderName: stakeholder.name,
+      projectCount: stakeholder._count.projects,
+    }));
+  }
+
+  async findProjectsForStakeholder(stakeholderId: number) {
+    const stakeholder = await this.prisma.stakeholder.findUnique({
+      select: { name: true },
+      where: { idStakeholder: stakeholderId },
+    });
+    if (!stakeholder) {
+      throw new NotFoundException(`Stakeholder ${stakeholderId} was not found`);
+    }
+
+    const projects = await this.prisma.project.findMany({
+      orderBy: [{ name: 'asc' }, { idProject: 'asc' }],
+      select: {
+        ...projectFinancialSelect,
+        idProject: true,
+        name: true,
+        stakeholders: {
+          select: stakeholderFinancialSelect,
+          where: { idStakeholder: stakeholderId },
+        },
+      },
+      where: { stakeholders: { some: { idStakeholder: stakeholderId } } },
+    });
+
+    return {
+      stakeholderId,
+      stakeholderName: stakeholder.name,
+      projects: projects.flatMap((project) => {
+        const [assignment] = project.stakeholders;
+        if (!assignment) {
+          return [];
+        }
+
+        const { financials } = calculateProjectFinancials(project);
+        const { balance, income, investment, payments, stakePercentage } =
+          calculateStakeholderFinancials(assignment, financials);
+
+        return [
+          {
+            projectId: project.idProject,
+            projectName: project.name,
+            balance,
+            income,
+            investment,
+            payments,
+            stakePercentage,
+          },
+        ];
+      }),
+    };
+  }
+
   async getStakeholderProjectsReport(
     query: StakeholderProjectReportQueryDto,
   ): Promise<StakeholderProjectsResponse> {
@@ -244,98 +333,22 @@ export class ReportsService {
       return { row: null, sources: [...BASE_REPORT_SOURCES] };
     }
 
-    const row = createEmptyStakeholderProjectRow({
-      productImage: normalizeImageUrl(project.product.image),
-      productName: project.product.name,
-      projectId: project.idProject,
-      totalUnits: project.units,
-    });
-    let hasSurfaceSales = false;
-
-    for (const sale of project.sales) {
-      const source = sale.source as ImportSource;
-      if (source === 'surface') {
-        hasSurfaceSales = true;
-      }
-
-      if (isReportSource(source)) {
-        row[source].quantity += sale.quantity;
-        row[source].amount += toNumber(sale.amount);
-      }
-
-      row.totalUnitsSold += sale.quantity;
-      row.totalSales += toNumber(sale.amount);
-      row.totalFees += toNumber(sale.fee);
-    }
-
-    row.projectTotalCost = roundCurrency(
-      sumNumbers(
-        ...project.transactions.map((transaction) => transaction.amount),
-      ),
-    );
-    const rawUnitPrice =
-      project.units === 0 ? 0 : row.projectTotalCost / project.units;
-    row.unitPrice = roundCurrency(rawUnitPrice);
-    row.unitsLeft = project.units - row.totalUnitsSold;
-    row.netSalesTotal = roundCurrency(row.totalSales - row.totalFees);
-    row.calculatedCost = roundCurrency(row.totalUnitsSold * rawUnitPrice);
-    row.profit = roundCurrency(row.netSalesTotal - row.calculatedCost);
-    row.fixedRoi = project.fixedRoi;
-    row.fixedRoiPercentage = project.fixedRoi
-      ? toNumber(project.fixedRoiPercentage)
-      : null;
-    row.fixedRoiProfit = project.fixedRoi
-      ? roundCurrency(
-          row.calculatedCost * ((row.fixedRoiPercentage ?? 0) / 100),
-        )
-      : null;
-    row.profitDifference =
-      row.fixedRoiProfit === null
-        ? null
-        : roundCurrency(row.profit - row.fixedRoiProfit);
-    row.projectProgress =
-      project.units === 0
-        ? 0
-        : roundCurrency((row.totalUnitsSold / project.units) * 100);
-    row.totalSales = roundCurrency(row.totalSales);
-    row.totalFees = roundCurrency(row.totalFees);
-
-    for (const source of ALL_REPORT_SOURCES) {
-      row[source].amount = roundCurrency(row[source].amount);
-    }
-
     const stakeholderRow = project.stakeholders[0];
-    const stakePercentage = toNumber(stakeholderRow.stakePercentage);
-    const stakeRatio = stakePercentage / 100;
-    const transactionTotals = calculateStakeholderTransactionTotals(
-      stakeholderRow.transactions,
-    );
-    const income = row.fixedRoi
-      ? roundCurrency(
-          row.calculatedCost +
-            row.calculatedCost *
-              ((row.fixedRoiPercentage ?? 0) / 100) *
-              stakeRatio,
-        )
-      : roundCurrency(
-          row.calculatedCost * stakeRatio + row.profit * stakeRatio,
-        );
-    row.stakeholder = {
-      adjustmentCount: transactionTotals.adjustmentCount,
-      adjustments: transactionTotals.adjustments,
-      balance: roundCurrency(
-        income - transactionTotals.payments + transactionTotals.adjustments,
-      ),
-      income,
-      investment: transactionTotals.investment,
-      payments: transactionTotals.payments,
-      stakePercentage,
-      stakeholderId: stakeholderRow.stakeholder.idStakeholder,
-      stakeholderName: stakeholderRow.stakeholder.name,
-    };
+    const { financials, hasSurfaceSales } = calculateProjectFinancials(project);
 
     return {
-      row,
+      row: {
+        ...financials,
+        productImage: normalizeImageUrl(project.product.image),
+        productName: project.product.name,
+        projectId: project.idProject,
+        stakeholder: {
+          ...calculateStakeholderFinancials(stakeholderRow, financials),
+          stakeholderId: stakeholderRow.stakeholder.idStakeholder,
+          stakeholderName: stakeholderRow.stakeholder.name,
+        },
+        transactions: [],
+      },
       sources: hasSurfaceSales
         ? [...ALL_REPORT_SOURCES]
         : [...BASE_REPORT_SOURCES],
@@ -398,52 +411,111 @@ function createEmptyRow({
   };
 }
 
-function createEmptyStakeholderProjectRow({
-  productImage,
-  productName,
-  projectId,
-  totalUnits,
-}: {
-  productImage: string | null;
-  productName: string;
-  projectId: number;
-  totalUnits: number;
-}): StakeholderProjectRow {
-  return {
-    calculatedCost: 0,
+function calculateProjectFinancials(project: ProjectFinancialInput) {
+  const sourceTotals = {
     ecommerce: createEmptySourceTotals(),
     event: createEmptySourceTotals(),
-    fixedRoi: false,
-    fixedRoiPercentage: null,
-    fixedRoiProfit: null,
-    netSalesTotal: 0,
-    productImage,
-    productName,
-    profit: 0,
-    profitDifference: null,
-    projectId,
-    projectProgress: 0,
-    projectTotalCost: 0,
-    stakeholder: {
-      adjustmentCount: 0,
-      adjustments: 0,
-      balance: 0,
-      income: 0,
-      investment: 0,
-      payments: 0,
-      stakePercentage: 0,
-      stakeholderId: 0,
-      stakeholderName: '',
-    },
     store: createEmptySourceTotals(),
     surface: createEmptySourceTotals(),
-    totalFees: 0,
-    totalSales: 0,
-    totalUnits,
-    totalUnitsSold: 0,
-    transactions: [],
-    unitPrice: 0,
-    unitsLeft: totalUnits,
+  };
+  let hasSurfaceSales = false;
+  let totalUnitsSold = 0;
+  let totalSales = 0;
+  let totalFees = 0;
+
+  for (const sale of project.sales) {
+    const { source } = sale;
+    const amount = toNumber(sale.amount);
+    if (source === 'surface') {
+      hasSurfaceSales = true;
+    }
+
+    if (isReportSource(source)) {
+      sourceTotals[source].quantity += sale.quantity;
+      sourceTotals[source].amount += amount;
+    }
+
+    totalUnitsSold += sale.quantity;
+    totalSales += amount;
+    totalFees += toNumber(sale.fee);
+  }
+
+  const projectTotalCost = roundCurrency(
+    project.transactions.reduce(
+      (sum, transaction) => sum + toNumber(transaction.amount),
+      0,
+    ),
+  );
+  const rawUnitPrice =
+    project.units === 0 ? 0 : projectTotalCost / project.units;
+  const netSalesTotal = roundCurrency(totalSales - totalFees);
+  const calculatedCost = roundCurrency(totalUnitsSold * rawUnitPrice);
+  const profit = roundCurrency(netSalesTotal - calculatedCost);
+  const fixedRoiPercentage = project.fixedRoi
+    ? toNumber(project.fixedRoiPercentage)
+    : null;
+  const fixedRoiProfit =
+    fixedRoiPercentage === null
+      ? null
+      : roundCurrency(calculatedCost * (fixedRoiPercentage / 100));
+  const profitDifference =
+    fixedRoiProfit === null ? null : roundCurrency(profit - fixedRoiProfit);
+  const projectProgress =
+    project.units === 0
+      ? 0
+      : roundCurrency((totalUnitsSold / project.units) * 100);
+
+  for (const source of ALL_REPORT_SOURCES) {
+    sourceTotals[source].amount = roundCurrency(sourceTotals[source].amount);
+  }
+
+  return {
+    hasSurfaceSales,
+    financials: {
+      ...sourceTotals,
+      calculatedCost,
+      fixedRoi: project.fixedRoi,
+      fixedRoiPercentage,
+      fixedRoiProfit,
+      netSalesTotal,
+      profit,
+      profitDifference,
+      projectProgress,
+      projectTotalCost,
+      totalFees: roundCurrency(totalFees),
+      totalSales: roundCurrency(totalSales),
+      totalUnits: project.units,
+      totalUnitsSold,
+      unitPrice: roundCurrency(rawUnitPrice),
+      unitsLeft: project.units - totalUnitsSold,
+    },
+  };
+}
+
+function calculateStakeholderFinancials(
+  assignment: StakeholderFinancialInput,
+  financials: Pick<
+    StakeholderProjectRow,
+    'calculatedCost' | 'fixedRoiPercentage' | 'profit'
+  >,
+) {
+  const { calculatedCost, fixedRoiPercentage, profit } = financials;
+  const stakePercentage = toNumber(assignment.stakePercentage);
+  const stakeRatio = stakePercentage / 100;
+  const totals = calculateStakeholderTransactionTotals(assignment.transactions);
+  const income =
+    fixedRoiPercentage === null
+      ? roundCurrency(calculatedCost * stakeRatio + profit * stakeRatio)
+      : roundCurrency(
+          calculatedCost +
+            calculatedCost * (fixedRoiPercentage / 100) * stakeRatio,
+        );
+
+  return {
+    ...totals,
+    balance: roundCurrency(income - totals.payments + totals.adjustments),
+    income,
+    stakePercentage,
   };
 }
 
@@ -550,10 +622,6 @@ function toNumber(value: unknown): number {
 
 function normalizeImageUrl(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
-}
-
-function sumNumbers(...values: unknown[]): number {
-  return values.reduce<number>((sum, value) => sum + toNumber(value), 0);
 }
 
 function roundCurrency(value: number): number {

@@ -103,12 +103,37 @@ const projects = [
   },
 ]
 
+const stakeholderCounts = [
+  { stakeholderId: 10, stakeholderName: 'Alicia', projectCount: 1 },
+  { stakeholderId: 11, stakeholderName: 'Bruno', projectCount: 0 },
+]
+
+const stakeholderProjectSummary = {
+  stakeholderId: 10,
+  stakeholderName: 'Alicia',
+  projects: [
+    {
+      projectId: 501,
+      projectName: 'Maple Shelf production',
+      balance: 90.55,
+      income: 205.8,
+      investment: 25.5,
+      payments: 125.5,
+      stakePercentage: 60,
+    },
+  ],
+}
+
+const reportPath = '/reports/stakeholder-projects'
+const stakeholderPath = `${reportPath}?stakeholderId=10`
+const detailPath = `${reportPath}?projectId=501&stakeholderId=10`
+
 function renderStakeholderProjectsReportRoute(
   initialEntry = '/reports/stakeholder-projects',
 ) {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false },
+      queries: { retry: false, staleTime: Infinity },
     },
   })
 
@@ -121,27 +146,33 @@ function renderStakeholderProjectsReportRoute(
   )
 }
 
-async function selectAntOption(
-  user: ReturnType<typeof userEvent.setup>,
-  combobox: HTMLElement,
-  optionName: string,
-) {
-  await user.click(combobox)
-  const options = await screen.findAllByTitle(optionName)
-  await user.click(options[options.length - 1])
-}
-
 describe('StakeholderProjectsReportPage', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
   })
 
-  it('loads a selected project and stakeholder as a header/detail report without other stakeholder data', async () => {
+  it('drills down from stakeholder counts to project totals and the existing report', async () => {
     const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation((path: string) => {
-      if (path === '/projects?pageSize=100') {
-        return Promise.resolve(projects)
+      if (path === `${reportPath}/stakeholders`) {
+        return Promise.resolve(stakeholderCounts)
+      }
+
+      if (path === `${reportPath}/stakeholders/10`) {
+        return Promise.resolve(stakeholderProjectSummary)
+      }
+
+      if (path === `${reportPath}/stakeholders/11`) {
+        return Promise.resolve({
+          stakeholderId: 11,
+          stakeholderName: 'Bruno',
+          projects: [],
+        })
+      }
+
+      if (path === '/projects/501') {
+        return Promise.resolve(projects[0])
       }
 
       if (
@@ -190,23 +221,45 @@ describe('StakeholderProjectsReportPage', () => {
       ).toHaveAttribute('href', '/reports/stakeholder-projects')
     })
 
-    const projectSelect = await screen.findByRole('combobox', {
-      name: 'Proyecto',
-    })
-    const stakeholderSelect = screen.getByRole('combobox', {
-      name: 'Socio',
-    })
-    expect(stakeholderSelect.closest('.ant-select')).toHaveClass(
-      'ant-select-disabled',
-    )
-    expect(
-      screen.getByText(
-        'Selecciona un proyecto y un socio para cargar el reporte.',
-      ),
-    ).toBeVisible()
+    const stakeholderLink = await screen.findByRole('link', { name: 'Alicia' })
+    expect(stakeholderLink).toHaveAttribute('href', stakeholderPath)
+    expect(screen.getByRole('row', { name: 'Bruno 0' })).toBeVisible()
+    expect(screen.getByRole('row', { name: 'Alicia 1' })).toBeVisible()
+    stakeholderLink.focus()
+    await user.keyboard('{Enter}')
 
-    await selectAntOption(user, projectSelect, 'Proyecto #501 - Maple Shelf')
-    await selectAntOption(user, stakeholderSelect, 'Alicia')
+    const projectLink = await screen.findByRole('link', {
+      name: 'Maple Shelf production',
+    })
+    expect(projectLink).toHaveAttribute('href', detailPath)
+    expect(
+      screen.getByRole('link', { name: 'Volver a los socios' }),
+    ).toHaveAttribute('href', reportPath)
+    const table = projectLink.closest('table')!
+    const columnNames = within(table)
+      .getAllByRole('columnheader')
+      .map((cell) => cell.textContent)
+    expect(columnNames).toEqual([
+      'Proyecto',
+      'Participación %',
+      'Saldo de inversión',
+      'Pagos',
+      'Ingreso correspondiente',
+      'Saldo',
+    ])
+    const projectRow = projectLink.closest('tr')!
+    const projectValues = within(projectRow)
+      .getAllByRole('cell')
+      .map((cell) => cell.textContent)
+    expect(projectValues).toEqual([
+      'Maple Shelf production',
+      '60%',
+      '$25.50',
+      '$125.50',
+      '$205.80',
+      '$90.55',
+    ])
+    await user.click(within(projectRow).getByText('$90.55'))
 
     await waitFor(() => {
       expect(getJson).toHaveBeenCalledWith(
@@ -299,6 +352,10 @@ describe('StakeholderProjectsReportPage', () => {
       'href',
       '/reports/stakeholder-projects/print?projectId=501&stakeholderId=10',
     )
+    const backToProjects = screen.getByRole('link', {
+      name: 'Volver a los proyectos del socio',
+    })
+    expect(backToProjects).toHaveAttribute('href', stakeholderPath)
     expect(
       screen.getByRole('table', {
         name: 'Alicia, detalle de transacciones',
@@ -312,49 +369,80 @@ describe('StakeholderProjectsReportPage', () => {
       }),
     ).toBeVisible()
     expect(within(projectRegion).queryByText('Bruno')).not.toBeInTheDocument()
+
+    await user.click(backToProjects)
+    await user.click(screen.getByRole('link', { name: 'Volver a los socios' }))
+    const emptyStakeholder = await screen.findByRole('row', { name: 'Bruno 0' })
+    await user.click(within(emptyStakeholder).getByRole('cell', { name: '0' }))
+    expect(await screen.findByText('Este socio no tiene proyectos.')).toBeVisible()
   })
 
-  it('searches project labels and IDs beyond the first page and resets stakeholder only when selecting a project', async () => {
+  it('refreshes the project totals after saving a stakeholder transaction', async () => {
     const user = userEvent.setup()
-    const laterProject = { ...projects[0], idProject: 701, name: 'Autumn launch' }
+    let updated = false
     vi.mocked(getJson).mockImplementation(async (path) => {
-      if (path === '/projects?pageSize=100') return Array.from({ length: 100 }, (_, i) => ({ ...projects[0], idProject: i + 1, name: `Project ${i + 1}` }))
-      if (path === '/projects?pageSize=100&page=2') return [projects[0], laterProject]
-      if (path.startsWith('/reports/stakeholder-projects?')) return stakeholderProjectsReport
-      return []
+      if (path === `${reportPath}/stakeholders/10`) {
+        return updated
+          ? {
+              ...stakeholderProjectSummary,
+              projects: [
+                {
+                  ...stakeholderProjectSummary.projects[0],
+                  balance: 216.05,
+                  investment: -100,
+                  payments: 0,
+                },
+              ],
+            }
+          : stakeholderProjectSummary
+      }
+      if (path === detailPath) return stakeholderProjectsReport
+      if (path === '/projects/501') return projects[0]
+      if (
+        path === '/stakeholder-project-transactions/projects/501/stakeholders/10'
+      ) {
+        return [
+          {
+            amount: 125.5,
+            date: '2026-05-05',
+            description: 'Distribution',
+            idProject: 501,
+            idStakeholder: 10,
+            idStakeholderProjectTransaction: 99,
+            transactionType: 'payment',
+          },
+        ]
+      }
+      throw new Error(`Unexpected GET ${path}`)
     })
-    renderStakeholderProjectsReportRoute()
-    const project = screen.getByRole('combobox', { name: 'Proyecto' })
-    await user.click(project)
-    await user.paste('  MAPLE  ')
-    expect(screen.getByTitle('Proyecto #501 - Maple Shelf')).toBeInTheDocument()
-    expect(screen.queryByTitle('Project 1 (#1)')).not.toBeInTheDocument()
-    await user.click(screen.getByTitle('Proyecto #501 - Maple Shelf'))
-    const stakeholder = screen.getByRole('combobox', { name: 'Socio' })
-    await selectAntOption(user, stakeholder, 'Alicia')
-    await waitFor(() => expect(getJson).toHaveBeenCalledWith('/reports/stakeholder-projects?projectId=501&stakeholderId=10'))
-    const requestCount = vi.mocked(getJson).mock.calls.length
-    await user.click(project)
-    await user.paste('unmatched')
-    await user.tab()
-    expect(project.closest('.ant-select')).toHaveTextContent('Proyecto #501 - Maple Shelf')
-    expect(stakeholder.closest('.ant-select')).toHaveTextContent('Alicia')
-    expect(getJson).toHaveBeenCalledTimes(requestCount)
-    await user.click(project)
-    await user.clear(project)
-    await user.paste('  AUTUMN  ')
-    expect(screen.getByTitle('Autumn launch (#701)')).toBeInTheDocument()
-    await user.clear(project)
-    await user.paste('  701 ')
-    await user.click(screen.getByTitle('Autumn launch (#701)'))
-    expect(stakeholder.closest('.ant-select')).not.toHaveTextContent('Alicia')
-    expect(getJson).not.toHaveBeenCalledWith('/reports/stakeholder-projects?projectId=701&stakeholderId=10')
+    vi.mocked(putJson).mockImplementation(async (_path, body) => {
+      updated = true
+      return body
+    })
+
+    renderStakeholderProjectsReportRoute(stakeholderPath)
+
+    expect(await screen.findByText('$90.55')).toBeVisible()
+    await user.click(
+      screen.getByRole('link', { name: 'Maple Shelf production' }),
+    )
+    await user.click(
+      await screen.findByRole('button', { name: 'Eliminar fila 1' }),
+    )
+    await waitFor(() =>
+      expect(screen.queryByText('Distribution')).not.toBeInTheDocument(),
+    )
+    await user.click(
+      screen.getByRole('link', { name: 'Volver a los proyectos del socio' }),
+    )
+    expect(await screen.findByText('$216.05')).toBeVisible()
+    expect(screen.queryByText('$90.55')).not.toBeInTheDocument()
   })
+
   it('shows fixed ROI project metrics, channel amounts, and fixed stakeholder income', async () => {
-    const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation((path: string) => {
-      if (path === '/projects?pageSize=100') {
-        return Promise.resolve(projects)
+      if (path === '/projects/501') {
+        return Promise.resolve(projects[0])
       }
 
       if (
@@ -373,18 +461,7 @@ describe('StakeholderProjectsReportPage', () => {
       return Promise.reject(new Error(`Unexpected GET ${path}`))
     })
 
-    renderStakeholderProjectsReportRoute()
-
-    await selectAntOption(
-      user,
-      await screen.findByRole('combobox', { name: 'Proyecto' }),
-      'Proyecto #501 - Maple Shelf',
-    )
-    await selectAntOption(
-      user,
-      screen.getByRole('combobox', { name: 'Socio' }),
-      'Alicia',
-    )
+    renderStakeholderProjectsReportRoute(detailPath)
 
     const projectRegion = await screen.findByRole('region', {
       name: 'Maple Shelf, proyecto 501',
@@ -598,10 +675,9 @@ describe('StakeholderProjectsReportPage', () => {
   })
 
   it('shows an unavailable project ROI when calculated cost is zero', async () => {
-    const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation((path: string) => {
-      if (path === '/projects?pageSize=100') {
-        return Promise.resolve(projects)
+      if (path === '/projects/501') {
+        return Promise.resolve(projects[0])
       }
 
       if (
@@ -626,18 +702,7 @@ describe('StakeholderProjectsReportPage', () => {
       return Promise.reject(new Error(`Unexpected GET ${path}`))
     })
 
-    renderStakeholderProjectsReportRoute()
-
-    await selectAntOption(
-      user,
-      await screen.findByRole('combobox', { name: 'Proyecto' }),
-      'Proyecto #501 - Maple Shelf',
-    )
-    await selectAntOption(
-      user,
-      screen.getByRole('combobox', { name: 'Socio' }),
-      'Alicia',
-    )
+    renderStakeholderProjectsReportRoute(detailPath)
 
     const projectRegion = await screen.findByRole('region', {
       name: 'Maple Shelf, proyecto 501',
@@ -651,10 +716,9 @@ describe('StakeholderProjectsReportPage', () => {
   })
 
   it('renders report load failures as an Ant Design alert', async () => {
-    const user = userEvent.setup()
     vi.mocked(getJson).mockImplementation((path: string) => {
-      if (path === '/projects?pageSize=100') {
-        return Promise.resolve(projects)
+      if (path === '/projects/501') {
+        return Promise.resolve(projects[0])
       }
 
       if (
@@ -667,18 +731,7 @@ describe('StakeholderProjectsReportPage', () => {
       return Promise.reject(new Error('Report failed'))
     })
 
-    renderStakeholderProjectsReportRoute()
-
-    await selectAntOption(
-      user,
-      await screen.findByRole('combobox', { name: 'Proyecto' }),
-      'Proyecto #501 - Maple Shelf',
-    )
-    await selectAntOption(
-      user,
-      screen.getByRole('combobox', { name: 'Socio' }),
-      'Alicia',
-    )
+    renderStakeholderProjectsReportRoute(detailPath)
 
     const alert = await screen.findByRole('alert')
 
