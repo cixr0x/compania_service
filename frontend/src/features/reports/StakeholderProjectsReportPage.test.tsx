@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -127,6 +128,62 @@ const stakeholderProjectSummary = {
 const reportPath = '/reports/stakeholder-projects'
 const stakeholderPath = `${reportPath}?stakeholderId=10`
 const detailPath = `${reportPath}?projectId=501&stakeholderId=10`
+const summaryPath = `${reportPath}/stakeholders/10`
+const transactionsPath =
+  '/stakeholder-project-transactions/projects/501/stakeholders/10'
+
+const savedProjectSummary = {
+  ...stakeholderProjectSummary,
+  projects: [
+    {
+      ...stakeholderProjectSummary.projects[0],
+      balance: 216.05,
+      investment: -100,
+      payments: 0,
+    },
+  ],
+}
+
+const payment = {
+  amount: 125.5,
+  date: '2026-05-05',
+  description: 'Distribution',
+  idProject: 501,
+  idStakeholder: 10,
+  idStakeholderProjectTransaction: 99,
+  transactionType: 'payment',
+}
+
+const investment = {
+  ...payment,
+  amount: 100,
+  date: '2026-05-06',
+  description: 'Capital',
+  idStakeholderProjectTransaction: 100,
+  transactionType: 'investment',
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
+function mockTransactionReportReads(
+  getSummary: () =>
+    | typeof stakeholderProjectSummary
+    | Promise<typeof stakeholderProjectSummary>,
+) {
+  vi.mocked(getJson).mockImplementation(async (path) => {
+    if (path === summaryPath) return getSummary()
+    if (path === detailPath) return stakeholderProjectsReport
+    if (path === '/projects/501') return projects[0]
+    if (path === transactionsPath) return [payment, investment]
+    throw new Error(`Unexpected GET ${path}`)
+  })
+}
 
 function renderStakeholderProjectsReportRoute(
   initialEntry = '/reports/stakeholder-projects',
@@ -377,47 +434,23 @@ describe('StakeholderProjectsReportPage', () => {
     expect(await screen.findByText('Este socio no tiene proyectos.')).toBeVisible()
   })
 
-  it('refreshes the project totals after saving a stakeholder transaction', async () => {
+  it('keeps the pending save locked after reopening detail and then shows the canonical transactions', async () => {
     const user = userEvent.setup()
+    const save = deferred<void>()
     let updated = false
-    vi.mocked(getJson).mockImplementation(async (path) => {
-      if (path === `${reportPath}/stakeholders/10`) {
-        return updated
-          ? {
-              ...stakeholderProjectSummary,
-              projects: [
-                {
-                  ...stakeholderProjectSummary.projects[0],
-                  balance: 216.05,
-                  investment: -100,
-                  payments: 0,
-                },
-              ],
-            }
-          : stakeholderProjectSummary
-      }
-      if (path === detailPath) return stakeholderProjectsReport
-      if (path === '/projects/501') return projects[0]
-      if (
-        path === '/stakeholder-project-transactions/projects/501/stakeholders/10'
-      ) {
-        return [
-          {
-            amount: 125.5,
-            date: '2026-05-05',
-            description: 'Distribution',
-            idProject: 501,
-            idStakeholder: 10,
-            idStakeholderProjectTransaction: 99,
-            transactionType: 'payment',
-          },
-        ]
-      }
-      throw new Error(`Unexpected GET ${path}`)
-    })
-    vi.mocked(putJson).mockImplementation(async (_path, body) => {
+    mockTransactionReportReads(() =>
+      updated ? savedProjectSummary : stakeholderProjectSummary,
+    )
+    vi.mocked(putJson).mockImplementation(async () => {
+      await save.promise
       updated = true
-      return body
+      return [
+        {
+          ...investment,
+          description: 'Capital verified',
+          idStakeholderProjectTransaction: 101,
+        },
+      ]
     })
 
     renderStakeholderProjectsReportRoute(stakeholderPath)
@@ -429,13 +462,65 @@ describe('StakeholderProjectsReportPage', () => {
     await user.click(
       await screen.findByRole('button', { name: 'Eliminar fila 1' }),
     )
-    await waitFor(() =>
-      expect(screen.queryByText('Distribution')).not.toBeInTheDocument(),
+    await user.click(
+      screen.getByRole('link', { name: 'Volver a los proyectos del socio' }),
     )
+    await user.click(
+      await screen.findByRole('link', { name: 'Maple Shelf production' }),
+    )
+
+    expect(
+      await screen.findByRole('button', { name: 'Eliminar fila 1' }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Agregar transacción' }),
+    ).toBeDisabled()
+
+    await act(async () => save.resolve())
     await user.click(
       screen.getByRole('link', { name: 'Volver a los proyectos del socio' }),
     )
     expect(await screen.findByText('$216.05')).toBeVisible()
+    expect(screen.queryByText('$90.55')).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole('link', { name: 'Maple Shelf production' }),
+    )
+    expect(await screen.findByText('Capital verified')).toBeVisible()
+    expect(screen.queryByText('Distribution')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Eliminar fila 1' })).toBeEnabled()
+  }, 12000)
+
+  it('refreshes project totals when the first summary request started during the save', async () => {
+    const user = userEvent.setup()
+    const save = deferred<void>()
+    const initialSummary = deferred<typeof stakeholderProjectSummary>()
+    let initialSummaryStarted = false
+    let updated = false
+    mockTransactionReportReads(() => {
+      if (updated) return savedProjectSummary
+
+      initialSummaryStarted = true
+      return initialSummary.promise
+    })
+    vi.mocked(putJson).mockImplementation(async () => {
+      await save.promise
+      updated = true
+      return [investment]
+    })
+
+    renderStakeholderProjectsReportRoute(detailPath)
+    await user.click(
+      await screen.findByRole('button', { name: 'Eliminar fila 1' }),
+    )
+    await user.click(
+      screen.getByRole('link', { name: 'Volver a los proyectos del socio' }),
+    )
+    await waitFor(() => expect(initialSummaryStarted).toBe(true))
+
+    await act(async () => save.resolve())
+    expect(await screen.findByText('$216.05')).toBeVisible()
+    await act(async () => initialSummary.resolve(stakeholderProjectSummary))
+    expect(screen.getByText('$216.05')).toBeVisible()
     expect(screen.queryByText('$90.55')).not.toBeInTheDocument()
   })
 

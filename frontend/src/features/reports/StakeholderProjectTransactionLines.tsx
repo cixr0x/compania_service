@@ -7,7 +7,12 @@ import {
   PlusOutlined,
   SaveOutlined,
 } from '@ant-design/icons'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import {
   Alert,
   Button,
@@ -185,7 +190,14 @@ export function StakeholderProjectTransactionLines({
   const [nextRowIndex, setNextRowIndex] = useState(0)
   const [saveError, setSaveError] = useState<string | null>(null)
   const transactionsPath = getTransactionsPath(projectId, stakeholderId)
+  const transactionsQueryKey = [
+    'stakeholder-project-transactions',
+    projectId,
+    stakeholderId,
+  ] as const
+  const saveFilter = { mutationKey: transactionsQueryKey, exact: true }
   const queryClient = useQueryClient()
+  const isSaving = useIsMutating(saveFilter) > 0
   const tableComponents = useMemo(
     () =>
       getNamedTableComponents(
@@ -195,7 +207,7 @@ export function StakeholderProjectTransactionLines({
   )
 
   const transactionsQuery = useQuery({
-    queryKey: ['stakeholder-project-transactions', projectId, stakeholderId],
+    queryKey: transactionsQueryKey,
     queryFn: () => getJson<StakeholderProjectTransaction[]>(transactionsPath),
   })
 
@@ -207,6 +219,7 @@ export function StakeholderProjectTransactionLines({
   const activeRows = draftRows ?? loadedRows
 
   const saveMutation = useMutation({
+    mutationKey: transactionsQueryKey,
     mutationFn: (rows: TransactionDraftRow[]) =>
       putJson<StakeholderProjectTransaction[], TransactionPayloadRow[]>(
         transactionsPath,
@@ -219,15 +232,22 @@ export function StakeholderProjectTransactionLines({
           'No se pudieron guardar las transacciones del socio en el proyecto.',
         ),
       ),
-    onSuccess: (rows) => {
+    onSuccess: async (rows) => {
+      const summaryQuery = {
+        queryKey: stakeholderProjectsReportKeys.projects(stakeholderId),
+        exact: true,
+      }
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: transactionsQueryKey, exact: true }),
+        queryClient.cancelQueries(summaryQuery),
+      ])
+      queryClient.setQueryData(transactionsQueryKey, rows)
       setDraftRows(sortTransactionRows(rows.map(buildDraftRow)))
       setSaveError(null)
       void queryClient.invalidateQueries({
         queryKey: stakeholderProjectsReportKeys.detail(projectId, stakeholderId),
       })
-      void queryClient.invalidateQueries({
-        queryKey: stakeholderProjectsReportKeys.projects(stakeholderId),
-      })
+      void queryClient.invalidateQueries(summaryQuery)
     },
   })
 
@@ -298,7 +318,7 @@ export function StakeholderProjectTransactionLines({
   function handleSaveRow(rowKey: string) {
     const editedRow = editingRows[rowKey]
 
-    if (!editedRow) {
+    if (!editedRow || queryClient.isMutating(saveFilter) > 0) {
       return
     }
 
@@ -344,6 +364,10 @@ export function StakeholderProjectTransactionLines({
   }
 
   function handleRemoveRow(rowKey: string) {
+    if (queryClient.isMutating(saveFilter) > 0) {
+      return
+    }
+
     const nextRows = activeRows.filter((row) => row.rowKey !== rowKey)
     setDraftRows(nextRows)
     setEditingRows((currentRows) => {
@@ -493,8 +517,9 @@ export function StakeholderProjectTransactionLines({
                 <Space size="small">
                   <Button
                     aria-label={`Guardar fila ${rowNumber}`}
+                    disabled={isSaving}
                     icon={<SaveOutlined />}
-                    loading={saveMutation.isPending}
+                    loading={isSaving}
                     onClick={() => handleSaveRow(row.rowKey)}
                     size="small"
                     type="primary"
@@ -511,6 +536,7 @@ export function StakeholderProjectTransactionLines({
                 <Space size="small">
                   <Button
                     aria-label={`Editar fila ${rowNumber}`}
+                    disabled={isSaving}
                     icon={<EditOutlined />}
                     onClick={() => handleEditRow(row)}
                     size="small"
@@ -518,8 +544,9 @@ export function StakeholderProjectTransactionLines({
                   />
                   <Button
                     aria-label={`Eliminar fila ${rowNumber}`}
+                    disabled={isSaving}
                     icon={<DeleteOutlined />}
-                    loading={saveMutation.isPending}
+                    loading={isSaving}
                     onClick={() => handleRemoveRow(row.rowKey)}
                     size="small"
                     type="default"
@@ -581,6 +608,7 @@ export function StakeholderProjectTransactionLines({
             <div className="stakeholder-transactions-card-footer">
               <Button
                 aria-label="Agregar transacción"
+                disabled={isSaving}
                 icon={<PlusOutlined />}
                 onClick={handleAddRow}
                 type="link"
